@@ -1,8 +1,8 @@
 {
   "name": "عيلتنا — Our Family",
   "short_name": "عيلتنا",
- "start_url": "/",
- "scope": "/",
+ "start_url": "/aylitna/",
+ "scope": "/aylitna/",
   "display": "standalone",
   "background_color": "#FAF8F3",
   "theme_color": "#ffffff",
