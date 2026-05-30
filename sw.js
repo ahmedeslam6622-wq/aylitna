@@ -10,10 +10,10 @@ self.addEventListener('push', e => {
     if (cls.some(c => c.visibilityState === 'visible')) return;
     await self.registration.showNotification(d.title || 'عيلتنا', {
       body: d.body || '',
-      icon: '/icon.png',
-      badge: '/icon.png',
+      icon: '/aylitna/icon.png',
+      badge: '/aylitna/icon.png',
       vibrate: [200, 100, 200],
-      data: { url: '/' }
+      data: { url: '/aylitna/' }
     });
   })());
 });
