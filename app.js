@@ -513,43 +513,76 @@ function checkBirthdays(){
 /* ══════════════════════════════════════════════════════
    WEBRTC CALLS
    ══════════════════════════════════════════════════════ */
-async function startCall(targetName,withVideo=false){
+async function startCall(targetName, withVideo=false) {
   if(!requireOnline())return;
   if(!USE_SB){toast('Calls require an internet connection');return}
-  callTarget=targetName;callDirection='outgoing';isVideoOn=withVideo;
-  showCallUI('outgoing',targetName);
+
+  // Request mic/camera FIRST — must happen directly from user tap
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:true, video:withVideo});
+  } catch(e) {
+    if(e.name==='NotAllowedError') toast('❌ Please allow microphone access in your browser settings');
+    else if(e.name==='NotFoundError') toast('❌ No microphone found on this device');
+    else toast('❌ Could not access microphone: '+e.message);
+    return;
+  }
+
+  callTarget=targetName; callDirection='outgoing'; isVideoOn=withVideo;
+  localStream=stream;
+  showCallUI('outgoing', targetName);
   playSound('ring');
-  try{
-    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:withVideo});
-    document.getElementById('localVideo').srcObject=localStream;
-    if(withVideo)document.getElementById('localVideo').classList.add('show');
-    pc=new RTCPeerConnection({iceServers:STUN_SERVERS});
+
+  document.getElementById('localVideo').srcObject=localStream;
+  if(withVideo) document.getElementById('localVideo').classList.add('show');
+
+  try {
+    pc = new RTCPeerConnection({iceServers:STUN_SERVERS});
     localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-    pc.onicecandidate=e=>{if(e.candidate)signalSend({type:'ice',from:myName,to:targetName,candidate:e.candidate})};
-    pc.ontrack=e=>{
+    pc.onicecandidate = e=>{if(e.candidate)signalSend({type:'ice',from:myName,to:targetName,candidate:e.candidate})};
+    pc.ontrack = e=>{
       document.getElementById('remoteVideo').srcObject=e.streams[0];
-      if(withVideo)document.getElementById('remoteVideo').classList.add('show');
+      if(withVideo) document.getElementById('remoteVideo').classList.add('show');
     };
-    const offer=await pc.createOffer();
+    const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
     document.getElementById('callStatus').textContent='Ringing…';
-  }catch(e){toast('Could not access microphone');endCall();}
+  } catch(e) {
+    toast('Call setup failed: '+e.message);
+    endCall();
+  }
 }
-async function acceptCall(){
+async function acceptCall() {
   document.getElementById('callIncomingBtns').style.display='none';
   document.getElementById('callControls').style.display='flex';
-  document.getElementById('callStatus').textContent='Connected';
+  document.getElementById('callStatus').textContent='Connecting…';
+
+  // Request mic FIRST directly from button tap
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:true, video:isVideoOn});
+  } catch(e) {
+    if(e.name==='NotAllowedError') toast('❌ Please allow microphone access in settings');
+    else toast('❌ Could not access microphone');
+    endCall(); return;
+  }
+
+  localStream=stream;
   playSound('receive');
-  try{
-    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:isVideoOn});
-    document.getElementById('localVideo').srcObject=localStream;
-    if(isVideoOn)document.getElementById('localVideo').classList.add('show');
+  document.getElementById('localVideo').srcObject=localStream;
+  if(isVideoOn) document.getElementById('localVideo').classList.add('show');
+
+  try {
     localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-    const answer=await pc.createAnswer();
+    const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     signalSend({type:'answer',from:myName,to:callTarget,sdp:answer});
-  }catch(e){toast('Could not access microphone');endCall();}
+    document.getElementById('callStatus').textContent='Connected';
+  } catch(e) {
+    toast('Could not connect call');
+    endCall();
+  }
 }
 function rejectCall(){
   signalSend({type:'reject',from:myName,to:callTarget});
