@@ -522,7 +522,13 @@ async function startCall(targetName, withVideo=false) {
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio:true, video:withVideo});
   } catch(e) {
-    if(e.name==='NotAllowedError') toast('❌ Please allow microphone access in your browser settings');
+    if(e.name==='NotAllowedError'){
+  toast('❌ Microphone blocked — fix it then retry', 4000);
+  showCallUI('outgoing', targetName); // keep overlay open so they can see instructions
+  document.getElementById('callStatus').textContent='⚠️ Microphone access blocked';
+  document.getElementById('callControls').style.display='flex';
+  return; // don't call endCall, let them close manually
+}
     else if(e.name==='NotFoundError') toast('❌ No microphone found on this device');
     else toast('❌ Could not access microphone: '+e.message);
     return;
