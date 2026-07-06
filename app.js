@@ -52,7 +52,7 @@ const STUN_SERVERS = [{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.
 /* ══════════════════════════════════════════════════════
    STATE
    ══════════════════════════════════════════════════════ */
-let posts=[], messages={}, dmMessages={}, comments={};
+let posts=[], messages={group:[]}, dmMessages={}, comments={};
 // messages = { group: [...], dmKey: [...] }  dmKey = sorted pair e.g. "Ahmed|Omar"
 let myName='', filter=null, view='feed', prevView='feed';
 let draftPhoto=null, selOct='everyday', showNameInput=false, fullPost=null;
@@ -551,9 +551,21 @@ async function startCall(targetName, withVideo=false) {
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    await waitForChannel(); // ensure signaling channel is ready
+    const ready = await waitForChannel();
+    if(!ready){
+      toast('❌ Could not connect to server — try again');
+      endCall();return;
+    }
     signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
-    document.getElementById('callStatus').textContent='Ringing…';
+    document.getElementById('callStatus').textContent='Ringing… 📳';
+    // Auto-cancel if no answer in 30 seconds
+    setTimeout(()=>{
+      if(document.getElementById('callStatus')?.textContent?.includes('Ringing')){
+        signalSend({type:'end',from:myName,to:targetName});
+        cleanupCall();hideCallUI();
+        toast(`${targetName} did not answer`);
+      }
+    },30000);
   } catch(e) {
     toast('Call setup failed: '+e.message);
     endCall();
@@ -643,11 +655,13 @@ function signalSend(payload){
 }
 
 // Wait for channel to be subscribed before sending offer
-async function waitForChannel(maxWait=3000){
+async function waitForChannel(maxWait=4000){
   const start=Date.now();
-  while(callChannel?.state!=='joined'&&Date.now()-start<maxWait){
+  while(Date.now()-start<maxWait){
+    if(callChannel?.state==='SUBSCRIBED')return true;
     await new Promise(r=>setTimeout(r,100));
   }
+  return false; // timed out
 }
 function showMicBlockedGuide(){
   const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -739,6 +753,11 @@ async function init(){
   loadingFeed=false;
   render(); // Render immediately with posts
   loadAllCmtCounts().then(()=>{
+    // Update all comment badges without full re-render
+    document.querySelectorAll('[id^="cb-"]').forEach(el=>{
+      const pid=el.id.replace('cb-','');
+      el.textContent=cmtCountRaw(pid);
+    });
     loadSeenByFromDB().then(()=>markSeenBy());
   });
   if(USE_SB){
