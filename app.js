@@ -690,8 +690,12 @@ async function init(){
   loadingFeed=false;
   render(); // Render immediately with posts
   loadAllCmtCounts().then(()=>{
-    loadSeenByFromDB().then(()=>markSeenBy());
+  document.querySelectorAll('[id^="cb-"]').forEach(el=>{
+    const pid=el.id.replace('cb-','');
+    el.textContent=cmtCountRaw(pid);
   });
+  loadSeenByFromDB().then(()=>markSeenBy());
+});
   if(USE_SB){
     const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null).catch(()=>({data:null}));
     if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
