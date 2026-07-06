@@ -522,15 +522,14 @@ async function startCall(targetName, withVideo=false) {
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio:true, video:withVideo});
   } catch(e) {
-    if(e.name==='NotAllowedError'){
-  toast('❌ Microphone blocked — fix it then retry', 4000);
-  showCallUI('outgoing', targetName); // keep overlay open so they can see instructions
-  document.getElementById('callStatus').textContent='⚠️ Microphone access blocked';
-  document.getElementById('callControls').style.display='flex';
-  return; // don't call endCall, let them close manually
-}
-    else if(e.name==='NotFoundError') toast('❌ No microphone found on this device');
-    else toast('❌ Could not access microphone: '+e.message);
+    cleanupCall();
+    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
+      showMicBlockedGuide();
+    } else if(e.name==='NotFoundError'){
+      toast('❌ No microphone found on this device');
+    } else {
+      toast('❌ Could not start call: '+e.message);
+    }
     return;
   }
 
@@ -552,6 +551,7 @@ async function startCall(targetName, withVideo=false) {
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    await waitForChannel(); // ensure signaling channel is ready
     signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
     document.getElementById('callStatus').textContent='Ringing…';
   } catch(e) {
@@ -635,11 +635,50 @@ async function handleCallSignal(payload){
   }
 }
 function signalSend(payload){
-  if(!callChannel||!USE_SB)return;
-  callChannel.send({type:'broadcast',event:'call-signal',payload});
+  if(!USE_SB)return;
+  // Use a fresh broadcast each time for reliability
+  if(callChannel){
+    callChannel.send({type:'broadcast',event:'call-signal',payload});
+  }
+}
+
+// Wait for channel to be subscribed before sending offer
+async function waitForChannel(maxWait=3000){
+  const start=Date.now();
+  while(callChannel?.state!=='joined'&&Date.now()-start<maxWait){
+    await new Promise(r=>setTimeout(r,100));
+  }
+}
+function showMicBlockedGuide(){
+  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isAndroid=/Android/.test(navigator.userAgent);
+  const el=document.getElementById('callOverlay');
+  el.style.display='flex';
+  document.getElementById('callName').textContent='Microphone Blocked';
+  document.getElementById('callStatus').textContent='';
+  document.getElementById('callControls').style.display='none';
+  document.getElementById('callIncomingBtns').style.display='none';
+  document.getElementById('callAv').textContent='🎙️';
+  document.getElementById('callAv').style.background='rgba(255,255,255,.1)';
+  // Replace call inner content with guide
+  document.querySelector('.call-inner').innerHTML=`
+    <div style="font-size:50px;margin-bottom:16px">🎙️</div>
+    <div style="font-family:var(--font-d);font-size:22px;font-weight:700;color:#fff;margin-bottom:10px">Microphone blocked</div>
+    <div style="color:rgba(255,255,255,.7);font-size:14px;text-align:center;margin-bottom:28px;line-height:1.6;max-width:280px">
+      ${isIOS
+        ? 'Go to <strong style="color:#fff">Settings → Safari → Microphone</strong> and set it to Allow, then come back and call again.'
+        : isAndroid
+        ? 'Tap the <strong style="color:#fff">🔒 lock icon</strong> in your browser address bar → Permissions → Microphone → Allow.'
+        : 'Click the <strong style="color:#fff">🔒 lock</strong> in the address bar → Site settings → Microphone → Allow.'
+      }
+    </div>
+    ${isAndroid?`<button onclick="window.open('chrome://settings/content/microphone','_blank')" style="background:var(--pri);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:800;margin-bottom:14px;font-family:var(--font-b)">Open mic settings</button>`:''}
+    <button onclick="document.getElementById('callOverlay').style.display='none'" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;font-family:var(--font-b)">Close</button>
+  `;
 }
 function showCallUI(direction, name) {
   const el = document.getElementById('callOverlay');
+  el.style.display = 'flex';
   el.className = 'call-overlay show';
   document.getElementById('callName').textContent = name;
   document.getElementById('callStatus').textContent = direction === 'incoming' ? `${name} is calling…` : 'Calling…';
@@ -663,7 +702,11 @@ function showCallUI(direction, name) {
       </div>`;
   }
 }
-function hideCallUI(){document.getElementById('callOverlay').className='call-overlay';}
+function hideCallUI(){
+  const el=document.getElementById('callOverlay');
+  el.className='call-overlay';
+  el.style.display='none';
+}
 function toggleMute(){
   isMuted=!isMuted;
   localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted);
@@ -696,12 +739,8 @@ async function init(){
   loadingFeed=false;
   render(); // Render immediately with posts
   loadAllCmtCounts().then(()=>{
-  document.querySelectorAll('[id^="cb-"]').forEach(el=>{
-    const pid=el.id.replace('cb-','');
-    el.textContent=cmtCountRaw(pid);
+    loadSeenByFromDB().then(()=>markSeenBy());
   });
-  loadSeenByFromDB().then(()=>markSeenBy());
-});
   if(USE_SB){
     const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null).catch(()=>({data:null}));
     if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
