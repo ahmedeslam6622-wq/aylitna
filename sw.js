@@ -1,4 +1,3 @@
-const CACHE = 'ayl-v5';
 const PHOTO_CACHE = 'ayl-photos-v1';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
@@ -6,26 +5,15 @@ self.addEventListener('activate', e => { self.clients.claim(); });
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-
-  // Cache photos aggressively — serve from cache first, update in background
-  if (url.includes('cloudinary.com') || url.includes('res.cloudinary')) {
-    e.respondWith(
-      caches.open(PHOTO_CACHE).then(async cache => {
-        const hit = await cache.match(e.request);
-        const fetchPromise = fetch(e.request).then(res => {
-          if (res.ok) cache.put(e.request, res.clone());
-          return res;
-        }).catch(() => null);
-        return hit || fetchPromise;
-      })
-    );
+  if (url.includes('cloudinary.com')) {
+    e.respondWith(caches.open(PHOTO_CACHE).then(async cache => {
+      const hit = await cache.match(e.request);
+      const fetchP = fetch(e.request).then(res => { if(res.ok) cache.put(e.request, res.clone()); return res; }).catch(()=>null);
+      return hit || fetchP;
+    }));
     return;
   }
-
-  // Everything else — network first, fall back to cache
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });
 
 self.addEventListener('push', e => {
@@ -34,11 +22,8 @@ self.addEventListener('push', e => {
     const cls = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (cls.some(c => c.visibilityState === 'visible')) return;
     await self.registration.showNotification(d.title || 'عيلتنا', {
-      body: d.body || '',
-      icon: '/aylitna/icon.png',
-      badge: '/aylitna/icon.png',
-      vibrate: [200, 100, 200],
-      data: { url: d.data?.url || '/aylitna/' }
+      body: d.body || '', icon: '/aylitna/icon.png', badge: '/aylitna/icon.png',
+      vibrate: [200, 100, 200], data: { url: d.data?.url || '/aylitna/' }
     });
   })());
 });
