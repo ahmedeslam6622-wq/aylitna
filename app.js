@@ -515,29 +515,34 @@ function peerIdFor(name){
   return 'aylitna-'+name.trim().toLowerCase().replace(/[^a-z0-9]/g,'-');
 }
 
+let peerRetries=0;
 function initPeer(){
   if(!myName)return;
   if(peer){try{peer.destroy()}catch{}peer=null;}
+  peerReady=false;
   myPeerId=peerIdFor(myName);
   peer=new Peer(myPeerId,{debug:1});
-  peer.on('open',id=>{peerReady=true;myPeerId=id;});
+  peer.on('open',id=>{peerReady=true;myPeerId=id;peerRetries=0;});
   peer.on('error',err=>{
-    // If ID taken (another tab), append random suffix — but then others can't call.
-    // Most common: 'unavailable-id' when your own old connection lingers. Retry once.
     if(err.type==='unavailable-id'){
-      setTimeout(()=>{try{peer.destroy()}catch{}; peer=new Peer(myPeerId+'-'+Math.floor(Math.random()*999),{debug:1});
-        peer.on('open',id=>{peerReady=true;myPeerId=id;});
-        peer.on('call',handleIncomingCall);
-      },500);
+      // Old stale connection still holds the ID. Wait and retry the SAME id
+      // (never use a random suffix — others must be able to reach us by name).
+      if(peerRetries<5){
+        peerRetries++;
+        setTimeout(()=>initPeer(), 1500);
+      }
     } else if(err.type==='peer-unavailable'){
-      toast('📵 '+ (callTarget||'They')+' is not online right now');
+      toast('📵 '+(callTarget||'They')+' is not reachable — ask them to open the app');
       cleanupCall();hideCallUI();
+    } else if(err.type==='network'||err.type==='disconnected'){
+      setTimeout(()=>{try{peer.reconnect()}catch{}},1000);
     } else {
       console.log('Peer error:',err.type,err);
     }
   });
   peer.on('call',handleIncomingCall);
   peer.on('disconnected',()=>{peerReady=false;try{peer.reconnect()}catch{}});
+  peer.on('close',()=>{peerReady=false;});
 }
 
 function handleIncomingCall(call){
