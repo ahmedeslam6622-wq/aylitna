@@ -551,14 +551,8 @@ async function startCall(targetName, withVideo=false) {
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    const ready = await waitForChannel();
-    if(!ready){
-      toast('❌ Could not connect to server — try again');
-      endCall();return;
-    }
     signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
     document.getElementById('callStatus').textContent='Ringing… 📳';
-    // Auto-cancel if no answer in 30 seconds
     setTimeout(()=>{
       if(document.getElementById('callStatus')?.textContent?.includes('Ringing')){
         signalSend({type:'end',from:myName,to:targetName});
@@ -648,20 +642,22 @@ async function handleCallSignal(payload){
 }
 function signalSend(payload){
   if(!USE_SB)return;
-  // Use a fresh broadcast each time for reliability
   if(callChannel){
-    callChannel.send({type:'broadcast',event:'call-signal',payload});
+    callChannel.send({type:'broadcast',event:'call-signal',payload})
+      .catch(e=>console.log('Signal send error:',e));
   }
 }
 
 // Wait for channel to be subscribed before sending offer
-async function waitForChannel(maxWait=4000){
+async function waitForChannel(maxWait=6000){
   const start=Date.now();
   while(Date.now()-start<maxWait){
-    if(callChannel?.state==='SUBSCRIBED')return true;
+    const state=callChannel?.state;
+    if(state==='SUBSCRIBED'||state==='joined')return true;
     await new Promise(r=>setTimeout(r,100));
   }
-  return false; // timed out
+  toast('Channel state: '+(callChannel?.state||'null'),4000);
+  return false;
 }
 function showMicBlockedGuide(){
   const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
