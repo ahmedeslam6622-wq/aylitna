@@ -70,7 +70,7 @@ let dmUnread={}; // { dmKey: count }
 // WebRTC state
 let pc=null, localStream=null, callTarget=null, callDirection=null;
 let isMuted=false, isSpeaker=true, isVideoOn=false;
-let callChannel=null;
+let callChannel=null, callChannelReady=false, iceQueue=[];
 
 /* ══════════════════════════════════════════════════════
    UTILS
@@ -458,10 +458,13 @@ function subscribeRealtime(){
       }
     }
   }).subscribe();
-  // Call signaling channel — fixed name so all family members share it
-  callChannel = sb.channel('family-calls')
+  // Call signaling channel — uses subscribe callback to track ready state
+  callChannel = sb.channel('family-calls', {config:{broadcast:{ack:true,self:false}}})
     .on('broadcast', {event:'call-signal'}, ({payload}) => handleCallSignal(payload))
-    .subscribe();
+    .subscribe((status)=>{
+      callChannelReady = (status==='SUBSCRIBED');
+      if(status==='CHANNEL_ERROR'||status==='CLOSED'){callChannelReady=false;}
+    });
 }
 
 /* ══════════════════════════════════════════════════════
@@ -551,7 +554,16 @@ async function startCall(targetName, withVideo=false) {
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
+    const ready = await waitForChannel();
+    if(!ready){
+      toast('❌ Connection not ready — check internet and retry');
+      endCall();return;
+    }
+    const sent = await signalSend({type:'offer',from:myName,to:targetName,sdp:offer,video:withVideo});
+    if(!sent){
+      toast('❌ Call could not be delivered — retry');
+      endCall();return;
+    }
     document.getElementById('callStatus').textContent='Ringing… 📳';
     setTimeout(()=>{
       if(document.getElementById('callStatus')?.textContent?.includes('Ringing')){
@@ -619,6 +631,7 @@ async function handleCallSignal(payload){
   const{type,from,sdp,candidate,video}=payload;
   if(type==='offer'){
     callTarget=from;callDirection='incoming';isVideoOn=!!video;
+    iceQueue=[];
     showCallUI('incoming',from);
     playSound('ring');
     pc=new RTCPeerConnection({iceServers:STUN_SERVERS});
@@ -629,22 +642,35 @@ async function handleCallSignal(payload){
       document.getElementById('callStatus').textContent='Connected';
     };
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    // flush any queued ICE candidates
+    for(const c of iceQueue)await pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+    iceQueue=[];
   } else if(type==='answer'){
     await pc?.setRemoteDescription(new RTCSessionDescription(sdp));
+    for(const c of iceQueue)await pc?.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
+    iceQueue=[];
     document.getElementById('callStatus').textContent='Connected';
   } else if(type==='ice'){
-    await pc?.addIceCandidate(new RTCIceCandidate(candidate));
+    // Queue ICE if remote description not set yet
+    if(pc?.remoteDescription&&pc.remoteDescription.type){
+      await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
+    } else {
+      iceQueue.push(candidate);
+    }
   } else if(type==='end'||type==='reject'){
     playSound('call_end');
     cleanupCall();hideCallUI();
     toast(type==='reject'?`${from} declined the call`:`Call ended`);
   }
 }
-function signalSend(payload){
-  if(!USE_SB)return;
-  if(callChannel){
-    callChannel.send({type:'broadcast',event:'call-signal',payload})
-      .catch(e=>console.log('Signal send error:',e));
+async function signalSend(payload){
+  if(!USE_SB||!callChannel)return false;
+  try{
+    const res=await callChannel.send({type:'broadcast',event:'call-signal',payload});
+    return res==='ok';
+  }catch(e){
+    console.log('Signal error:',e);
+    return false;
   }
 }
 
@@ -652,11 +678,9 @@ function signalSend(payload){
 async function waitForChannel(maxWait=6000){
   const start=Date.now();
   while(Date.now()-start<maxWait){
-    const state=callChannel?.state;
-    if(state==='SUBSCRIBED'||state==='joined')return true;
+    if(callChannelReady)return true;
     await new Promise(r=>setTimeout(r,100));
   }
-  toast('Channel state: '+(callChannel?.state||'null'),4000);
   return false;
 }
 function showMicBlockedGuide(){
