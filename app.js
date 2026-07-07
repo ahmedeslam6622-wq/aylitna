@@ -541,14 +541,41 @@ function initPeer(){
     }
   });
   peer.on('call',handleIncomingCall);
+  peer.on('connection',conn=>{
+    // Data channel for call control signals (decline, busy, hangup)
+    conn.on('data',data=>{
+      if(data==='decline'){
+        clearInterval(ringTimer);
+        toast(`${callTarget||'They'} declined the call`);
+        cleanupCall();hideCallUI();
+      } else if(data==='busy'){
+        clearInterval(ringTimer);
+        toast(`${callTarget||'They'} is busy`);
+        cleanupCall();hideCallUI();
+      } else if(data==='hangup'){
+        playSound('call_end');cleanupCall();hideCallUI();toast('Call ended');
+      }
+    });
+  });
   peer.on('disconnected',()=>{peerReady=false;try{peer.reconnect()}catch{}});
   peer.on('close',()=>{peerReady=false;});
+}
+
+// Send a control signal to a peer via a short-lived data connection
+function sendControl(targetName, msg){
+  if(!peer||!peerReady)return;
+  try{
+    const conn=peer.connect(peerIdFor(targetName));
+    conn.on('open',()=>{conn.send(msg);setTimeout(()=>{try{conn.close()}catch{}},500);});
+  }catch(e){console.log('Control send failed',e);}
 }
 
 function handleIncomingCall(call){
   // ISOLATION: if already in a call, reject the new one so audio never bleeds
   if(activeCall){
+    const caller=call.metadata?.name;
     call.close();
+    if(caller)sendControl(caller,'busy');
     return;
   }
   incomingCallObj=call;
@@ -629,10 +656,12 @@ async function acceptCall(){
   lv.srcObject=localStream;lv.muted=true;
   if(isVideoOn)lv.classList.add('show');
 
-  incomingCallObj.answer(localStream);
   activeCall=incomingCallObj;
   incomingCallObj=null;
+  // CRITICAL: attach stream listener BEFORE answering, or the remote
+  // stream can arrive before we're listening → stuck on "Connecting".
   wireCall(activeCall);
+  activeCall.answer(localStream);
   document.getElementById('callStatus').textContent='Connected';
   playSound('receive');
 }
@@ -655,13 +684,17 @@ function wireCall(call){
 
 function rejectCall(){
   clearInterval(ringTimer);
+  const who=callTarget; // the caller
   if(incomingCallObj){incomingCallObj.close();incomingCallObj=null;}
+  if(who)sendControl(who,'decline'); // tell caller we declined
   cleanupCall();hideCallUI();
 }
 function endCall(){
   clearInterval(ringTimer);
   playSound('call_end');
+  const who=callTarget;
   if(activeCall){try{activeCall.close()}catch{}}
+  if(who)sendControl(who,'hangup'); // tell other side we hung up
   cleanupCall();hideCallUI();
 }
 function cleanupCall(){
