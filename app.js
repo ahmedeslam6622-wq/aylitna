@@ -521,7 +521,20 @@ function initPeer(){
   if(peer){try{peer.destroy()}catch{}peer=null;}
   peerReady=false;
   myPeerId=peerIdFor(myName);
-  peer=new Peer(myPeerId,{debug:1});
+  peer=new Peer(myPeerId,{
+    debug:1,
+    config:{
+      iceServers:[
+        {urls:'stun:stun.l.google.com:19302'},
+        {urls:'stun:stun1.l.google.com:19302'},
+        // Free TURN relay (Open Relay by Metered) — needed when devices are on
+        // different networks / symmetric NAT, otherwise stream never connects.
+        {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+        {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+        {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+      ]
+    }
+  });
   peer.on('open',id=>{peerReady=true;myPeerId=id;peerRetries=0;});
   peer.on('error',err=>{
     if(err.type==='unavailable-id'){
