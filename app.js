@@ -5,8 +5,10 @@
    ══════════════════════════════════════════════════════ */
 const SB_URL  = 'https://ptpprauzusyrbrigfyji.supabase.co';
 const SB_KEY  = 'sb_publishable_K4QVE01BB4XSfmUlemIJZQ_TyFDDR1H';
-const CLD_CLOUD  = 'df618arjm';
-const CLD_PRESET = 'zsz6vswy';
+const CLD_CLOUD      = 'df618arjm';
+const CLD_PRESET     = 'zsz6vswy';
+const CLD_VID_CLOUD  = 'hhjzkoeh';
+const CLD_VID_PRESET = 'aylitna-video';
 const VAPID   = 'BClsAtEWOVK95B0atTRO4d6-QacLuKZg_X5p6r3YXKaOI35BF7TsRR-NOPDnEC_omwyZQRiQtqgeZWmbs6hasUw';
 const ANTHROPIC_KEY = ''; // add your Anthropic key here for AI photo tagging
 const USE_SB  = !!(SB_URL && SB_KEY);
@@ -68,7 +70,7 @@ async function getTurnServers(){
 let posts=[], messages={group:[]}, dmMessages={}, comments={};
 // messages = { group: [...], dmKey: [...] }  dmKey = sorted pair e.g. "Ahmed|Omar"
 let myName='', filter=null, view='feed', prevView='feed';
-let draftPhoto=null, selOct='everyday', showNameInput=false, fullPost=null;
+let draftPhoto=null, draftVideo=null, draftVideoFile=null, selOct='everyday', showNameInput=false, fullPost=null;
 let reminderDismissed=false, greetingDismissed=false;
 let loadingFeed=false, unreadMsgs=0, lastMsgSeen=0, lastSeen=0;
 let openComments={}, cmtDraft={}, cmtPages={}, openCtx=null;
@@ -248,10 +250,10 @@ async function loadPosts(){
   const{data,error}=await sb.from('posts').select('*').order('created_at',{ascending:false}).limit(120);
   if(!error)posts=data||[];
 }
-async function addPost(name,caption,photoURL,oct){
-  const p={id:Date.now()+'',name,caption,photo_url:photoURL,oct,created_at:new Date().toISOString(),reactions:{}};
+async function addPost(name,caption,photoURL,videoURL,oct){
+  const p={id:Date.now()+'',name,caption,photo_url:photoURL,video_url:videoURL||null,oct,created_at:new Date().toISOString(),reactions:{}};
   if(!USE_SB){posts.unshift(p);lssj('ayl_posts',posts);return}
-  const{data}=await sb.from('posts').insert({name,caption,photo_url:photoURL,oct,reactions:{}}).select().single();
+  const{data}=await sb.from('posts').insert({name,caption,photo_url:photoURL,video_url:videoURL||null,oct,reactions:{}}).select().single();
   if(data)posts.unshift(data);
 }
 async function updateRxn(pid,rxn){
@@ -364,6 +366,18 @@ async function uploadPhoto(dataURL){
     const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd});
     const d=await r.json();return d.secure_url||dataURL;
   }catch{return dataURL}
+}
+async function uploadVideo(file){
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('upload_preset',CLD_VID_PRESET);
+    fd.append('resource_type','video');
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_VID_CLOUD}/video/upload`,{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error.message);
+    return d.secure_url||null;
+  }catch(e){console.log('Video upload error:',e);toast('❌ Video upload failed: '+e.message);return null;}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1032,7 +1046,13 @@ function buildCard(p,idx){
       <button class="more-btn" onclick="toggleCtx('${p.id}',event)">⋯</button>
     </div>
     ${openCtx===p.id?buildCtxMenu(p):''}
-    ${p.photo_url
+    ${p.video_url
+      ?`<div class="post-video-wrap">
+          <video class="post-video" src="${p.video_url}" playsinline preload="metadata"
+            onclick="togglePostVideo(this)"></video>
+          <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
+        </div>`
+      :p.photo_url
       ?`<div class="post-img-wrap">
           <div class="img-blur" id="iblur-${p.id}"><div class="img-spinner"></div></div>
           <img class="post-img" src="${p.photo_url}" alt="" loading="lazy"
@@ -1062,8 +1082,9 @@ function buildCtxMenu(p){
     <button class="ctx-item" onclick="openProfile('${p.name}')"><span class="ctx-item-ico">👤</span>View profile</button>
     ${isOwn(p.name)?`<button class="ctx-item danger" onclick="confirmDel('${p.id}')"><span class="ctx-item-ico">🗑️</span>Delete</button>`:''}
     <button class="ctx-item" onclick="togglePin('${p.id}')"><span class="ctx-item-ico">📌</span>${isPinned?'Unpin':'Pin to top'}</button>
-    <button class="ctx-item" onclick="setFull('${p.id}')"><span class="ctx-item-ico">🔍</span>Fullscreen</button>
+    ${p.photo_url?`<button class="ctx-item" onclick="setFull('${p.id}')"><span class="ctx-item-ico">🔍</span>Fullscreen</button>`:''}
     ${p.photo_url?`<button class="ctx-item" onclick="saveImg(null,'${p.photo_url}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
+    ${p.video_url?`<button class="ctx-item" onclick="saveImg(null,'${p.video_url}')"><span class="ctx-item-ico">⬇️</span>Save video</button>`:''}
     <button class="ctx-item" onclick="copyCaption('${p.id}')"><span class="ctx-item-ico">📋</span>Copy caption</button>
     <button class="ctx-item" onclick="closeCtx()"><span class="ctx-item-ico">✕</span>Close</button>
   </div>`;
@@ -1253,13 +1274,17 @@ function buildAdd(){
     ?`<div class="posting-as"><div><div class="pa-lbl">Posting as</div><div class="pa-name">${myName}</div></div><button class="change-btn" onclick="showNameInput=true;render()">Change</button></div>`
     :`<label class="field-lbl">Your name</label><input class="field" id="nameIn" value="${myName}" placeholder="e.g. Omar" autocapitalize="words" oninput="checkSub()">`;
   return`<div class="add-wrap">
-    <div class="page-ttl">Share a moment 📸</div>
+    <div class="page-ttl">Share a moment 📸🎬</div>
     ${pa}
     <div class="photo-row">
       <button class="photo-btn" onclick="document.getElementById('cameraIn').click()"><div class="photo-btn-ico">📷</div><div class="photo-btn-txt">Camera</div></button>
       <button class="photo-btn" onclick="document.getElementById('galleryIn').click()"><div class="photo-btn-ico">🖼️</div><div class="photo-btn-txt">Gallery</div></button>
+      <button class="photo-btn" onclick="document.getElementById('videoIn').click()"><div class="photo-btn-ico">🎬</div><div class="photo-btn-txt">Video</div></button>
     </div>
-    ${draftPhoto?`<div class="draft-wrap"><img class="draft-img" src="${draftPhoto}"><button class="remove-img" onclick="draftPhoto=null;render()">✕ Remove</button></div>`:''}
+    ${draftVideo?`<div class="draft-wrap">
+      <video src="${draftVideo}" controls style="width:100%;border-radius:12px;max-height:220px;background:#000"></video>
+      <button class="remove-img" onclick="draftVideo=null;draftVideoFile=null;render()">✕ Remove</button>
+    </div>`:draftPhoto?`<div class="draft-wrap"><img class="draft-img" src="${draftPhoto}"><button class="remove-img" onclick="draftPhoto=null;render()">✕ Remove</button></div>`:''}
     <label class="field-lbl">Occasion</label>
     <div class="oct-row scrollx">${OCTS.map(o=>`<button class="oct-btn${selOct===o.id?' on':''}" onclick="selOct='${o.id}';render()">${o.e} ${o.l}</button>`).join('')}</div>
     <label class="field-lbl">Caption</label>
@@ -1278,18 +1303,33 @@ async function submitPost(){
   const name=(showNameInput?(document.getElementById('nameIn')?.value||''):myName).trim();
   const caption=(document.getElementById('captIn')?.value||'').trim();
   if(!name||caption.length>MAX_CAP)return;
-  document.getElementById('uploading').className='uploading-overlay show';
+  const upEl=document.getElementById('uploading');
+  upEl.className='uploading-overlay show';
+  if(draftVideo){
+    upEl.querySelector('.uploading-txt').textContent='Uploading video… ❤️';
+    upEl.querySelector('.uploading-sub').textContent='This may take a moment';
+  }
   try{
-    let photoURL=null;if(draftPhoto)photoURL=await uploadPhoto(draftPhoto);
-    await addPost(name,caption,photoURL,selOct);
+    let photoURL=null,videoURL=null;
+    if(draftVideo&&draftVideoFile){
+      videoURL=await uploadVideo(draftVideoFile);
+      if(!videoURL){upEl.className='uploading-overlay';return;}
+    }else if(draftPhoto){
+      photoURL=await uploadPhoto(draftPhoto);
+    }
+    await addPost(name,caption,photoURL,videoURL,selOct);
     if(name!==myName){myName=name;lss('ayl_name',name)}
     const newPost=posts[0];
     if(photoURL&&newPost&&draftPhoto)tagPhotoWithAI(newPost.id,draftPhoto);
-    draftPhoto=null;selOct='everyday';showNameInput=false;
+    draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false;
     if(!USE_SB)await loadPosts();
     view='feed';render();toast('✨ Moment shared!');vibrate([20,10,20]);playSound('send');
   }catch(e){alert('Something went wrong. Please try again.')}
-  finally{document.getElementById('uploading').className='uploading-overlay'}
+  finally{
+    upEl.className='uploading-overlay';
+    upEl.querySelector('.uploading-txt').textContent='Sharing with family… ❤️';
+    upEl.querySelector('.uploading-sub').textContent='Just a moment';
+  }
 }
 function wrapTxt(b,a){const ta=document.getElementById('captIn');if(!ta)return;const s=ta.selectionStart,e=ta.selectionEnd;const sel=ta.value.substring(s,e)||'text';ta.value=ta.value.substring(0,s)+b+sel+a+ta.value.substring(e);ta.focus()}
 function insertMention(n){const ta=document.getElementById('captIn');if(!ta)return;const p=ta.selectionStart;ta.value=ta.value.substring(0,p)+'@'+n+' '+ta.value.substring(p);ta.focus()}
@@ -1766,7 +1806,13 @@ function renderOnboarding(app){
    ══════════════════════════════════════════════════════ */
 function obChk(){const v=(document.getElementById('obIn')?.value||'').trim();const b=document.getElementById('obBtn');if(b){b.disabled=!v;b.style.opacity=v?'1':'.35'}}
 function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();initPeer();render()}
-function goView(v){view=v;openCtx=null;if(v==='add'){draftPhoto=null;selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
+function togglePostVideo(video){
+  if(!video||video.tagName!=='VIDEO')return;
+  const btn=video.nextElementSibling;
+  if(video.paused){video.play();if(btn)btn.style.display='none';}
+  else{video.pause();if(btn)btn.style.display='flex';}
+}
+function goView(v){view=v;openCtx=null;if(v==='add'){draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
 function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
 function setFull(id){fullPost=id||null;render()}
 function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
@@ -1802,8 +1848,15 @@ function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.
 /* ══════════════════════════════════════════════════════
    FILE INPUTS
    ══════════════════════════════════════════════════════ */
-document.getElementById('galleryIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);this.value='';if(view!=='add')view='add';render()};
-document.getElementById('cameraIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);this.value='';if(view!=='add')view='add';render()};
+document.getElementById('galleryIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);draftVideo=null;draftVideoFile=null;this.value='';if(view!=='add')view='add';render()};
+document.getElementById('cameraIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);draftVideo=null;draftVideoFile=null;this.value='';if(view!=='add')view='add';render()};
+document.getElementById('videoIn').onchange=function(){
+  const f=this.files[0];if(!f)return;
+  if(!f.type.startsWith('video/')){toast('Please select a video file');this.value='';return;}
+  draftVideoFile=f;draftPhoto=null;
+  draftVideo=URL.createObjectURL(f);
+  this.value='';if(view!=='add')view='add';render();
+};
 document.getElementById('commentImgIn').onchange=async function(){
   const f=this.files[0];if(!f||!commentImgTarget)return;
   const d=await compress(f,600);this.value='';
