@@ -898,7 +898,7 @@ function render(){
     `<div class="main">${body}</div>`+
     buildNav()+buildFullscreen()+buildThemeSheet(th,fs);
   if(view==='chat'){setupChatInput();scrollChat()}
-  if(view==='feed')setupFeedListeners();
+  if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
 }
 
@@ -1048,7 +1048,7 @@ function buildCard(p,idx){
     ${openCtx===p.id?buildCtxMenu(p):''}
     ${p.video_url
       ?`<div class="post-video-wrap">
-          <video class="post-video" src="${p.video_url}" playsinline preload="none"
+          <video class="post-video" src="${getVideoUrl(p.video_url)}" playsinline preload="none"
             onclick="togglePostVideo(this)"></video>
           <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
         </div>`
@@ -1806,17 +1806,48 @@ function renderOnboarding(app){
    ══════════════════════════════════════════════════════ */
 function obChk(){const v=(document.getElementById('obIn')?.value||'').trim();const b=document.getElementById('obBtn');if(b){b.disabled=!v;b.style.opacity=v?'1':'.35'}}
 function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();initPeer();render()}
+const VIDEO_CACHE='ayl-videos-v1';
+
+async function prefetchVideo(url){
+  if(!url||!('caches'in window))return;
+  try{
+    const cache=await caches.open(VIDEO_CACHE);
+    if(await cache.match(url))return; // already cached
+    // Fetch and cache in background — don't await so it doesn't block anything
+    fetch(url,{mode:'cors'}).then(res=>{if(res.ok)cache.put(url,res);}).catch(()=>{});
+  }catch{}
+}
+
+// Prefetch videos for visible posts in background
+function prefetchVisibleVideos(){
+  const videoPosts=posts.filter(p=>p.video_url).slice(0,5);
+  videoPosts.forEach(p=>prefetchVideo(getVideoUrl(p.video_url)));
+}
+
 function getVideoUrl(url){
   if(!url||!url.includes('cloudinary.com'))return url;
-  // Insert quality + format auto transformation for smoother playback
   return url.replace('/upload/','/upload/q_auto,vc_auto/');
 }
+async function togglePostVideo(video){
   if(!video||video.tagName!=='VIDEO')return;
   const btn=video.nextElementSibling;
   if(video.paused){
+    // Try to serve from cache first
+    const cachedUrl=video.dataset.cached;
+    if(!cachedUrl&&video.src){
+      try{
+        const cache=await caches.open(VIDEO_CACHE);
+        const hit=await cache.match(video.src);
+        if(hit){
+          const blob=await hit.blob();
+          const objUrl=URL.createObjectURL(blob);
+          video.src=objUrl;
+          video.dataset.cached='1';
+        }
+      }catch{}
+    }
     video.play();
     if(btn)btn.style.display='none';
-    // Show buffering indicator if stalling
     video.onwaiting=()=>{if(btn){btn.style.display='flex';btn.textContent='⏳';}};
     video.onplaying=()=>{if(btn)btn.style.display='none';};
     video.onended=()=>{if(btn){btn.style.display='flex';btn.textContent='▶';}};
