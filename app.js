@@ -689,27 +689,45 @@ async function acceptCall(){
   playSound('receive');
 }
 
+let remoteAudio=null; // dedicated audio element for remote stream
+
 function wireCall(call){
   call.on('stream',remote=>{
-    const rv=document.getElementById('remoteVideo');
-    if(rv){
-      rv.srcObject=remote;
-      rv.muted=false; // never mute remote audio
-      rv.volume=1;
-      // iOS requires play() to be called explicitly after a user gesture
-      // acceptCall/startCall are user gestures so this should work
-      const playPromise=rv.play();
-      if(playPromise)playPromise.catch(()=>{
-        // If autoplay blocked, add a tap-to-unmute button
-        toast('🔊 Tap screen to enable audio',3000);
-        document.addEventListener('touchend',()=>rv.play().catch(()=>{}),{once:true});
-      });
+    // Use a dedicated Audio element for audio — iOS handles this more reliably
+    // than trying to play through a <video> element
+    if(!remoteAudio){
+      remoteAudio=new Audio();
+      remoteAudio.autoplay=true;
     }
+    remoteAudio.srcObject=remote;
+    remoteAudio.muted=false;
+    remoteAudio.volume=1;
+    remoteAudio.play().catch(()=>{
+      toast('🔊 Tap screen to enable audio',3000);
+      document.addEventListener('touchend',()=>remoteAudio.play().catch(()=>{}),{once:true});
+    });
+    // Also set video element for video calls
+    const rv=document.getElementById('remoteVideo');
+    if(rv){rv.srcObject=remote;rv.muted=true;} // mute video element to avoid double audio
     document.getElementById('callStatus').textContent='Connected ✓';
     clearRing();
   });
-  call.on('close',()=>{playSound('call_end');endCallClean();toast('Call ended');});
-  call.on('error',err=>{console.log('call err',err);endCallClean();toast('Call error');});
+  call.on('close',()=>{
+    if(activeCall===call){
+      document.getElementById('callStatus').textContent='Reconnecting…';
+      setTimeout(()=>{
+        if(document.getElementById('callStatus')?.textContent==='Reconnecting…'){
+          playSound('call_end');endCallClean();toast('Call ended');
+        }
+      },8000);
+    }
+  });
+  call.on('error',err=>{
+    console.log('call err',err);
+    if(err.type==='negotiation-failed'||err.type==='connection-failed'){
+      document.getElementById('callStatus').textContent='Connection issue…';
+    }else{endCallClean();toast('Call error');}
+  });
 }
 
 function rejectCall(){
@@ -732,6 +750,7 @@ function endCall(){
 function endCallClean(){
   clearRing();callLock=false;callTarget=null;activeCall=null;incomingCallObj=null;
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+  if(remoteAudio){try{remoteAudio.pause();remoteAudio.srcObject=null;}catch{}remoteAudio=null;}
   isMuted=false;isVideoOn=false;
   const lv=document.getElementById('localVideo');
   const rv=document.getElementById('remoteVideo');
