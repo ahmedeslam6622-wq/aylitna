@@ -1048,7 +1048,7 @@ function buildCard(p,idx){
     ${openCtx===p.id?buildCtxMenu(p):''}
     ${p.video_url
       ?`<div class="post-video-wrap">
-          <video class="post-video" src="${p.video_url}" playsinline preload="metadata"
+          <video class="post-video" src="${p.video_url}" playsinline preload="none"
             onclick="togglePostVideo(this)"></video>
           <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
         </div>`
@@ -1806,11 +1806,24 @@ function renderOnboarding(app){
    ══════════════════════════════════════════════════════ */
 function obChk(){const v=(document.getElementById('obIn')?.value||'').trim();const b=document.getElementById('obBtn');if(b){b.disabled=!v;b.style.opacity=v?'1':'.35'}}
 function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();initPeer();render()}
-function togglePostVideo(video){
+function getVideoUrl(url){
+  if(!url||!url.includes('cloudinary.com'))return url;
+  // Insert quality + format auto transformation for smoother playback
+  return url.replace('/upload/','/upload/q_auto,vc_auto/');
+}
   if(!video||video.tagName!=='VIDEO')return;
   const btn=video.nextElementSibling;
-  if(video.paused){video.play();if(btn)btn.style.display='none';}
-  else{video.pause();if(btn)btn.style.display='flex';}
+  if(video.paused){
+    video.play();
+    if(btn)btn.style.display='none';
+    // Show buffering indicator if stalling
+    video.onwaiting=()=>{if(btn){btn.style.display='flex';btn.textContent='⏳';}};
+    video.onplaying=()=>{if(btn)btn.style.display='none';};
+    video.onended=()=>{if(btn){btn.style.display='flex';btn.textContent='▶';}};
+  }else{
+    video.pause();
+    if(btn){btn.style.display='flex';btn.textContent='▶';}
+  }
 }
 function goView(v){view=v;openCtx=null;if(v==='add'){draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
 function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
