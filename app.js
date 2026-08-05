@@ -624,6 +624,10 @@ async function startCall(targetName,withVideo=false){
   localStream=stream;
   callTarget=targetName;
   isVideoOn=withVideo;
+
+  // Ensure all tracks are enabled
+  localStream.getTracks().forEach(t=>{t.enabled=true;});
+
   setCallUI('outgoing');
   clearRing();
   ringTimer=setInterval(()=>playSound('ring'),3000);
@@ -669,6 +673,9 @@ async function acceptCall(){
   incomingCallObj=null;
   callLock=false;
 
+  // Ensure all tracks are enabled
+  localStream.getTracks().forEach(t=>{t.enabled=true;});
+
   const lv=document.getElementById('localVideo');
   if(lv){lv.srcObject=localStream;lv.muted=true;if(isVideoOn)lv.classList.add('show');}
 
@@ -685,7 +692,19 @@ async function acceptCall(){
 function wireCall(call){
   call.on('stream',remote=>{
     const rv=document.getElementById('remoteVideo');
-    if(rv){rv.srcObject=remote;rv.muted=false;rv.play?.().catch(()=>{});}
+    if(rv){
+      rv.srcObject=remote;
+      rv.muted=false; // never mute remote audio
+      rv.volume=1;
+      // iOS requires play() to be called explicitly after a user gesture
+      // acceptCall/startCall are user gestures so this should work
+      const playPromise=rv.play();
+      if(playPromise)playPromise.catch(()=>{
+        // If autoplay blocked, add a tap-to-unmute button
+        toast('🔊 Tap screen to enable audio',3000);
+        document.addEventListener('touchend',()=>rv.play().catch(()=>{}),{once:true});
+      });
+    }
     document.getElementById('callStatus').textContent='Connected ✓';
     clearRing();
   });
