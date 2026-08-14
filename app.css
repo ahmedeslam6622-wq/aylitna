@@ -31,7 +31,8 @@
    ══════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;height:100dvh;margin:0;padding:0;overflow:hidden;background:var(--bg);font-family:var(--font-b);color:var(--txt);font-size:var(--fs)}
-#app{height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative;max-width:540px;margin:0 auto;background:var(--bg);transition:background var(--tr),color var(--tr);padding:0 3px}
+#app{height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;max-width:540px;margin:0 auto;background:var(--bg);transition:background var(--tr),color var(--tr);padding:0 3px}
+
 img{display:block;max-width:100%}
 button{cursor:pointer;font-family:var(--font-b);-webkit-tap-highlight-color:transparent}
 input,textarea,select{font-family:var(--font-b)}
