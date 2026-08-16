@@ -593,13 +593,20 @@ function roomNameFor(a,b){
 /* ---- Supabase signaling channel: a lightweight `calls` table ----
    Row shape: {id, from_name, to_name, room, status, video, created_at}
    status: 'ringing' -> 'accepted' -> 'ended' (or 'declined' / 'busy' / 'missed') */
+let callResubTimer=null;
 function subscribeCallSignaling(){
   if(!USE_SB||!myName)return;
   if(callChannel){try{sb.removeChannel(callChannel)}catch{}}
-  callChannel=sb.channel('calls-'+myName).on('postgres_changes',
+  callChannel=sb.channel('calls-'+myName+'-'+Date.now()).on('postgres_changes',
     {event:'*',schema:'public',table:'calls'},
     payload=>{dlog('[calls] signal:',payload.eventType,payload.new||payload.old);handleCallSignal(payload);}
-  ).subscribe(status=>dlog('[calls] channel status:',status));
+  ).subscribe(status=>{
+    dlog('[calls] channel status:',status);
+    if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+      clearTimeout(callResubTimer);
+      callResubTimer=setTimeout(()=>{dlog('[calls] resubscribing…');subscribeCallSignaling();},1500);
+    }
+  });
 }
 function handleCallSignal(payload){
   const row=payload.new||payload.old;
@@ -712,18 +719,26 @@ async function joinJitsiRoom(){
   callState='active';
   setCallStatus('Connecting…');
   showActiveControls();
-  try{ await loadJitsiScript(); }
-  catch{ toast('❌ Could not load calling service');resetCall();return; }
+  dlog('[jitsi] loading external_api.js…');
+  try{ await loadJitsiScript(); dlog('[jitsi] script loaded OK'); }
+  catch(e){ dlog('[jitsi] SCRIPT LOAD FAILED:',e?.message||e); toast('❌ Could not load calling service');resetCall();return; }
 
   const holder=document.getElementById('jitsiHolder');
-  if(!holder){resetCall();return;}
+  if(!holder){dlog('[jitsi] ERROR: no #jitsiHolder in DOM');resetCall();return;}
   holder.innerHTML='';
+  // Jitsi's constructor computes iframe size at creation time and does not
+  // reliably handle percentage width/height in every browser — give it the
+  // real, current pixel size of the viewport instead so it never lands on
+  // a 0x0 or NaN iframe (which loads but never actually joins media).
+  const vw=Math.max(holder.clientWidth||0,window.innerWidth||360);
+  const vh=Math.max(holder.clientHeight||0,window.innerHeight||640);
 
+  dlog('[jitsi] creating iframe, room:',callRoom,'size:',vw+'x'+vh);
   jitsiApi=new JitsiMeetExternalAPI(JITSI_DOMAIN,{
     roomName:callRoom,
     parentNode:holder,
-    width:'100%',
-    height:'100%',
+    width:vw,
+    height:vh,
     userInfo:{displayName:myName},
     configOverwrite:{
       prejoinConfig:{enabled:false},
@@ -745,17 +760,19 @@ async function joinJitsiRoom(){
       HIDE_INVITE_MORE_HEADER:true,
     }
   });
+  dlog('[jitsi] iframe object created, waiting for events…');
 
   jitsiApi.addListener('videoConferenceJoined',()=>{
+    dlog('[jitsi] videoConferenceJoined — CONNECTED');
     setCallStatus('Connected');
     stopRing();
     // reflect requested initial audio/video state via our own buttons
     if(isMuted)jitsiApi.executeCommand('toggleAudio');
   });
-  jitsiApi.addListener('participantJoined',()=>{setCallStatus('Connected');});
-  jitsiApi.addListener('participantLeft',()=>{toast('Call ended');resetCall();});
-  jitsiApi.addListener('videoConferenceLeft',()=>{if(callState!=='idle')resetCall();});
-  jitsiApi.addListener('readyToClose',()=>{if(callState!=='idle')resetCall();});
+  jitsiApi.addListener('participantJoined',()=>{dlog('[jitsi] participantJoined');setCallStatus('Connected');});
+  jitsiApi.addListener('participantLeft',()=>{dlog('[jitsi] participantLeft');toast('Call ended');resetCall();});
+  jitsiApi.addListener('videoConferenceLeft',()=>{dlog('[jitsi] videoConferenceLeft');if(callState!=='idle')resetCall();});
+  jitsiApi.addListener('readyToClose',()=>{dlog('[jitsi] readyToClose');if(callState!=='idle')resetCall();});
   jitsiApi.addListener('audioMuteStatusChanged',e=>{
     isMuted=e.muted;
     const b=document.getElementById('muteBtn');
@@ -768,6 +785,7 @@ async function joinJitsiRoom(){
     holder.classList.toggle('video-on',isVideoOn);
   });
   jitsiApi.addListener('errorOccurred',e=>{
+    dlog('[jitsi] errorOccurred:',e?.name||'?',e?.message||'',e?.isFatal?'(FATAL)':'(non-fatal)');
     if(e?.isFatal){toast('Call error — connection lost');resetCall();}
   });
 
