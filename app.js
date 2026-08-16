@@ -610,15 +610,26 @@ async function startCall(targetName,withVideo=false){
 
   let stream;
   try{
+    // ALWAYS request audio+video so both peers have matching track counts
+    // (PeerJS issue #1035: mismatched tracks break stream negotiation).
+    // For an audio call we disable the video track after capture.
     stream=await navigator.mediaDevices.getUserMedia({
       audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
-      video:withVideo?{facingMode:'user'}:false
+      video:{facingMode:'user'}
     });
+    if(!withVideo){
+      // audio call — disable (but keep) the video track so track count matches
+      stream.getVideoTracks().forEach(t=>{t.enabled=false;});
+    }
   }catch(e){
-    callLock=false;
-    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')showMicGuide();
-    else toast('❌ Could not access microphone: '+e.message);
-    return;
+    // Fallback: if no camera, try audio-only
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
+    catch(e2){
+      callLock=false;
+      if(e2.name==='NotAllowedError'||e2.name==='PermissionDeniedError')showMicGuide();
+      else toast('❌ Could not access microphone: '+e2.message);
+      return;
+    }
   }
 
   localStream=stream;
@@ -659,13 +670,17 @@ async function acceptCall(){
   try{
     stream=await navigator.mediaDevices.getUserMedia({
       audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
-      video:isVideoOn?{facingMode:'user'}:false
+      video:{facingMode:'user'}
     });
+    if(!isVideoOn){stream.getVideoTracks().forEach(t=>{t.enabled=false;});}
   }catch(e){
-    callLock=false;
-    if(e.name==='NotAllowedError')showMicGuide();
-    else toast('❌ Could not access microphone');
-    rejectCall();return;
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
+    catch(e2){
+      callLock=false;
+      if(e2.name==='NotAllowedError')showMicGuide();
+      else toast('❌ Could not access microphone');
+      rejectCall();return;
+    }
   }
 
   localStream=stream;
@@ -693,40 +708,50 @@ let remoteAudio=null; // dedicated audio element for remote stream
 
 function wireCall(call){
   call.on('stream',remote=>{
-    // Use a dedicated Audio element for audio — iOS handles this more reliably
-    // than trying to play through a <video> element
+    const audioTracks=remote.getAudioTracks();
+    const videoTracks=remote.getVideoTracks();
+    // Verify we actually received audio
+    if(!audioTracks.length){
+      console.log('WARNING: remote stream has no audio track');
+    }
+    // Play remote audio through dedicated element
     if(!remoteAudio){
-      remoteAudio=new Audio();
+      remoteAudio=document.createElement('audio');
+      remoteAudio.id='remoteAudioEl';
       remoteAudio.autoplay=true;
+      remoteAudio.setAttribute('playsinline','');
+      document.body.appendChild(remoteAudio);
     }
     remoteAudio.srcObject=remote;
     remoteAudio.muted=false;
     remoteAudio.volume=1;
-    remoteAudio.play().catch(()=>{
-      toast('🔊 Tap screen to enable audio',3000);
-      document.addEventListener('touchend',()=>remoteAudio.play().catch(()=>{}),{once:true});
+    const tryPlay=()=>remoteAudio.play().then(()=>{
+      document.getElementById('callStatus').textContent='Connected ✓';
+    }).catch(err=>{
+      console.log('audio play blocked:',err);
+      document.getElementById('callStatus').textContent='Tap to hear audio 🔊';
+      const unlock=()=>{remoteAudio.play().then(()=>{document.getElementById('callStatus').textContent='Connected ✓';}).catch(()=>{});document.removeEventListener('touchend',unlock);document.removeEventListener('click',unlock);};
+      document.addEventListener('touchend',unlock);
+      document.addEventListener('click',unlock);
     });
-    // Also set video element for video calls
+    tryPlay();
+    // Video element for video calls (muted — audio comes from remoteAudio)
     const rv=document.getElementById('remoteVideo');
-    if(rv){rv.srcObject=remote;rv.muted=true;} // mute video element to avoid double audio
-    document.getElementById('callStatus').textContent='Connected ✓';
+    if(rv&&videoTracks.length){rv.srcObject=remote;rv.muted=true;rv.play?.().catch(()=>{});if(isVideoOn)rv.classList.add('show');}
     clearRing();
   });
   call.on('close',()=>{
     if(activeCall===call){
       document.getElementById('callStatus').textContent='Reconnecting…';
       setTimeout(()=>{
-        if(document.getElementById('callStatus')?.textContent==='Reconnecting…'){
-          playSound('call_end');endCallClean();toast('Call ended');
-        }
+        if(document.getElementById('callStatus')?.textContent==='Reconnecting…'){playSound('call_end');endCallClean();toast('Call ended');}
       },8000);
     }
   });
   call.on('error',err=>{
     console.log('call err',err);
-    if(err.type==='negotiation-failed'||err.type==='connection-failed'){
-      document.getElementById('callStatus').textContent='Connection issue…';
-    }else{endCallClean();toast('Call error');}
+    if(err.type==='negotiation-failed'||err.type==='connection-failed')document.getElementById('callStatus').textContent='Connection issue…';
+    else{endCallClean();toast('Call error');}
   });
 }
 
@@ -750,7 +775,7 @@ function endCall(){
 function endCallClean(){
   clearRing();callLock=false;callTarget=null;activeCall=null;incomingCallObj=null;
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  if(remoteAudio){try{remoteAudio.pause();remoteAudio.srcObject=null;}catch{}remoteAudio=null;}
+  if(remoteAudio){try{remoteAudio.pause();remoteAudio.srcObject=null;remoteAudio.remove();}catch{}remoteAudio=null;}
   isMuted=false;isVideoOn=false;
   const lv=document.getElementById('localVideo');
   const rv=document.getElementById('remoteVideo');
