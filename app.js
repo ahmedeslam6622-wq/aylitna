@@ -150,6 +150,52 @@ function toast(msg,dur=2400,type='default'){
 }
 function vibrate(ms=20){if(navigator.vibrate)navigator.vibrate(ms)}
 
+/* ══════════════════════════════════════════════════════
+   ON-SCREEN DEBUG LOG (temporary — for testing calls on iPhone
+   without a computer/Safari-inspector). Tap the 🐞 button that
+   appears bottom-right, or long-press the app title, to toggle.
+   Safe to delete this whole block once calls are confirmed working.
+   ══════════════════════════════════════════════════════ */
+let dlogLines=[];
+function dlog(...args){
+  const msg=args.map(a=>typeof a==='object'?JSON.stringify(a):String(a)).join(' ');
+  const line=new Date().toLocaleTimeString([],{hour12:false})+'  '+msg;
+  dlogLines.push(line);
+  if(dlogLines.length>60)dlogLines.shift();
+  console.log(...args);
+  const panel=document.getElementById('dlogPanel');
+  if(panel&&panel.classList.contains('show'))renderDlog();
+}
+function renderDlog(){
+  const panel=document.getElementById('dlogPanel');
+  if(!panel)return;
+  panel.textContent=dlogLines.join('\n');
+  panel.scrollTop=panel.scrollHeight;
+}
+function toggleDlog(){
+  const panel=document.getElementById('dlogPanel');
+  if(!panel)return;
+  panel.classList.toggle('show');
+  if(panel.classList.contains('show'))renderDlog();
+}
+function ensureDlogUI(){
+  if(document.getElementById('dlogBtn'))return;
+  const btn=document.createElement('button');
+  btn.id='dlogBtn';btn.textContent='🐞';
+  btn.style.cssText='position:fixed;bottom:calc(var(--nav-h) + 14px);right:14px;width:38px;height:38px;border-radius:50%;background:#1A1208;color:#fff;border:none;font-size:16px;z-index:998;opacity:.55;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+  btn.onclick=toggleDlog;
+  document.body.appendChild(btn);
+  const panel=document.createElement('pre');
+  panel.id='dlogPanel';
+  panel.style.cssText='display:none;position:fixed;left:8px;right:8px;bottom:calc(var(--nav-h) + 60px);max-height:40vh;overflow-y:auto;background:rgba(10,10,10,.94);color:#7CFC7C;font-size:10px;line-height:1.5;padding:10px;border-radius:10px;z-index:997;white-space:pre-wrap;font-family:monospace;-webkit-user-select:text;user-select:text';
+  panel.className='';
+  document.body.appendChild(panel);
+  // toggle via CSS class rather than inline display so renderDlog's check works
+  const style=document.createElement('style');
+  style.textContent='#dlogPanel.show{display:block!important}';
+  document.head.appendChild(style);
+}
+
 /* Sounds — generated via Web Audio API (no external files needed) */
 function playSound(type){
   try{
@@ -552,14 +598,14 @@ function subscribeCallSignaling(){
   if(callChannel){try{sb.removeChannel(callChannel)}catch{}}
   callChannel=sb.channel('calls-'+myName).on('postgres_changes',
     {event:'*',schema:'public',table:'calls'},
-    payload=>handleCallSignal(payload)
-  ).subscribe();
+    payload=>{dlog('[calls] signal:',payload.eventType,payload.new||payload.old);handleCallSignal(payload);}
+  ).subscribe(status=>dlog('[calls] channel status:',status));
 }
 function handleCallSignal(payload){
   const row=payload.new||payload.old;
   if(!row)return;
   // Incoming ring
-  if(payload.eventType==='INSERT'&&row.to_name===myName&&row.status==='ringing'){
+  if(payload.eventType==='INSERT'&&row.to_name.trim().toLowerCase()===myName.trim().toLowerCase()&&row.status==='ringing'){
     if(callState!=='idle'){
       // we're busy — tell caller
       updateCallRow(row.id,{status:'busy'});
@@ -591,12 +637,14 @@ function handleCallSignal(payload){
   }
 }
 async function insertCallRow(toName,room,video){
-  const{data}=await sb.from('calls').insert({from_name:myName,to_name:toName,room,status:'ringing',video}).select().single();
+  const{data,error}=await sb.from('calls').insert({from_name:myName,to_name:toName,room,status:'ringing',video}).select().single();
+  if(error){dlog('[calls] insert failed:',error.message||error);toast('❌ '+(error.message||'Could not reach call server'),3500,'error');return null;}
   return data?.id||null;
 }
 async function updateCallRow(id,fields){
   if(!id)return;
-  await sb.from('calls').update(fields).eq('id',id).catch(()=>{});
+  const{error}=await sb.from('calls').update(fields).eq('id',id);
+  if(error)dlog('[calls] update failed:',error.message||error);
 }
 
 /* ---- Start an outgoing call ---- */
@@ -613,7 +661,9 @@ async function startCall(targetName,withVideo=false){
   showCallScreen('outgoing');
   startRing();
 
+  dlog('[calls] starting call to',targetName,'room:',callRoom);
   callRowId=await insertCallRow(targetName,callRoom,withVideo);
+  dlog('[calls] insert result, row id:',callRowId||'NULL — failed');
   if(!callRowId){toast('❌ Could not start call');resetCall();return;}
 
   noAnswerTimer=setTimeout(()=>{
@@ -834,6 +884,7 @@ async function init(){
 function render(){
   const app=document.getElementById('app');
   if(!myName){renderOnboarding(app);return}
+  ensureDlogUI();
   const newPosts=posts.filter(p=>new Date(p.created_at).getTime()>lastSeen).length;
   const th=ls('ayl_theme','default'),fs=ls('ayl_fs','md');
   const offline=!isOnline?`<div class="offline-banner"><span>📡</span> No internet — some features may not work</div>`:'';
