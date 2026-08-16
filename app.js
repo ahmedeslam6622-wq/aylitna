@@ -530,376 +530,285 @@ function checkBirthdays(){
 
 
 
+
+
 /* ══════════════════════════════════════════════════════
-   CALLS — PeerJS (1-to-1, fully isolated)
+   CALLS — PeerJS (clean single-state-machine rewrite)
+   State: callState is the ONE source of truth.
+     'idle'      — no call
+     'outgoing'  — we called, waiting for answer
+     'incoming'  — someone is calling us
+     'active'    — connected
    ══════════════════════════════════════════════════════ */
-let peer=null, myPeerId=null;
-let activeCall=null, incomingCallObj=null, localStream=null;
-let callTarget=null, isMuted=false, isVideoOn=false;
-let peerReady=false, callLock=false, ringTimer=null;
-let peerRetries=0;
+let peer=null, myPeerId=null, peerReady=false, peerRetries=0;
+let callState='idle';
+let currentCall=null;      // the PeerJS MediaConnection
+let pendingIncoming=null;  // incoming call awaiting accept
+let localStream=null, remoteAudioEl=null;
+let callTarget=null, isVideoOn=false, isMuted=false;
+let ringTimer=null, noAnswerTimer=null;
 
-function peerIdFor(name){
-  return 'aylitna-'+name.trim().toLowerCase().replace(/[^a-z0-9]/g,'-');
-}
+function peerIdFor(name){return 'aylitna-'+name.trim().toLowerCase().replace(/[^a-z0-9]/g,'-');}
 
+/* ---- Peer setup ---- */
 async function initPeer(){
   if(!myName)return;
   if(peer){try{peer.destroy()}catch{}peer=null;}
-  peerReady=false;peerRetries=0;
+  peerReady=false; peerRetries=0;
   const iceServers=await getTurnServers();
   peer=new Peer(peerIdFor(myName),{debug:0,config:{iceServers}});
-  peer.on('open',id=>{peerReady=true;myPeerId=id;});
+  peer.on('open',()=>{peerReady=true;});
   peer.on('error',err=>{
-    if(err.type==='unavailable-id'){
-      if(peerRetries<5){peerRetries++;setTimeout(initPeer,2000);}
-    } else if(err.type==='peer-unavailable'){
-      toast('📵 '+(callTarget||'They')+' is not online — ask them to open the app');
-      endCallClean();
-    } else if(err.type==='network'||err.type==='server-error'||err.type==='disconnected'){
-      peerReady=false;setTimeout(()=>{try{peer.reconnect()}catch{setTimeout(initPeer,2000)}},1000);
-    }
+    if(err.type==='unavailable-id'){ if(peerRetries<5){peerRetries++;setTimeout(initPeer,2000);} }
+    else if(err.type==='peer-unavailable'){ toast('📵 '+(callTarget||'They')+' is offline'); resetCall(); }
+    else if(['network','server-error','disconnected'].includes(err.type)){ peerReady=false; setTimeout(()=>{try{peer.reconnect()}catch{setTimeout(initPeer,2000)}},1000); }
   });
-  peer.on('call',onIncomingCall);
-  peer.on('connection',conn=>conn.on('data',onControlMsg));
+  peer.on('call',handleIncoming);
+  peer.on('connection',conn=>conn.on('data',handleControl));
   peer.on('disconnected',()=>{peerReady=false;try{peer.reconnect()}catch{}});
-  peer.on('close',()=>peerReady=false);
 }
 
-function onControlMsg(msg){
-  if(msg==='decline'){clearRing();toast(`${callTarget||'They'} declined`);endCallClean();}
-  else if(msg==='busy'){clearRing();toast(`${callTarget||'They'} is busy`);endCallClean();}
-  else if(msg==='hangup'){playSound('call_end');endCallClean();toast('Call ended');}
+/* ---- Control messages (decline / busy / hangup) via data channel ---- */
+function handleControl(msg){
+  if(msg==='decline'){toast((callTarget||'They')+' declined');resetCall();}
+  else if(msg==='busy'){toast((callTarget||'They')+' is busy');resetCall();}
+  else if(msg==='hangup'){toast('Call ended');resetCall();}
 }
-
 function sendControl(name,msg){
   if(!peer||!peerReady)return;
-  try{const c=peer.connect(peerIdFor(name));c.on('open',()=>{c.send(msg);setTimeout(()=>{try{c.close()}catch{}},500);});}catch{}
+  try{const c=peer.connect(peerIdFor(name));c.on('open',()=>{c.send(msg);setTimeout(()=>{try{c.close()}catch{}},400);});}catch{}
 }
 
-function onIncomingCall(call){
-  if(activeCall||callLock){
-    // Already in a call — send busy and reject
-    call.close();
-    const caller=call.metadata?.name;
-    if(caller)sendControl(caller,'busy');
-    return;
-  }
-  incomingCallObj=call;
-  callTarget=call.metadata?.name||'Someone';
-  isVideoOn=!!call.metadata?.video;
-  setCallUI('incoming');
-  playSound('ring');
-  clearRing();
-  ringTimer=setInterval(()=>playSound('ring'),3000);
-  // Auto-reject if not answered in 60s
-  setTimeout(()=>{if(incomingCallObj===call){rejectCall();}},60000);
-}
-
-async function startCall(targetName,withVideo=false){
-  if(!requireOnline())return;
-  if(callLock||activeCall){toast('Already in a call');return;}
-  callLock=true;
-
-  // If peer not ready, wait up to 5s
-  if(!peer||!peerReady){
-    initPeer();
-    const waited=await waitFor(()=>peerReady,5000);
-    if(!waited){callLock=false;toast('Not connected yet — try again');return;}
-  }
-
-  let stream;
+/* ---- Media capture: ALWAYS audio+video, disable video track for voice calls
+        so both peers have matching track counts (PeerJS #1035 fix). ---- */
+async function getMedia(withVideo){
+  let s;
   try{
-    // ALWAYS request audio+video so both peers have matching track counts
-    // (PeerJS issue #1035: mismatched tracks break stream negotiation).
-    // For an audio call we disable the video track after capture.
-    stream=await navigator.mediaDevices.getUserMedia({
+    s=await navigator.mediaDevices.getUserMedia({
       audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
       video:{facingMode:'user'}
     });
-    if(!withVideo){
-      // audio call — disable (but keep) the video track so track count matches
-      stream.getVideoTracks().forEach(t=>{t.enabled=false;});
-    }
+    if(!withVideo)s.getVideoTracks().forEach(t=>t.enabled=false);
+    return s;
   }catch(e){
-    // Fallback: if no camera, try audio-only
-    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
+    // no camera → audio only
+    try{return await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
     catch(e2){
-      callLock=false;
       if(e2.name==='NotAllowedError'||e2.name==='PermissionDeniedError')showMicGuide();
-      else toast('❌ Could not access microphone: '+e2.message);
-      return;
+      else toast('❌ Microphone unavailable');
+      return null;
     }
   }
+}
 
-  localStream=stream;
+/* ---- Start an outgoing call ---- */
+async function startCall(targetName,withVideo=false){
+  if(!requireOnline())return;
+  if(callState!=='idle'){toast('You are already in a call');return;}
+  if(!peer||!peerReady){toast('⏳ Connecting… try again in a moment');initPeer();return;}
+
+  callState='outgoing';
   callTarget=targetName;
   isVideoOn=withVideo;
 
-  // Ensure all tracks are enabled
-  localStream.getTracks().forEach(t=>{t.enabled=true;});
+  const stream=await getMedia(withVideo);
+  if(!stream){resetCall();return;}
+  localStream=stream;
 
-  setCallUI('outgoing');
-  clearRing();
-  ringTimer=setInterval(()=>playSound('ring'),3000);
-  playSound('ring');
+  showCallScreen('outgoing');
+  startRing();
 
-  // Attach own video muted (no echo)
-  const lv=document.getElementById('localVideo');
-  if(lv){lv.srcObject=localStream;lv.muted=true;if(withVideo)lv.classList.add('show');}
+  attachLocalVideo();
 
   const call=peer.call(peerIdFor(targetName),localStream,{metadata:{name:myName,video:withVideo}});
-  if(!call){callLock=false;toast('❌ Call failed');endCallClean();return;}
-  activeCall=call;
-  callLock=false;
+  if(!call){toast('❌ Call failed');resetCall();return;}
+  currentCall=call;
+  wireStream(call);
 
-  wireCall(call);
-
-  // No-answer timeout
-  setTimeout(()=>{
-    if(activeCall===call){toast(targetName+' did not answer');endCallClean();}
+  noAnswerTimer=setTimeout(()=>{
+    if(callState==='outgoing'){toast(targetName+' did not answer');hangup();}
   },30000);
 }
 
-async function acceptCall(){
-  if(!incomingCallObj)return;
-  clearRing();
-  callLock=true;
-
-  let stream;
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({
-      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
-      video:{facingMode:'user'}
-    });
-    if(!isVideoOn){stream.getVideoTracks().forEach(t=>{t.enabled=false;});}
-  }catch(e){
-    try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
-    catch(e2){
-      callLock=false;
-      if(e2.name==='NotAllowedError')showMicGuide();
-      else toast('❌ Could not access microphone');
-      rejectCall();return;
-    }
+/* ---- Handle an incoming call ---- */
+function handleIncoming(call){
+  // Isolation: reject if we're not idle
+  if(callState!=='idle'){
+    call.close();
+    if(call.metadata?.name)sendControl(call.metadata.name,'busy');
+    return;
   }
-
-  localStream=stream;
-  activeCall=incomingCallObj;
-  incomingCallObj=null;
-  callLock=false;
-
-  // Ensure all tracks are enabled
-  localStream.getTracks().forEach(t=>{t.enabled=true;});
-
-  const lv=document.getElementById('localVideo');
-  if(lv){lv.srcObject=localStream;lv.muted=true;if(isVideoOn)lv.classList.add('show');}
-
-  // Wire BEFORE answer so stream event isn't missed
-  wireCall(activeCall);
-  activeCall.answer(localStream);
-
-  document.getElementById('callStatus').textContent='Connecting…';
-  document.getElementById('callControls').style.display='flex';
-  document.getElementById('callIncomingBtns').style.display='none';
-  playSound('receive');
+  callState='incoming';
+  pendingIncoming=call;
+  callTarget=call.metadata?.name||'Someone';
+  isVideoOn=!!call.metadata?.video;
+  showCallScreen('incoming');
+  startRing();
+  noAnswerTimer=setTimeout(()=>{if(callState==='incoming')declineCall();},45000);
 }
 
-let remoteAudio=null; // dedicated audio element for remote stream
+/* ---- Accept incoming ---- */
+async function acceptCall(){
+  if(callState!=='incoming'||!pendingIncoming)return;
+  stopRing();clearTimeout(noAnswerTimer);
 
-function wireCall(call){
+  const stream=await getMedia(isVideoOn);
+  if(!stream){declineCall();return;}
+  localStream=stream;
+
+  const call=pendingIncoming;
+  pendingIncoming=null;
+  currentCall=call;
+  callState='active';
+
+  attachLocalVideo();
+  wireStream(call);          // attach BEFORE answer so we don't miss the stream
+  call.answer(localStream);
+
+  setCallStatus('Connected');
+  showActiveControls();
+}
+
+/* ---- Decline incoming ---- */
+function declineCall(){
+  if(callTarget)sendControl(callTarget,'decline');
+  resetCall();
+}
+
+/* ---- Hang up an active/outgoing call ---- */
+function hangup(){
+  if(callTarget)sendControl(callTarget,'hangup');
+  resetCall();
+}
+
+/* ---- Wire the remote stream → audio element ---- */
+function wireStream(call){
   call.on('stream',remote=>{
-    const audioTracks=remote.getAudioTracks();
-    const videoTracks=remote.getVideoTracks();
-    // Verify we actually received audio
-    if(!audioTracks.length){
-      console.log('WARNING: remote stream has no audio track');
+    callState='active';
+    // remote audio through a real DOM <audio> element
+    if(!remoteAudioEl){
+      remoteAudioEl=document.createElement('audio');
+      remoteAudioEl.autoplay=true;
+      remoteAudioEl.setAttribute('playsinline','');
+      document.body.appendChild(remoteAudioEl);
     }
-    // Play remote audio through dedicated element
-    if(!remoteAudio){
-      remoteAudio=document.createElement('audio');
-      remoteAudio.id='remoteAudioEl';
-      remoteAudio.autoplay=true;
-      remoteAudio.setAttribute('playsinline','');
-      document.body.appendChild(remoteAudio);
-    }
-    remoteAudio.srcObject=remote;
-    remoteAudio.muted=false;
-    remoteAudio.volume=1;
-    const tryPlay=()=>remoteAudio.play().then(()=>{
-      document.getElementById('callStatus').textContent='Connected ✓';
-    }).catch(err=>{
-      console.log('audio play blocked:',err);
-      document.getElementById('callStatus').textContent='Tap to hear audio 🔊';
-      const unlock=()=>{remoteAudio.play().then(()=>{document.getElementById('callStatus').textContent='Connected ✓';}).catch(()=>{});document.removeEventListener('touchend',unlock);document.removeEventListener('click',unlock);};
+    remoteAudioEl.srcObject=remote;
+    remoteAudioEl.muted=false;
+    remoteAudioEl.volume=1;
+    remoteAudioEl.play().then(()=>setCallStatus('Connected')).catch(()=>{
+      setCallStatus('Tap to hear 🔊');
+      const unlock=()=>{remoteAudioEl.play().then(()=>setCallStatus('Connected')).catch(()=>{});cleanupUnlock();};
+      const cleanupUnlock=()=>{document.removeEventListener('touchend',unlock);document.removeEventListener('click',unlock);};
       document.addEventListener('touchend',unlock);
       document.addEventListener('click',unlock);
     });
-    tryPlay();
-    // Video element for video calls (muted — audio comes from remoteAudio)
+    // remote video (muted — audio plays via remoteAudioEl)
     const rv=document.getElementById('remoteVideo');
-    if(rv&&videoTracks.length){rv.srcObject=remote;rv.muted=true;rv.play?.().catch(()=>{});if(isVideoOn)rv.classList.add('show');}
-    clearRing();
+    if(rv&&remote.getVideoTracks().length){rv.srcObject=remote;rv.muted=true;rv.play?.().catch(()=>{});if(isVideoOn)rv.classList.add('show');}
+    stopRing();
+    showActiveControls();
   });
-  call.on('close',()=>{
-    if(activeCall===call){
-      document.getElementById('callStatus').textContent='Reconnecting…';
-      setTimeout(()=>{
-        if(document.getElementById('callStatus')?.textContent==='Reconnecting…'){playSound('call_end');endCallClean();toast('Call ended');}
-      },8000);
-    }
-  });
-  call.on('error',err=>{
-    console.log('call err',err);
-    if(err.type==='negotiation-failed'||err.type==='connection-failed')document.getElementById('callStatus').textContent='Connection issue…';
-    else{endCallClean();toast('Call error');}
-  });
+  call.on('close',()=>{ if(callState!=='idle'){toast('Call ended');resetCall();} });
+  call.on('error',()=>{ toast('Call error');resetCall(); });
 }
 
-function rejectCall(){
-  clearRing();
-  const who=callTarget;
-  if(incomingCallObj){try{incomingCallObj.close()}catch{};incomingCallObj=null;}
-  if(who)sendControl(who,'decline');
-  endCallClean();
-}
-
-function endCall(){
-  clearRing();
-  const who=callTarget;
-  if(activeCall){try{activeCall.close()}catch{};activeCall=null;}
-  if(who)sendControl(who,'hangup');
-  playSound('call_end');
-  endCallClean();
-}
-
-function endCallClean(){
-  clearRing();callLock=false;callTarget=null;activeCall=null;incomingCallObj=null;
+/* ---- The ONE reset. Clears everything, always returns to idle. ---- */
+function resetCall(){
+  stopRing();
+  clearTimeout(noAnswerTimer);noAnswerTimer=null;
+  if(currentCall){try{currentCall.close()}catch{}}
+  if(pendingIncoming){try{pendingIncoming.close()}catch{}}
+  currentCall=null;pendingIncoming=null;
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  if(remoteAudio){try{remoteAudio.pause();remoteAudio.srcObject=null;remoteAudio.remove();}catch{}remoteAudio=null;}
-  isMuted=false;isVideoOn=false;
+  if(remoteAudioEl){try{remoteAudioEl.pause();remoteAudioEl.srcObject=null;remoteAudioEl.remove();}catch{}remoteAudioEl=null;}
+  callState='idle';callTarget=null;isVideoOn=false;isMuted=false;
+  hideCallScreen();
+}
+
+/* ---- Ring helpers ---- */
+function startRing(){stopRing();playSound('ring');ringTimer=setInterval(()=>playSound('ring'),3000);}
+function stopRing(){clearInterval(ringTimer);ringTimer=null;}
+
+/* ---- Local video attach ---- */
+function attachLocalVideo(){
   const lv=document.getElementById('localVideo');
-  const rv=document.getElementById('remoteVideo');
-  if(lv){lv.srcObject=null;lv.classList.remove('show');}
-  if(rv){rv.srcObject=null;rv.classList.remove('show');}
-  hideCallUI();
+  if(lv&&localStream){lv.srcObject=localStream;lv.muted=true;if(isVideoOn)lv.classList.add('show');else lv.classList.remove('show');}
 }
 
-function clearRing(){clearInterval(ringTimer);ringTimer=null;}
-
-// Wait for a condition to be true, polling every 100ms up to maxMs
-function waitFor(cond,maxMs=5000){
-  return new Promise(res=>{
-    const t=Date.now();
-    const iv=setInterval(()=>{if(cond()){clearInterval(iv);res(true);}else if(Date.now()-t>maxMs){clearInterval(iv);res(false);}},100);
-  });
-}
-
-function setCallUI(direction){
-  const el=document.getElementById('callOverlay');
-  if(!el)return;
-  el.style.display='flex';
-  // Only rebuild content if not already showing (prevents flicker on double-tap)
-  if(el.className!=='call-overlay show'){
-    el.className='call-overlay show';
-    const inner=el.querySelector('.call-inner');
-    if(inner)inner.innerHTML=`
-      <div class="call-av" id="callAv"></div>
-      <div class="call-name" id="callName"></div>
-      <div class="call-status" id="callStatus"></div>
-      <video class="call-video-remote" id="remoteVideo" autoplay playsinline></video>
-      <video class="call-video-local" id="localVideo" autoplay playsinline muted></video>
-      <div class="call-controls" id="callControls" style="display:none">
-        <button class="call-btn call-btn-end" onclick="endCall()">📵</button>
-        <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()">🎙️</button>
-        <button class="call-btn call-btn-speaker active" id="speakerBtn" onclick="toggleSpeaker()">🔊</button>
-        <button class="call-btn call-btn-video" id="videoBtn" onclick="toggleVideo()">📷</button>
-      </div>
-      <div class="call-incoming-btns" id="callIncomingBtns" style="display:none">
-        <div style="text-align:center">
-          <button class="call-btn call-btn-end" onclick="rejectCall()">📵</button>
-          <div class="call-incoming-label">Decline</div>
-        </div>
-        <div style="text-align:center">
-          <button class="call-btn call-btn-accept" onclick="acceptCall()">📞</button>
-          <div class="call-incoming-label">Accept</div>
-        </div>
-      </div>`;
-  } else {
-    el.className='call-overlay show';
-  }
-  const name=callTarget||'';
-  const nameEl=document.getElementById('callName');
-  const statusEl=document.getElementById('callStatus');
-  const av=document.getElementById('callAv');
-  if(nameEl)nameEl.textContent=name;
-  if(statusEl)statusEl.textContent=direction==='incoming'?name+' is calling…':'Calling…';
-  if(av){
-    const prof=profiles[name],c=getC(name)||{bg:'#eee',br:'#ccc',tx:'#333'};
-    if(prof?.photo){av.innerHTML=`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;av.style.background='';}
-    else{av.style.background=c.bg;av.style.borderColor=c.br;av.style.color=c.tx;av.textContent=name[0]?.toUpperCase()||'?';}
-  }
-  document.getElementById('callControls').style.display=direction==='outgoing'?'flex':'none';
-  document.getElementById('callIncomingBtns').style.display=direction==='incoming'?'flex':'none';
-}
-
-function hideCallUI(){
-  const el=document.getElementById('callOverlay');
-  if(el){el.style.display='none';el.className='call-overlay';}
-}
-
+/* ---- In-call controls ---- */
 function toggleMute(){
   isMuted=!isMuted;
   localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted);
   const b=document.getElementById('muteBtn');
   if(b){b.textContent=isMuted?'🔇':'🎙️';b.className='call-btn call-btn-mute'+(isMuted?' active':'');}
 }
-
 function toggleSpeaker(){
-  const rv=document.getElementById('remoteVideo');
-  if(rv)rv.volume=rv.volume>0.5?0.3:1;
+  if(remoteAudioEl)remoteAudioEl.volume=remoteAudioEl.volume>0.5?0.35:1;
   const b=document.getElementById('speakerBtn');
-  if(b)b.className='call-btn call-btn-speaker'+(rv?.volume>0.5?' active':'');
+  if(b)b.className='call-btn call-btn-speaker'+((remoteAudioEl?.volume||1)>0.5?' active':'');
 }
-
 function toggleVideo(){
   isVideoOn=!isVideoOn;
-  if(isVideoOn&&localStream&&!localStream.getVideoTracks().length){
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}).then(vs=>{
-      const track=vs.getVideoTracks()[0];
-      localStream.addTrack(track);
-      try{activeCall?.peerConnection?.addTrack(track,localStream);}catch{}
-      const lv=document.getElementById('localVideo');if(lv){lv.srcObject=localStream;lv.classList.add('show');}
-    }).catch(()=>toast('Could not access camera'));
-  } else {
-    localStream?.getVideoTracks().forEach(t=>t.enabled=isVideoOn);
-    const lv=document.getElementById('localVideo');
-    if(lv){if(isVideoOn)lv.classList.add('show');else lv.classList.remove('show');}
-  }
+  const vids=localStream?.getVideoTracks()||[];
+  if(vids.length){vids.forEach(t=>t.enabled=isVideoOn);attachLocalVideo();}
   const b=document.getElementById('videoBtn');
   if(b)b.className='call-btn call-btn-video'+(isVideoOn?' active':'');
 }
 
-function showMicGuide(){
-  const el=document.getElementById('callOverlay');
-  if(!el)return;
-  el.style.display='flex';el.className='call-overlay show';
+/* ---- UI ---- */
+function showCallScreen(direction){
+  const el=document.getElementById('callOverlay');if(!el)return;
+  el.style.display='flex';
+  el.className='call-overlay show';
   const inner=el.querySelector('.call-inner');
-  if(!inner)return;
-  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
-  const isAndroid=/Android/.test(navigator.userAgent);
-  inner.innerHTML=`
-    <div style="font-size:50px;margin-bottom:16px">🎙️</div>
+  if(inner)inner.innerHTML=`
+    <div class="call-av" id="callAv"></div>
+    <div class="call-name" id="callName"></div>
+    <div class="call-status" id="callStatus"></div>
+    <video class="call-video-remote" id="remoteVideo" autoplay playsinline></video>
+    <video class="call-video-local" id="localVideo" autoplay playsinline muted></video>
+    <div class="call-controls" id="callControls" style="display:${direction==='outgoing'?'flex':'none'}">
+      <button class="call-btn call-btn-end" onclick="hangup()">📵</button>
+      <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()">🎙️</button>
+      <button class="call-btn call-btn-speaker active" id="speakerBtn" onclick="toggleSpeaker()">🔊</button>
+      <button class="call-btn call-btn-video" id="videoBtn" onclick="toggleVideo()">📷</button>
+    </div>
+    <div class="call-incoming-btns" id="callIncomingBtns" style="display:${direction==='incoming'?'flex':'none'}">
+      <div style="text-align:center"><button class="call-btn call-btn-end" onclick="declineCall()">📵</button><div class="call-incoming-label">Decline</div></div>
+      <div style="text-align:center"><button class="call-btn call-btn-accept" onclick="acceptCall()">📞</button><div class="call-incoming-label">Accept</div></div>
+    </div>`;
+  const name=callTarget||'';
+  document.getElementById('callName').textContent=name;
+  setCallStatus(direction==='incoming'?name+' is calling…':'Calling…');
+  const av=document.getElementById('callAv');
+  const prof=profiles[name],c=getC(name)||{bg:'#eee',br:'#ccc',tx:'#333'};
+  if(prof?.photo){av.innerHTML=`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;}
+  else{av.style.background=c.bg;av.style.borderColor=c.br;av.style.color=c.tx;av.textContent=(name[0]||'?').toUpperCase();}
+}
+function showActiveControls(){
+  const c=document.getElementById('callControls'),i=document.getElementById('callIncomingBtns');
+  if(c)c.style.display='flex';
+  if(i)i.style.display='none';
+}
+function setCallStatus(t){const el=document.getElementById('callStatus');if(el)el.textContent=t;}
+function hideCallScreen(){const el=document.getElementById('callOverlay');if(el){el.style.display='none';el.className='call-overlay';}}
+
+function showMicGuide(){
+  const el=document.getElementById('callOverlay');if(!el)return;
+  el.style.display='flex';el.className='call-overlay show';
+  const inner=el.querySelector('.call-inner');if(!inner)return;
+  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),isAndroid=/Android/.test(navigator.userAgent);
+  inner.innerHTML=`<div style="font-size:50px;margin-bottom:16px">🎙️</div>
     <div style="font-family:var(--font-d);font-size:22px;font-weight:700;color:#fff;margin-bottom:12px">Microphone blocked</div>
     <div style="color:rgba(255,255,255,.7);font-size:14px;text-align:center;line-height:1.7;max-width:280px;margin-bottom:28px">
-      ${isIOS
-        ?'Go to <strong style="color:#fff">Settings → Safari → Microphone</strong> and set to Allow, then try calling again.'
-        :isAndroid
-        ?'Tap the <strong style="color:#fff">🔒 lock icon</strong> in Chrome\'s address bar → Permissions → Microphone → Allow.'
-        :'Click the <strong style="color:#fff">🔒 lock</strong> in the address bar → Site settings → Microphone → Allow.'}
+      ${isIOS?'Go to <strong style="color:#fff">Settings → Safari → Microphone</strong> → Allow.':isAndroid?'Tap the <strong style="color:#fff">🔒 icon</strong> in the address bar → Permissions → Microphone → Allow.':'Click the <strong style="color:#fff">🔒 lock</strong> → Site settings → Microphone → Allow.'}
     </div>
-    <button onclick="hideCallUI()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;font-family:var(--font-b)">Close</button>`;
+    <button onclick="hideCallScreen()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;font-family:var(--font-b)">Close</button>`;
 }
 
+/* Aliases for any legacy onclick handlers in static HTML */
+function endCall(){hangup();}
+function rejectCall(){declineCall();}
 
 /* ══════════════════════════════════════════════════════
    INIT
