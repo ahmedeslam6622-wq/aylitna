@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="عيلتنا">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff" id="themeColorMeta">
 <title>عيلتنا · Our Family</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
@@ -15,11 +15,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 <div id="app"></div>
-
 <!-- Overlays -->
 <div class="uploading-overlay" id="uploading">
   <div class="spinner"></div>
@@ -27,41 +25,18 @@
   <div class="uploading-sub">Just a moment</div>
 </div>
 <div class="toast" id="toast"></div>
-
-<!-- Call overlay -->
+<!-- Call overlay: inner content is rebuilt by app.js (showCallScreen) so it
+     can insert the Jitsi holder div dynamically. Left empty here on purpose. -->
 <div class="call-overlay" id="callOverlay">
   <div class="call-bg" id="callBg"></div>
-  <div class="call-inner">
-    <div class="call-av" id="callAv"></div>
-    <div class="call-name" id="callName"></div>
-    <div class="call-status" id="callStatus">Calling…</div>
-    <video class="call-video-remote" id="remoteVideo" autoplay playsinline></video>
-    <video class="call-video-local" id="localVideo" autoplay playsinline muted></video>
-    <div class="call-controls" id="callControls">
-      <button class="call-btn call-btn-end" onclick="endCall()" aria-label="End call">📵</button>
-      <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()" aria-label="Mute">🎙️</button>
-      <button class="call-btn call-btn-speaker" id="speakerBtn" onclick="toggleSpeaker()" aria-label="Speaker">🔊</button>
-      <button class="call-btn call-btn-video" id="videoBtn" onclick="toggleVideo()" aria-label="Camera">📷</button>
-    </div>
-    <div class="call-incoming-btns" id="callIncomingBtns" style="display:none">
-      <button class="call-btn call-btn-accept" onclick="acceptCall()" aria-label="Accept">📞</button>
-      <button class="call-btn call-btn-end" onclick="rejectCall()" aria-label="Reject">📵</button>
-    </div>
-  </div>
+  <div class="call-inner"></div>
 </div>
-
 <!-- File inputs -->
 <input type="file" id="galleryIn" accept="image/*" style="display:none">
 <input type="file" id="cameraIn" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="videoIn" accept="video/*" style="display:none">
 <input type="file" id="commentImgIn" accept="image/*" style="display:none">
 <input type="file" id="profilePicIn" accept="image/*" style="display:none">
-
-<!-- Sounds -->
-<audio id="sndSend" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" preload="auto"></audio>
-<audio id="sndReceive" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" preload="auto"></audio>
-<audio id="sndRing" loop src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" preload="auto"></audio>
-
 <script src="app.js"></script>
 </body>
 </html>
