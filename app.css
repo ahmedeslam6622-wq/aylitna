@@ -4,6 +4,7 @@
 :root {
   --bg:#FAF8F3;--bg2:#F3EFE7;--card:#FFF;--card2:#FDF9F5;
   --pri:#C4622D;--pri2:#E8A87C;--pri-light:#FAECE7;--pri-dark:#A04E22;
+   .call-overlay.show ~ * { }
   --txt:#1A1208;--txt2:#7A6A5A;--txt3:#B8A898;
   --bd:#EAE2D6;--bd2:#DDD4C4;
   --shadow:rgba(196,98,45,.12);--shadow2:rgba(26,18,8,.08);
@@ -385,10 +386,14 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 @keyframes call-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.2)}50%{box-shadow:0 0 0 20px rgba(255,255,255,0)}}
 .call-name{font-family:var(--font-d);font-size:26px;font-weight:700;color:#fff;margin-bottom:6px}
 .call-status{font-size:var(--fs-sm);color:rgba(255,255,255,.6);margin-bottom:auto}
-.call-video-remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;display:none;border-radius:0}
-.call-video-remote.show{display:block}
-.call-video-local{position:absolute;top:calc(80px + env(safe-area-inset-top));right:16px;width:90px;height:130px;object-fit:cover;border-radius:var(--r2);border:2px solid rgba(255,255,255,.3);display:none;z-index:2}
-.call-video-local.show{display:block}
+/* Jitsi iframe sits behind our own avatar/name/controls. In audio-only
+   calls it's invisible (0 size, audio still flows); when video turns on
+   we expand it to fill the call screen behind our overlay buttons. */
+.call-jitsi-holder{position:absolute;inset:0;z-index:0;opacity:0;pointer-events:none;transition:opacity .25s}
+.call-jitsi-holder.video-on{opacity:1;pointer-events:auto}
+.call-jitsi-holder iframe{width:100%!important;height:100%!important;border:none;border-radius:0}
+.call-jitsi-holder.video-on ~ .call-av,
+.call-jitsi-holder.video-on ~ .call-name{opacity:0;pointer-events:none;transition:opacity .2s}
 .call-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:auto;padding-top:30px}
 .call-btn{width:60px;height:60px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:24px;transition:transform .2s,opacity .2s;flex-shrink:0}
 .call-btn:active{transform:scale(.88)}
@@ -509,8 +514,10 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .uploading-overlay.show{display:flex}
 .uploading-txt{font-size:var(--fs);font-weight:800;color:var(--txt)}
 .uploading-sub{font-size:var(--fs-sm);color:var(--txt2)}
-.toast{position:absolute;bottom:calc(var(--nav-h) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--txt);color:#fff;border-radius:30px;padding:10px 20px;font-size:var(--fs-sm);font-weight:700;z-index:90;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .2s,transform .2s;box-shadow:0 4px 16px rgba(0,0,0,.25)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{position:absolute;bottom:calc(var(--nav-h) + 16px);left:50%;transform:translateX(-50%) translateY(24px) scale(.94);background:#1A1208;color:#fff;border-radius:18px;padding:14px 22px;font-size:var(--fs);font-weight:800;z-index:90;opacity:0;pointer-events:none;max-width:88%;width:max-content;text-align:center;line-height:1.4;transition:opacity .25s cubic-bezier(.34,1.4,.64,1),transform .25s cubic-bezier(.34,1.4,.64,1);box-shadow:0 8px 28px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.06)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.toast.toast-error{background:#7A1D1D}
+.toast.toast-success{background:#1A5C33}
 .new-post-banner{position:sticky;top:10px;display:flex;justify-content:center;z-index:25;pointer-events:none;padding:0 16px;margin-bottom:4px}
 .new-post-pill{background:var(--pri);color:#fff;border-radius:30px;padding:10px 22px;font-size:var(--fs-sm);font-weight:800;box-shadow:0 4px 16px var(--shadow);pointer-events:all;border:none;font-family:var(--font-b);animation:slide-down .3s cubic-bezier(.34,1.2,.64,1)}
 
