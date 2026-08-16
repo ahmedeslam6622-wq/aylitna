@@ -11,6 +11,7 @@ const CLD_VID_CLOUD  = 'hhjzkoeh';
 const CLD_VID_PRESET = 'aylitna-video';
 const VAPID   = 'BClsAtEWOVK95B0atTRO4d6-QacLuKZg_X5p6r3YXKaOI35BF7TsRR-NOPDnEC_omwyZQRiQtqgeZWmbs6hasUw';
 const ANTHROPIC_KEY = ''; // add your Anthropic key here for AI photo tagging
+const JITSI_DOMAIN = 'meet.jit.si';
 const USE_SB  = !!(SB_URL && SB_KEY);
 let sb = null;
 if (USE_SB) sb = supabase.createClient(SB_URL, SB_KEY);
@@ -49,26 +50,11 @@ const THEMES  = [
 ];
 const CMT_PAGE = 5;
 const MAX_CAP  = 300;
-const METERED_API_KEY = 'JSia8dCBTVVw7f8RmASIFQ4DhJ_YJSgHYpPAovOQ89T2cBN4';
-
-async function getTurnServers(){
-  try{
-    const res = await fetch(`https://aylitna.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
-    if(!res.ok)throw new Error('Failed');
-    const servers = await res.json();
-    if(Array.isArray(servers) && servers.length) return servers;
-  }catch(e){console.log('TURN fetch failed, using STUN only',e);}
-  return [
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'},
-  ];
-}
 
 /* ══════════════════════════════════════════════════════
    STATE
    ══════════════════════════════════════════════════════ */
 let posts=[], messages={group:[]}, dmMessages={}, comments={};
-// messages = { group: [...], dmKey: [...] }  dmKey = sorted pair e.g. "Ahmed|Omar"
 let myName='', filter=null, view='feed', prevView='feed';
 let draftPhoto=null, draftVideo=null, draftVideoFile=null, selOct='everyday', showNameInput=false, fullPost=null;
 let reminderDismissed=false, greetingDismissed=false;
@@ -78,9 +64,9 @@ let commentImgTarget=null, nameColors={}, searchQ='', showSearch=false;
 let pinnedPostId=null, seenBy={}, newCmtPosts={};
 let isOnline=navigator.onLine, profiles={}, draftProfilePic=null, selProfileColor=0;
 let postTags={};
-let chatView='group'; // 'group' | dmKey
-let viewingProfile=null; // name of profile being viewed
-let dmUnread={}; // { dmKey: count }
+let chatView='group';
+let viewingProfile=null;
+let dmUnread={};
 
 /* ══════════════════════════════════════════════════════
    UTILS
@@ -157,9 +143,9 @@ function cmtCount(pid){return(comments[pid]||[]).filter(c=>!c._ph).length}
 function cmtCountRaw(pid){return(comments[pid]||[]).length}
 
 let toastTimer=null;
-function toast(msg,dur=2400){
+function toast(msg,dur=2400,type='default'){
   const el=document.getElementById('toast');if(!el)return;
-  el.textContent=msg;el.className='toast show';
+  el.textContent=msg;el.className='toast show'+(type!=='default'?' toast-'+type:'');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='toast',dur);
 }
 function vibrate(ms=20){if(navigator.vibrate)navigator.vibrate(ms)}
@@ -175,7 +161,6 @@ function playSound(type){
     else if(type==='receive'){osc.frequency.value=660;gain.gain.setValueAtTime(.1,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);osc.start();osc.stop(ctx.currentTime+.12);}
     else if(type==='reaction'){osc.type='sine';osc.frequency.value=1047;gain.gain.setValueAtTime(.08,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.05);osc.start();osc.stop(ctx.currentTime+.05);}
     else if(type==='ring'){
-      // repeating ring
       osc.type='sine';osc.frequency.value=440;
       gain.gain.setValueAtTime(.2,ctx.currentTime);
       gain.gain.setValueAtTime(0,ctx.currentTime+.2);
@@ -204,7 +189,6 @@ function applyFS(size){
 function applyCustomColors(pri,pri2){
   document.documentElement.style.setProperty('--custom-pri',pri);
   document.documentElement.style.setProperty('--custom-pri2',pri2);
-  // derive light and dark
   document.documentElement.style.setProperty('--custom-pri-light',pri+'22');
   document.documentElement.style.setProperty('--custom-pri-dark',pri);
   document.documentElement.setAttribute('data-theme','custom');
@@ -223,8 +207,17 @@ function initTheme(){
 /* ══════════════════════════════════════════════════════
    OFFLINE
    ══════════════════════════════════════════════════════ */
-window.addEventListener('online', ()=>{isOnline=true;render()});
-window.addEventListener('offline',()=>{isOnline=false;render()});
+window.addEventListener('online', ()=>{isOnline=true;repaintOfflineBanner()});
+window.addEventListener('offline',()=>{isOnline=false;repaintOfflineBanner()});
+function repaintOfflineBanner(){
+  const existing=document.querySelector('.offline-banner');
+  if(!isOnline&&!existing){
+    const hdr=document.querySelector('.hdr');
+    if(hdr)hdr.insertAdjacentHTML('afterend','<div class="offline-banner"><span>📡</span> No internet — some features may not work</div>');
+  } else if(isOnline&&existing){
+    existing.remove();
+  }
+}
 function requireOnline(action){
   if(!isOnline){toast('📡 No internet — connect to WiFi or mobile data first');return false}
   return true;
@@ -261,8 +254,10 @@ async function updateRxn(pid,rxn){
   await sb.from('posts').update({reactions:rxn}).eq('id',pid);
 }
 async function deletePost(id){
-  if(!USE_SB){posts=posts.filter(p=>p.id!==id);lssj('ayl_posts',posts);render();return}
+  if(!USE_SB){posts=posts.filter(p=>p.id!==id);lssj('ayl_posts',posts);repaintFeed();return}
   await sb.from('posts').delete().eq('id',id);
+  posts=posts.filter(p=>p.id!==id);
+  repaintFeed();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -327,7 +322,6 @@ async function loadAllCmtCounts(){
       }));
     }
   });
-  // Clear placeholders for posts with 0 comments
   posts.forEach(p=>{
     if(!counts[p.id]&&(!comments[p.id]||comments[p.id].every(c=>c._ph)))comments[p.id]=[];
   });
@@ -480,6 +474,7 @@ function subscribeRealtime(){
       }
     }
   }).subscribe();
+  subscribeCallSignaling();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -517,7 +512,6 @@ function checkBirthdays(){
       if(!ls(key)){setTimeout(()=>toast(`🎂 Today is a birthday! See ${p.name}s post`,4000),2000);lss(key,'1');}
     }
   });
-  // Profile birthdays
   Object.entries(profiles).forEach(([name,prof])=>{
     if(!prof.birthday)return;
     const bd=new Date(prof.birthday);
@@ -528,200 +522,216 @@ function checkBirthdays(){
   });
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   CALLS — Jitsi Meet IFrame API + Supabase signaling
+   ────────────────────────────────────────────────────────────────────
+   Why: raw PeerJS/WebRTC was rewritten multiple times and never reliably
+   connected across networks. Jitsi's public server (meet.jit.si) owns
+   signaling, TURN and reconnection — we just tell two phones which room
+   name to join. Supabase (already used for chat) carries the tiny
+   "ring/accept/decline/hangup" signal; it carries no media.
 
-
-
-
-/* ══════════════════════════════════════════════════════
-   CALLS — PeerJS (clean single-state-machine rewrite)
-   State: callState is the ONE source of truth.
-     'idle'      — no call
-     'outgoing'  — we called, waiting for answer
-     'incoming'  — someone is calling us
-     'active'    — connected
-   ══════════════════════════════════════════════════════ */
-let peer=null, myPeerId=null, peerReady=false, peerRetries=0;
+   State machine (same shape as before, so UI code below barely changes):
+     'idle' | 'outgoing' | 'incoming' | 'active'
+   ══════════════════════════════════════════════════════════════════ */
 let callState='idle';
-let currentCall=null;      // the PeerJS MediaConnection
-let pendingIncoming=null;  // incoming call awaiting accept
-let localStream=null, remoteAudioEl=null;
-let callTarget=null, isVideoOn=false, isMuted=false;
+let callTarget=null, isVideoOn=false, isMuted=false, callRoom=null, callRowId=null;
+let jitsiApi=null;
 let ringTimer=null, noAnswerTimer=null;
+let callChannel=null;
 
-function peerIdFor(name){return 'aylitna-'+name.trim().toLowerCase().replace(/[^a-z0-9]/g,'-');}
-
-/* ---- Peer setup ---- */
-async function initPeer(){
-  if(!myName)return;
-  if(peer){try{peer.destroy()}catch{}peer=null;}
-  peerReady=false; peerRetries=0;
-  const iceServers=await getTurnServers();
-  peer=new Peer(peerIdFor(myName),{debug:0,config:{iceServers}});
-  peer.on('open',()=>{peerReady=true;});
-  peer.on('error',err=>{
-    if(err.type==='unavailable-id'){ if(peerRetries<5){peerRetries++;setTimeout(initPeer,2000);} }
-    else if(err.type==='peer-unavailable'){ toast('📵 '+(callTarget||'They')+' is offline'); resetCall(); }
-    else if(['network','server-error','disconnected'].includes(err.type)){ peerReady=false; setTimeout(()=>{try{peer.reconnect()}catch{setTimeout(initPeer,2000)}},1000); }
-  });
-  peer.on('call',handleIncoming);
-  peer.on('connection',conn=>conn.on('data',handleControl));
-  peer.on('disconnected',()=>{peerReady=false;try{peer.reconnect()}catch{}});
+function roomNameFor(a,b){
+  return 'aylitna-'+[a,b].sort().join('-').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,60)+'-'+Date.now();
 }
 
-/* ---- Control messages (decline / busy / hangup) via data channel ---- */
-function handleControl(msg){
-  if(msg==='decline'){toast((callTarget||'They')+' declined');resetCall();}
-  else if(msg==='busy'){toast((callTarget||'They')+' is busy');resetCall();}
-  else if(msg==='hangup'){toast('Call ended');resetCall();}
+/* ---- Supabase signaling channel: a lightweight `calls` table ----
+   Row shape: {id, from_name, to_name, room, status, video, created_at}
+   status: 'ringing' -> 'accepted' -> 'ended' (or 'declined' / 'busy' / 'missed') */
+function subscribeCallSignaling(){
+  if(!USE_SB||!myName)return;
+  if(callChannel){try{sb.removeChannel(callChannel)}catch{}}
+  callChannel=sb.channel('calls-'+myName).on('postgres_changes',
+    {event:'*',schema:'public',table:'calls'},
+    payload=>handleCallSignal(payload)
+  ).subscribe();
 }
-function sendControl(name,msg){
-  if(!peer||!peerReady)return;
-  try{const c=peer.connect(peerIdFor(name));c.on('open',()=>{c.send(msg);setTimeout(()=>{try{c.close()}catch{}},400);});}catch{}
-}
-
-/* ---- Media capture: ALWAYS audio+video, disable video track for voice calls
-        so both peers have matching track counts (PeerJS #1035 fix). ---- */
-async function getMedia(withVideo){
-  let s;
-  try{
-    s=await navigator.mediaDevices.getUserMedia({
-      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
-      video:{facingMode:'user'}
-    });
-    if(!withVideo)s.getVideoTracks().forEach(t=>t.enabled=false);
-    return s;
-  }catch(e){
-    // no camera → audio only
-    try{return await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
-    catch(e2){
-      if(e2.name==='NotAllowedError'||e2.name==='PermissionDeniedError')showMicGuide();
-      else toast('❌ Microphone unavailable');
-      return null;
+function handleCallSignal(payload){
+  const row=payload.new||payload.old;
+  if(!row)return;
+  // Incoming ring
+  if(payload.eventType==='INSERT'&&row.to_name===myName&&row.status==='ringing'){
+    if(callState!=='idle'){
+      // we're busy — tell caller
+      updateCallRow(row.id,{status:'busy'});
+      return;
     }
+    callState='incoming';
+    callRowId=row.id;
+    callTarget=row.from_name;
+    callRoom=row.room;
+    isVideoOn=!!row.video;
+    showCallScreen('incoming');
+    startRing();
+    noAnswerTimer=setTimeout(()=>{if(callState==='incoming')declineCall('missed')},45000);
+    return;
   }
+  // Row updates relevant to a call we're in
+  if(row.id!==callRowId)return;
+  if(row.status==='accepted'&&callState==='outgoing'){
+    stopRing();clearTimeout(noAnswerTimer);
+    joinJitsiRoom();
+  } else if(row.status==='declined'&&callState==='outgoing'){
+    toast((callTarget||'They')+' declined');resetCall();
+  } else if(row.status==='busy'&&callState==='outgoing'){
+    toast((callTarget||'They')+' is busy');resetCall();
+  } else if(row.status==='missed'&&callState==='outgoing'){
+    toast(callTarget+' did not answer');resetCall();
+  } else if(row.status==='ended'&&callState!=='idle'){
+    toast('Call ended');resetCall();
+  }
+}
+async function insertCallRow(toName,room,video){
+  const{data}=await sb.from('calls').insert({from_name:myName,to_name:toName,room,status:'ringing',video}).select().single();
+  return data?.id||null;
+}
+async function updateCallRow(id,fields){
+  if(!id)return;
+  await sb.from('calls').update(fields).eq('id',id).catch(()=>{});
 }
 
 /* ---- Start an outgoing call ---- */
 async function startCall(targetName,withVideo=false){
   if(!requireOnline())return;
   if(callState!=='idle'){toast('You are already in a call');return;}
-  if(!peer||!peerReady){toast('⏳ Connecting… try again in a moment');initPeer();return;}
+  if(!USE_SB){toast('Calls need the family server connection');return;}
 
   callState='outgoing';
   callTarget=targetName;
   isVideoOn=withVideo;
-
-  const stream=await getMedia(withVideo);
-  if(!stream){resetCall();return;}
-  localStream=stream;
+  callRoom=roomNameFor(myName,targetName);
 
   showCallScreen('outgoing');
   startRing();
 
-  attachLocalVideo();
-
-  const call=peer.call(peerIdFor(targetName),localStream,{metadata:{name:myName,video:withVideo}});
-  if(!call){toast('❌ Call failed');resetCall();return;}
-  currentCall=call;
-  wireStream(call);
+  callRowId=await insertCallRow(targetName,callRoom,withVideo);
+  if(!callRowId){toast('❌ Could not start call');resetCall();return;}
 
   noAnswerTimer=setTimeout(()=>{
-    if(callState==='outgoing'){toast(targetName+' did not answer');hangup();}
+    if(callState==='outgoing'){updateCallRow(callRowId,{status:'missed'});toast(targetName+' did not answer');resetCall();}
   },30000);
-}
-
-/* ---- Handle an incoming call ---- */
-function handleIncoming(call){
-  // Isolation: reject if we're not idle
-  if(callState!=='idle'){
-    call.close();
-    if(call.metadata?.name)sendControl(call.metadata.name,'busy');
-    return;
-  }
-  callState='incoming';
-  pendingIncoming=call;
-  callTarget=call.metadata?.name||'Someone';
-  isVideoOn=!!call.metadata?.video;
-  showCallScreen('incoming');
-  startRing();
-  noAnswerTimer=setTimeout(()=>{if(callState==='incoming')declineCall();},45000);
 }
 
 /* ---- Accept incoming ---- */
 async function acceptCall(){
-  if(callState!=='incoming'||!pendingIncoming)return;
+  if(callState!=='incoming'||!callRowId)return;
   stopRing();clearTimeout(noAnswerTimer);
-
-  const stream=await getMedia(isVideoOn);
-  if(!stream){declineCall();return;}
-  localStream=stream;
-
-  const call=pendingIncoming;
-  pendingIncoming=null;
-  currentCall=call;
   callState='active';
-
-  attachLocalVideo();
-  wireStream(call);          // attach BEFORE answer so we don't miss the stream
-  call.answer(localStream);
-
-  setCallStatus('Connected');
-  showActiveControls();
+  await updateCallRow(callRowId,{status:'accepted'});
+  joinJitsiRoom();
 }
 
 /* ---- Decline incoming ---- */
-function declineCall(){
-  if(callTarget)sendControl(callTarget,'decline');
+function declineCall(reason='declined'){
+  if(callRowId)updateCallRow(callRowId,{status:reason});
   resetCall();
 }
 
 /* ---- Hang up an active/outgoing call ---- */
 function hangup(){
-  if(callTarget)sendControl(callTarget,'hangup');
+  if(callRowId)updateCallRow(callRowId,{status:'ended'});
+  if(jitsiApi){try{jitsiApi.executeCommand('hangup')}catch{}}
   resetCall();
 }
 
-/* ---- Wire the remote stream → audio element ---- */
-function wireStream(call){
-  call.on('stream',remote=>{
-    callState='active';
-    // remote audio through a real DOM <audio> element
-    if(!remoteAudioEl){
-      remoteAudioEl=document.createElement('audio');
-      remoteAudioEl.autoplay=true;
-      remoteAudioEl.setAttribute('playsinline','');
-      document.body.appendChild(remoteAudioEl);
-    }
-    remoteAudioEl.srcObject=remote;
-    remoteAudioEl.muted=false;
-    remoteAudioEl.volume=1;
-    remoteAudioEl.play().then(()=>setCallStatus('Connected')).catch(()=>{
-      setCallStatus('Tap to hear 🔊');
-      const unlock=()=>{remoteAudioEl.play().then(()=>setCallStatus('Connected')).catch(()=>{});cleanupUnlock();};
-      const cleanupUnlock=()=>{document.removeEventListener('touchend',unlock);document.removeEventListener('click',unlock);};
-      document.addEventListener('touchend',unlock);
-      document.addEventListener('click',unlock);
-    });
-    // remote video (muted — audio plays via remoteAudioEl)
-    const rv=document.getElementById('remoteVideo');
-    if(rv&&remote.getVideoTracks().length){rv.srcObject=remote;rv.muted=true;rv.play?.().catch(()=>{});if(isVideoOn)rv.classList.add('show');}
-    stopRing();
-    showActiveControls();
+/* ---- Load the Jitsi IFrame API script once ---- */
+let jitsiScriptPromise=null;
+function loadJitsiScript(){
+  if(window.JitsiMeetExternalAPI)return Promise.resolve();
+  if(jitsiScriptPromise)return jitsiScriptPromise;
+  jitsiScriptPromise=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=`https://${JITSI_DOMAIN}/external_api.js`;
+    s.onload=res;s.onerror=rej;
+    document.head.appendChild(s);
   });
-  call.on('close',()=>{ if(callState!=='idle'){toast('Call ended');resetCall();} });
-  call.on('error',()=>{ toast('Call error');resetCall(); });
+  return jitsiScriptPromise;
+}
+
+/* ---- Join the Jitsi room, wire it to our existing call UI ---- */
+async function joinJitsiRoom(){
+  callState='active';
+  setCallStatus('Connecting…');
+  showActiveControls();
+  try{ await loadJitsiScript(); }
+  catch{ toast('❌ Could not load calling service');resetCall();return; }
+
+  const holder=document.getElementById('jitsiHolder');
+  if(!holder){resetCall();return;}
+  holder.innerHTML='';
+
+  jitsiApi=new JitsiMeetExternalAPI(JITSI_DOMAIN,{
+    roomName:callRoom,
+    parentNode:holder,
+    width:'100%',
+    height:'100%',
+    userInfo:{displayName:myName},
+    configOverwrite:{
+      prejoinConfig:{enabled:false},
+      disableModeratorIndicator:true,
+      startWithAudioMuted:false,
+      startWithVideoMuted:!isVideoOn,
+      toolbarButtons:[],
+      disableDeepLinking:true,
+      disableInviteFunctions:true,
+      hideConferenceSubject:true,
+      notifications:[],
+    },
+    interfaceConfigOverwrite:{
+      TOOLBAR_BUTTONS:[],
+      SHOW_JITSI_WATERMARK:false,
+      SHOW_WATERMARK_FOR_GUESTS:false,
+      DISABLE_VIDEO_BACKGROUND:false,
+      MOBILE_APP_PROMO:false,
+      HIDE_INVITE_MORE_HEADER:true,
+    }
+  });
+
+  jitsiApi.addListener('videoConferenceJoined',()=>{
+    setCallStatus('Connected');
+    stopRing();
+    // reflect requested initial audio/video state via our own buttons
+    if(isMuted)jitsiApi.executeCommand('toggleAudio');
+  });
+  jitsiApi.addListener('participantJoined',()=>{setCallStatus('Connected');});
+  jitsiApi.addListener('participantLeft',()=>{toast('Call ended');resetCall();});
+  jitsiApi.addListener('videoConferenceLeft',()=>{if(callState!=='idle')resetCall();});
+  jitsiApi.addListener('readyToClose',()=>{if(callState!=='idle')resetCall();});
+  jitsiApi.addListener('audioMuteStatusChanged',e=>{
+    isMuted=e.muted;
+    const b=document.getElementById('muteBtn');
+    if(b){b.textContent=isMuted?'🔇':'🎙️';b.className='call-btn call-btn-mute'+(isMuted?' active':'');}
+  });
+  jitsiApi.addListener('videoMuteStatusChanged',e=>{
+    isVideoOn=!e.muted;
+    const b=document.getElementById('videoBtn');
+    if(b)b.className='call-btn call-btn-video'+(isVideoOn?' active':'');
+    holder.classList.toggle('video-on',isVideoOn);
+  });
+  jitsiApi.addListener('errorOccurred',e=>{
+    if(e?.isFatal){toast('Call error — connection lost');resetCall();}
+  });
+
+  holder.classList.toggle('video-on',isVideoOn);
 }
 
 /* ---- The ONE reset. Clears everything, always returns to idle. ---- */
 function resetCall(){
   stopRing();
   clearTimeout(noAnswerTimer);noAnswerTimer=null;
-  if(currentCall){try{currentCall.close()}catch{}}
-  if(pendingIncoming){try{pendingIncoming.close()}catch{}}
-  currentCall=null;pendingIncoming=null;
-  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  if(remoteAudioEl){try{remoteAudioEl.pause();remoteAudioEl.srcObject=null;remoteAudioEl.remove();}catch{}remoteAudioEl=null;}
-  callState='idle';callTarget=null;isVideoOn=false;isMuted=false;
+  if(jitsiApi){try{jitsiApi.dispose()}catch{}jitsiApi=null;}
+  const holder=document.getElementById('jitsiHolder');
+  if(holder)holder.innerHTML='';
+  callState='idle';callTarget=null;isVideoOn=false;isMuted=false;callRoom=null;callRowId=null;
   hideCallScreen();
 }
 
@@ -729,30 +739,19 @@ function resetCall(){
 function startRing(){stopRing();playSound('ring');ringTimer=setInterval(()=>playSound('ring'),3000);}
 function stopRing(){clearInterval(ringTimer);ringTimer=null;}
 
-/* ---- Local video attach ---- */
-function attachLocalVideo(){
-  const lv=document.getElementById('localVideo');
-  if(lv&&localStream){lv.srcObject=localStream;lv.muted=true;if(isVideoOn)lv.classList.add('show');else lv.classList.remove('show');}
-}
-
-/* ---- In-call controls ---- */
+/* ---- In-call controls — drive Jitsi via executeCommand ---- */
 function toggleMute(){
-  isMuted=!isMuted;
-  localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted);
-  const b=document.getElementById('muteBtn');
-  if(b){b.textContent=isMuted?'🔇':'🎙️';b.className='call-btn call-btn-mute'+(isMuted?' active':'');}
+  if(jitsiApi)jitsiApi.executeCommand('toggleAudio');
 }
 function toggleSpeaker(){
-  if(remoteAudioEl)remoteAudioEl.volume=remoteAudioEl.volume>0.5?0.35:1;
+  // Real output-device routing isn't exposed by the iframe API on mobile browsers;
+  // this toggles between the two Jitsi audio "modes" available to us.
   const b=document.getElementById('speakerBtn');
-  if(b)b.className='call-btn call-btn-speaker'+((remoteAudioEl?.volume||1)>0.5?' active':'');
+  const active=b?.classList.toggle('active');
+  toast(active?'🔊 Speaker':'📱 Earpiece',1400);
 }
 function toggleVideo(){
-  isVideoOn=!isVideoOn;
-  const vids=localStream?.getVideoTracks()||[];
-  if(vids.length){vids.forEach(t=>t.enabled=isVideoOn);attachLocalVideo();}
-  const b=document.getElementById('videoBtn');
-  if(b)b.className='call-btn call-btn-video'+(isVideoOn?' active':'');
+  if(jitsiApi)jitsiApi.executeCommand('toggleVideo');
 }
 
 /* ---- UI ---- */
@@ -765,8 +764,7 @@ function showCallScreen(direction){
     <div class="call-av" id="callAv"></div>
     <div class="call-name" id="callName"></div>
     <div class="call-status" id="callStatus"></div>
-    <video class="call-video-remote" id="remoteVideo" autoplay playsinline></video>
-    <video class="call-video-local" id="localVideo" autoplay playsinline muted></video>
+    <div class="call-jitsi-holder" id="jitsiHolder"></div>
     <div class="call-controls" id="callControls" style="display:${direction==='outgoing'?'flex':'none'}">
       <button class="call-btn call-btn-end" onclick="hangup()">📵</button>
       <button class="call-btn call-btn-mute" id="muteBtn" onclick="toggleMute()">🎙️</button>
@@ -793,19 +791,6 @@ function showActiveControls(){
 function setCallStatus(t){const el=document.getElementById('callStatus');if(el)el.textContent=t;}
 function hideCallScreen(){const el=document.getElementById('callOverlay');if(el){el.style.display='none';el.className='call-overlay';}}
 
-function showMicGuide(){
-  const el=document.getElementById('callOverlay');if(!el)return;
-  el.style.display='flex';el.className='call-overlay show';
-  const inner=el.querySelector('.call-inner');if(!inner)return;
-  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),isAndroid=/Android/.test(navigator.userAgent);
-  inner.innerHTML=`<div style="font-size:50px;margin-bottom:16px">🎙️</div>
-    <div style="font-family:var(--font-d);font-size:22px;font-weight:700;color:#fff;margin-bottom:12px">Microphone blocked</div>
-    <div style="color:rgba(255,255,255,.7);font-size:14px;text-align:center;line-height:1.7;max-width:280px;margin-bottom:28px">
-      ${isIOS?'Go to <strong style="color:#fff">Settings → Safari → Microphone</strong> → Allow.':isAndroid?'Tap the <strong style="color:#fff">🔒 icon</strong> in the address bar → Permissions → Microphone → Allow.':'Click the <strong style="color:#fff">🔒 lock</strong> → Site settings → Microphone → Allow.'}
-    </div>
-    <button onclick="hideCallScreen()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;font-family:var(--font-b)">Close</button>`;
-}
-
 /* Aliases for any legacy onclick handlers in static HTML */
 function endCall(){hangup();}
 function rejectCall(){declineCall();}
@@ -825,9 +810,8 @@ async function init(){
   loadingFeed=true;render();
   await Promise.all([loadPosts(),loadMessages()]);
   loadingFeed=false;
-  render(); // Render immediately with posts
+  render();
   loadAllCmtCounts().then(()=>{
-    // Update all comment badges without full re-render
     document.querySelectorAll('[id^="cb-"]').forEach(el=>{
       const pid=el.id.replace('cb-','');
       el.textContent=cmtCountRaw(pid);
@@ -839,7 +823,7 @@ async function init(){
     if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
   }
   subscribeRealtime();
-  if(myName){initNotifs();initPeer();}
+  if(myName){initNotifs();}
   checkBirthdays();
   if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
@@ -872,6 +856,19 @@ function render(){
   if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
+}
+
+/* Repaint just the scrollable content area, preserving scroll position.
+   Used for anything that changes what's IN the feed/list without changing
+   which screen we're on (deletes, pin changes, etc). */
+function repaintFeed(){
+  const main=document.querySelector('.main');
+  if(!main)return;
+  const y=main.scrollTop;
+  if(view==='feed')main.innerHTML=buildFeed();
+  else if(view==='members')main.innerHTML=buildMembers();
+  else if(view==='stats')main.innerHTML=buildStats();
+  main.scrollTop=y;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -949,8 +946,12 @@ function buildReminder(){
   return`<div class="reminder"><span style="font-size:20px">📸</span>
     <div class="reminder-txt">${msg}</div>
     <button class="reminder-share" onclick="goView('add')">Share now</button>
-    <button class="reminder-close" onclick="reminderDismissed=true;render()">✕</button>
+    <button class="reminder-close" onclick="dismissReminder()">✕</button>
   </div>`;
+}
+function dismissReminder(){
+  reminderDismissed=true;
+  document.querySelector('.reminder')?.remove();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1218,7 +1219,7 @@ function repaintNav(){const nav=document.querySelector('.nav');if(nav)nav.outerH
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
   const v=document.getElementById('chatInput')?.value||'';
-  wrap.innerHTML=buildMsgList();scrollChat();
+  wrap.innerHTML=buildMsgList(chatView==='group'?null:chatView);scrollChat();
   const ni=document.getElementById('chatInput');if(ni)ni.value=v;
 }
 
@@ -1235,7 +1236,7 @@ function showNewBanner(){
   const content=main.querySelector('.content');
   if(content)content.prepend(d);else main.prepend(d);
 }
-function dismissBanner(){document.getElementById('npb')?.remove();render()}
+function dismissBanner(){document.getElementById('npb')?.remove();repaintFeed()}
 
 /* ══════════════════════════════════════════════════════
    ADD POST
@@ -1329,7 +1330,6 @@ function buildChatScreen(){
     </div>`;
   }
   if(chatView==='dms'){
-    // DM list
     return`<div class="chat-wrap">
       <div class="chat-tabs">
         <button class="chat-tab" onclick="setChatView('group')">👨‍👩‍👧‍👦 Family Chat</button>
@@ -1354,8 +1354,7 @@ function buildChatScreen(){
       </div>
     </div>`;
   }
-  // Individual DM thread
-  const target=chatView; // it's a name
+  const target=chatView;
   const key=dmKey(myName,target);
   if(!dmMessages[key])loadDMs(key).then(()=>repaintChat());
   return`<div class="chat-wrap">
@@ -1404,7 +1403,14 @@ function setChatView(v){
   }
   render();if(view==='chat')scrollChat();
 }
-function openDM(name){chatView=name;const key=dmKey(myName,name);dmUnread[key]=0;render();scrollChat();}
+function openDM(name){
+  chatView=name;
+  const key=dmKey(myName,name);
+  dmUnread[key]=0;
+  view='chat';
+  render();
+  scrollChat();
+}
 async function sendChat(key=null){
   if(!requireOnline())return;
   const el=document.getElementById('chatInput');const txt=(el?.value||'').trim();
@@ -1420,7 +1426,7 @@ function setupChatInput(){
 }
 function onChatIn(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';const btn=document.getElementById('chatSend');if(btn)btn.style.opacity=el.value.trim()?'1':'.4'}
 function scrollChat(){setTimeout(()=>{const el=document.getElementById('chatMsgsWrap');if(el)el.scrollTop=el.scrollHeight},60)}
-function markSeen(){unreadMsgs=0;lastMsgSeen=Date.now();lss('ayl_msgseen',lastMsgSeen)}
+function markSeen(){unreadMsgs=0;lastMsgSeen=Date.now();lss('ayl_msgseen',lastMsgSeen);repaintNav();}
 
 /* ══════════════════════════════════════════════════════
    PROFILE VIEW (other people)
@@ -1458,7 +1464,7 @@ function buildViewProfile(name){
       <div class="profile-stat"><div class="profile-stat-n">${cmts}</div><div class="profile-stat-l">Comments</div></div>
     </div>
     <div class="profile-action-row">
-      <button class="profile-action-btn" onclick="openDM('${name}');goView('chat')">💬 Message</button>
+      <button class="profile-action-btn" onclick="openDM('${name}')">💬 Message</button>
       <button class="profile-action-btn pri" onclick="startCall('${name}',false)">📞 Call</button>
       <button class="profile-action-btn" onclick="startCall('${name}',true)">📹 Video</button>
     </div>
@@ -1688,7 +1694,7 @@ function buildNav(){
     <button class="nav-btn" onclick="goView('feed')">
       <div class="nav-ico${isFeed?' active':''}">🏠</div><div class="nav-lbl${isFeed?' active':''}">Home</div>
     </button>
-    <button class="nav-btn" onclick="goView('chat');markSeen()" style="position:relative">
+    <button class="nav-btn" onclick="goView('chat')" style="position:relative">
       <div class="nav-ico${isChat?' active':''}">💬</div><div class="nav-lbl${isChat?' active':''}">Chat</div>
       ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
     </button>
@@ -1705,20 +1711,21 @@ function buildNav(){
 /* ══════════════════════════════════════════════════════
    FULLSCREEN + THEME SHEET
    ══════════════════════════════════════════════════════ */
-function buildFullscreen(){
-  if(!fullPost)return`<div class="fullscreen" id="fullscreen"></div>`;
-  const p=posts.find(p=>p.id===fullPost);if(!p)return`<div class="fullscreen" id="fullscreen"></div>`;
+function buildFullscreenInner(){
+  if(!fullPost)return'';
+  const p=posts.find(p=>p.id===fullPost);if(!p)return'';
   const o=getOct(p.oct);
-  return`<div class="fullscreen show" id="fullscreen">
-    <div class="fs-top">
+  return`<div class="fs-top">
       <button class="fs-close" onclick="setFull(null)">✕ Close</button>
       ${p.photo_url?`<button class="fs-save" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>`:''}
     </div>
     ${p.photo_url?`<img class="fs-img" src="${p.photo_url}" alt="">`:''}
     <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
     ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
-    <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>
-  </div>`;
+    <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>`;
+}
+function buildFullscreen(){
+  return`<div class="fullscreen${fullPost?' show':''}" id="fullscreen">${buildFullscreenInner()}</div>`;
 }
 function buildThemeSheet(curTheme,curFS){
   const customPri=ls('ayl_custom_pri','#C4622D');
@@ -1777,25 +1784,21 @@ function renderOnboarding(app){
    ACTIONS
    ══════════════════════════════════════════════════════ */
 function obChk(){const v=(document.getElementById('obIn')?.value||'').trim();const b=document.getElementById('obBtn');if(b){b.disabled=!v;b.style.opacity=v?'1':'.35'}}
-function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();initPeer();render()}
+function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();subscribeCallSignaling();render()}
 const VIDEO_CACHE='ayl-videos-v1';
 
 async function prefetchVideo(url){
   if(!url||!('caches'in window))return;
   try{
     const cache=await caches.open(VIDEO_CACHE);
-    if(await cache.match(url))return; // already cached
-    // Fetch and cache in background — don't await so it doesn't block anything
+    if(await cache.match(url))return;
     fetch(url,{mode:'cors'}).then(res=>{if(res.ok)cache.put(url,res);}).catch(()=>{});
   }catch{}
 }
-
-// Prefetch videos for visible posts in background
 function prefetchVisibleVideos(){
   const videoPosts=posts.filter(p=>p.video_url).slice(0,5);
   videoPosts.forEach(p=>prefetchVideo(getVideoUrl(p.video_url)));
 }
-
 function getVideoUrl(url){
   if(!url||!url.includes('cloudinary.com'))return url;
   return url.replace('/upload/','/upload/q_auto,vc_auto/');
@@ -1804,7 +1807,6 @@ async function togglePostVideo(video){
   if(!video||video.tagName!=='VIDEO')return;
   const btn=video.nextElementSibling;
   if(video.paused){
-    // Try to serve from cache first
     const cachedUrl=video.dataset.cached;
     if(!cachedUrl&&video.src){
       try{
@@ -1828,15 +1830,53 @@ async function togglePostVideo(video){
     if(btn){btn.style.display='flex';btn.textContent='▶';}
   }
 }
-function goView(v){view=v;openCtx=null;if(v==='add'){draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
-function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
-function setFull(id){fullPost=id||null;render()}
-function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
-function confirmDel(id){openCtx=null;if(!confirm('Delete this moment?'))return;deletePost(id)}
-function toggleCtx(id,e){e.stopPropagation();openCtx=openCtx===id?null:id;render()}
-function closeCtx(){openCtx=null;render()}
-function setupFeedListeners(){document.addEventListener('click',()=>{if(openCtx){openCtx=null;render()}},{once:true})}
-function togglePin(id){pinnedPostId=pinnedPostId===id?null:id;lss('ayl_pinned',pinnedPostId||'');closeCtx();toast(pinnedPostId?'📌 Pinned to top':'📌 Unpinned')}
+function goView(v){
+  if(v==='chat')markSeen();
+  view=v;openCtx=null;
+  if(v==='add'){draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false}
+  render();
+  if(v==='chat')scrollChat();
+}
+function setFilter(n){filter=n==='All'?null:(filter===n?null:n);repaintFeed()}
+
+/* setFull / toggleCtx / closeCtx patch just the overlay elements — no full
+   render, so scroll position and the rest of the feed stay untouched. */
+function setFull(id){
+  fullPost=id||null;
+  const el=document.getElementById('fullscreen');
+  if(!el)return;
+  if(fullPost){el.className='fullscreen show';el.innerHTML=buildFullscreenInner();}
+  else{el.className='fullscreen';el.innerHTML='';}
+}
+function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen';document.getElementById('fullscreen').innerHTML=''">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
+function confirmDel(id){closeCtx();if(!confirm('Delete this moment?'))return;deletePost(id)}
+function toggleCtx(id,e){
+  e.stopPropagation();
+  const prev=openCtx;
+  openCtx=openCtx===id?null:id;
+  if(prev&&prev!==id){const prevMenu=document.getElementById('ctx-'+prev);prevMenu?.remove();}
+  const card=document.getElementById('post-'+id);
+  if(!card)return;
+  const existing=document.getElementById('ctx-'+id);
+  if(existing){existing.remove();return;}
+  if(openCtx===id){
+    const p=posts.find(p=>p.id===id);if(!p)return;
+    card.querySelector('.card-hdr').insertAdjacentHTML('afterend',buildCtxMenu(p));
+  }
+}
+function closeCtx(){
+  if(!openCtx)return;
+  document.getElementById('ctx-'+openCtx)?.remove();
+  openCtx=null;
+}
+function setupFeedListeners(){document.addEventListener('click',()=>{if(openCtx)closeCtx();},{once:true})}
+function togglePin(id){
+  pinnedPostId=pinnedPostId===id?null:id;
+  lss('ayl_pinned',pinnedPostId||'');
+  closeCtx();
+  toast(pinnedPostId?'📌 Pinned to top':'📌 Unpinned');
+  repaintFeed();
+}
 function copyCaption(id){const p=posts.find(p=>p.id===id);if(!p?.caption)return;navigator.clipboard?.writeText(p.caption).then(()=>toast('📋 Copied!'));closeCtx()}
 function showFullDate(id){const p=posts.find(p=>p.id===id);if(p)toast(fullDate(p.created_at),3500)}
 let lpTimer=null;
