@@ -2,6 +2,7 @@
    THEME SYSTEM
    ══════════════════════════════════════════════════════ */
 :root {
+   --app-height: 100vh
   --bg:#FAF8F3;--bg2:#F3EFE7;--card:#FFF;--card2:#FDF9F5;
   --pri:#C4622D;--pri2:#E8A87C;--pri-light:#FAECE7;--pri-dark:#A04E22;
   --txt:#1A1208;--txt2:#7A6A5A;--txt3:#B8A898;
@@ -13,6 +14,13 @@
   --font-b:'Nunito',-apple-system,BlinkMacSystemFont,sans-serif;
   --fs:15px;--fs-sm:13px;--fs-xs:11px;--fs-lg:17px;--fs-xl:22px;
   --tr:0.18s cubic-bezier(0.4,0,0.2,1);--nav-h:68px;
+}
+html, body{
+   margin: 0;
+   padding: 0;
+   height: var(--app-height);
+   overflow: hidden;
+  mbackground-color: #000000;
 }
 [data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;}
 [data-theme="rose"]{--bg:#FFF5F7;--bg2:#FFE8ED;--card:#FFF;--card2:#FFF0F3;--pri:#E11D6A;--pri2:#F9A8C9;--pri-light:#FFE4EE;--pri-dark:#BE185D;--txt:#1A0A10;--txt2:#7A4055;--txt3:#C49AAA;--bd:#F5CEDD;--bd2:#EDADC3;--shadow:rgba(225,29,106,.12);--shadow2:rgba(26,10,16,.08);}
