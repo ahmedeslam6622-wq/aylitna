@@ -30,13 +30,8 @@
    RESET & BASE
    ══════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0;padding:0;overflow:hidden;background:var(--bg);font-family:var(--font-b);color:var(--txt);font-size:var(--fs)}
-/* #app uses 100vh (full viewport, notch region included) rather than 100dvh.
-   100dvh already excludes safe-area insets in standalone/PWA display mode on
-   several iOS/Android browser versions, which double-counts against the
-   env(safe-area-inset-top) padding already applied inside .hdr below —
-   that double-counting was the actual cause of the black bar under the notch. */
-#app{height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;max-width:540px;margin:0 auto;background:var(--bg);transition:background var(--tr),color var(--tr);padding:0 3px}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font-b);color:var(--txt);font-size:var(--fs)}
+#app{height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative;max-width:540px;margin:0 auto;background:var(--bg);transition:background var(--tr),color var(--tr);padding:0 3px}
 img{display:block;max-width:100%}
 button{cursor:pointer;font-family:var(--font-b);-webkit-tap-highlight-color:transparent}
 input,textarea,select{font-family:var(--font-b)}
@@ -45,12 +40,7 @@ input,textarea,select{font-family:var(--font-b)}
 /* ══════════════════════════════════════════════════════
    HEADER
    ══════════════════════════════════════════════════════ */
-.hdr{background:var(--card);border-bottom:1.5px solid var(--bd);padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));flex-shrink:0;position:relative;z-index:10;box-shadow:0 2px 12px var(--shadow2)}
-/* Fixed strip that always paints the physical top of the screen in the
-   header's color, independent of manifest display-mode / theme-color
-   caching. This is what actually closes the notch gap no matter what the
-   OS status bar does. */
-body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--card);z-index:9999;pointer-events:none}
+.hdr{background:var(--card);border-bottom:1.5px solid var(--bd);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));flex-shrink:0;position:relative;z-index:10;box-shadow:0 2px 12px var(--shadow2)}
 .hdr-row{display:flex;justify-content:space-between;align-items:center}
 .brand-arabic{font-family:var(--font-d);font-size:24px;font-weight:700;color:var(--pri);line-height:1}
 .brand-eng{font-size:var(--fs-xs);color:var(--txt3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
@@ -394,14 +384,10 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 @keyframes call-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.2)}50%{box-shadow:0 0 0 20px rgba(255,255,255,0)}}
 .call-name{font-family:var(--font-d);font-size:26px;font-weight:700;color:#fff;margin-bottom:6px}
 .call-status{font-size:var(--fs-sm);color:rgba(255,255,255,.6);margin-bottom:auto}
-/* Jitsi iframe sits behind our own avatar/name/controls. In audio-only
-   calls it's invisible (0 opacity, audio still flows); when video turns on
-   we expand it to fill the call screen behind our overlay buttons. */
-.call-jitsi-holder{position:absolute;inset:0;z-index:0;opacity:0;pointer-events:none;transition:opacity .25s}
-.call-jitsi-holder.video-on{opacity:1;pointer-events:auto}
-.call-jitsi-holder iframe{width:100%!important;height:100%!important;border:none;border-radius:0}
-.call-jitsi-holder.video-on ~ .call-av,
-.call-jitsi-holder.video-on ~ .call-name{opacity:0;pointer-events:none;transition:opacity .2s}
+.call-video-remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;display:none;border-radius:0}
+.call-video-remote.show{display:block}
+.call-video-local{position:absolute;top:calc(80px + env(safe-area-inset-top));right:16px;width:90px;height:130px;object-fit:cover;border-radius:var(--r2);border:2px solid rgba(255,255,255,.3);display:none;z-index:2}
+.call-video-local.show{display:block}
 .call-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:auto;padding-top:30px}
 .call-btn{width:60px;height:60px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:24px;transition:transform .2s,opacity .2s;flex-shrink:0}
 .call-btn:active{transform:scale(.88)}
@@ -522,40 +508,8 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .uploading-overlay.show{display:flex}
 .uploading-txt{font-size:var(--fs);font-weight:800;color:var(--txt)}
 .uploading-sub{font-size:var(--fs-sm);color:var(--txt2)}
-
-/* ══════════════════════════════════════════════════════
-   TOAST — Dynamic-Island style: anchored top-center under the
-   notch, wide dark pill, high-contrast text. Replaces the old
-   bottom-anchored toast entirely.
-   ══════════════════════════════════════════════════════ */
-.toast{
-  position:fixed;
-  top:calc(env(safe-area-inset-top) + 10px);
-  left:50%;
-  transform:translateX(-50%) translateY(-16px) scale(.92);
-  background:rgba(20,17,24,0.92);
-  -webkit-backdrop-filter:blur(20px);
-  backdrop-filter:blur(20px);
-  border:1px solid rgba(255,255,255,0.15);
-  color:#fff;
-  border-radius:26px;
-  padding:16px 26px;
-  font-size:var(--fs-lg);
-  font-weight:800;
-  z-index:300;
-  opacity:0;
-  pointer-events:none;
-  max-width:92%;
-  width:max-content;
-  text-align:center;
-  line-height:1.4;
-  letter-spacing:.1px;
-  transition:opacity .3s cubic-bezier(.34,1.4,.64,1),transform .3s cubic-bezier(.34,1.4,.64,1);
-  box-shadow:0 12px 32px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
-.toast.toast-error{background:#5A1616}
-.toast.toast-success{background:#123D24}
+.toast{position:absolute;bottom:calc(var(--nav-h) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--txt);color:#fff;border-radius:30px;padding:10px 20px;font-size:var(--fs-sm);font-weight:700;z-index:90;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .2s,transform .2s;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .new-post-banner{position:sticky;top:10px;display:flex;justify-content:center;z-index:25;pointer-events:none;padding:0 16px;margin-bottom:4px}
 .new-post-pill{background:var(--pri);color:#fff;border-radius:30px;padding:10px 22px;font-size:var(--fs-sm);font-weight:800;box-shadow:0 4px 16px var(--shadow);pointer-events:all;border:none;font-family:var(--font-b);animation:slide-down .3s cubic-bezier(.34,1.2,.64,1)}
 
