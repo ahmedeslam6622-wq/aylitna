@@ -536,7 +536,9 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
   top:calc(env(safe-area-inset-top) + 10px);
   left:50%;
   transform:translateX(-50%) translateY(-16px) scale(.92);
-  background:#141118;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.2);
   color:#fff;
   border-radius:26px;
   padding:16px 26px;
