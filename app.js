@@ -882,7 +882,6 @@ function render(){
   setupSheet();
   setTimeout(positionNavHighlight,0);
 }
-}
 
 /* Repaint just the scrollable content area, preserving scroll position.
    Used for anything that changes what's IN the feed/list without changing
