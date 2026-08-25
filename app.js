@@ -880,7 +880,6 @@ function render(){
   if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
-  setTimeout(positionNavHighlight,0);
 }
 
 /* Repaint just the scrollable content area, preserving scroll position.
@@ -1243,7 +1242,6 @@ function repaintCmtBadge(pid){const el=document.getElementById('cb-'+pid);if(el)
 function repaintNav(){
   const nav=document.querySelector('.nav');
   if(nav)nav.outerHTML=buildNav();
-  setTimeout(positionNavHighlight,0);
 }
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
@@ -1719,37 +1717,22 @@ function buildStats(){
 function buildNav(){
   const isFeed=view==='feed',isChat=view==='chat',isSt=view==='stats',isMem=view==='members';
   const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
-  return`<div class="nav" id="navBar">
-    <div class="nav-highlight" id="navHighlight"></div>
-    <button class="nav-btn" onclick="goView('feed')" data-nav="feed">
+  return`<div class="nav">
+    <button class="nav-btn" onclick="goView('feed')">
       <div class="nav-ico${isFeed?' active':''}">🏠</div><div class="nav-lbl${isFeed?' active':''}">Home</div>
     </button>
-    <button class="nav-btn" onclick="goView('chat')" data-nav="chat" style="position:relative">
+    <button class="nav-btn" onclick="goView('chat')" style="position:relative">
       <div class="nav-ico${isChat?' active':''}">💬</div><div class="nav-lbl${isChat?' active':''}">Chat</div>
       ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
     </button>
     <button class="fab" onclick="goView('add')">＋</button>
-    <button class="nav-btn" onclick="goView('stats')" data-nav="stats">
+    <button class="nav-btn" onclick="goView('stats')">
       <div class="nav-ico${isSt?' active':''}">📊</div><div class="nav-lbl${isSt?' active':''}">Stats</div>
     </button>
-    <button class="nav-btn" onclick="goView('members')" data-nav="members">
+    <button class="nav-btn" onclick="goView('members')">
       <div class="nav-ico${isMem?' active':''}">👨‍👩‍👧‍👦</div><div class="nav-lbl${isMem?' active':''}">Family</div>
     </button>
   </div>`;
-}
-
-//nav advanced sliding system
-function positionNavHighlight(){
-  const nav=document.getElementById('navBar');
-  const hl=document.getElementById('navHighlight');
-  if(!nav||!hl)return;
-  const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
-  if(!activeBtn){hl.style.opacity='0';return;}
-  const navRect=nav.getBoundingClientRect();
-  const btnRect=activeBtn.getBoundingClientRect();
-  hl.style.opacity='1';
-  hl.style.width=btnRect.width+'px';
-  hl.style.transform=`translateX(${btnRect.left-navRect.left}px)`;
 }
 
 /* ══════════════════════════════════════════════════════
