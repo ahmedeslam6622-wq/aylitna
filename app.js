@@ -876,10 +876,11 @@ function render(){
   else if(view==='view-profile')body=buildViewProfile(viewingProfile);
   app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
     `<div class="main">${body}</div>`+
-    buildNav()+buildFullscreen()+buildThemeSheet(th,fs);
-  if(view==='chat'){setupChatInput();scrollChat()}
+    if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
+  setTimeout(positionNavHighlight,0);
+}
 }
 
 /* Repaint just the scrollable content area, preserving scroll position.
@@ -1239,10 +1240,7 @@ function moreCmts(pid){cmtPages[pid]=(cmtPages[pid]||1)+1;repaintCmts(pid)}
 function repaintCard(pid){const card=document.getElementById('post-'+pid);const p=posts.find(p=>p.id===pid);if(!card||!p)return;const cs=card.querySelector('.comments-section');if(cs){const tmp=document.createElement('div');tmp.innerHTML=buildCmtSection(p);cs.replaceWith(tmp.firstChild)}}
 function repaintCmts(pid){const p=posts.find(p=>p.id===pid);if(!p||!openComments[pid])return;repaintCard(pid);repaintCmtBadge(pid)}
 function repaintCmtBadge(pid){const el=document.getElementById('cb-'+pid);if(el)el.textContent=cmtCountRaw(pid)}
-function repaintNav(){
-  const nav=document.querySelector('.nav');
-  if(nav)nav.outerHTML=buildNav();
-}
+function repaintNav(){   const nav=document.querySelector('.nav');   if(nav)nav.outerHTML=buildNav();   setTimeout(positionNavHighlight,0); }
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
   const v=document.getElementById('chatInput')?.value||'';
@@ -1714,25 +1712,40 @@ function buildStats(){
 /* ══════════════════════════════════════════════════════
    NAV
    ══════════════════════════════════════════════════════ */
-function buildNav(){
+ function buildNav(){
   const isFeed=view==='feed',isChat=view==='chat',isSt=view==='stats',isMem=view==='members';
   const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
-  return`<div class="nav">
-    <button class="nav-btn" onclick="goView('feed')">
+  return`<div class="nav" id="navBar">
+    <div class="nav-highlight" id="navHighlight"></div>
+    <button class="nav-btn" onclick="goView('feed')" data-nav="feed">
       <div class="nav-ico${isFeed?' active':''}">🏠</div><div class="nav-lbl${isFeed?' active':''}">Home</div>
     </button>
-    <button class="nav-btn" onclick="goView('chat')" style="position:relative">
+    <button class="nav-btn" onclick="goView('chat')" data-nav="chat" style="position:relative">
       <div class="nav-ico${isChat?' active':''}">💬</div><div class="nav-lbl${isChat?' active':''}">Chat</div>
       ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
     </button>
     <button class="fab" onclick="goView('add')">＋</button>
-    <button class="nav-btn" onclick="goView('stats')">
+    <button class="nav-btn" onclick="goView('stats')" data-nav="stats">
       <div class="nav-ico${isSt?' active':''}">📊</div><div class="nav-lbl${isSt?' active':''}">Stats</div>
     </button>
-    <button class="nav-btn" onclick="goView('members')">
+    <button class="nav-btn" onclick="goView('members')" data-nav="members">
       <div class="nav-ico${isMem?' active':''}">👨‍👩‍👧‍👦</div><div class="nav-lbl${isMem?' active':''}">Family</div>
     </button>
   </div>`;
+}
+
+//nav advanced sliding system
+function positionNavHighlight(){
+  const nav=document.getElementById('navBar');
+  const hl=document.getElementById('navHighlight');
+  if(!nav||!hl)return;
+  const activeBtn=nav.querySelector('.nav-btn [data-active], .nav-ico.active')?.closest('.nav-btn');
+  if(!activeBtn){hl.style.opacity='0';return;}
+  const navRect=nav.getBoundingClientRect();
+  const btnRect=activeBtn.getBoundingClientRect();
+  hl.style.opacity='1';
+  hl.style.width=btnRect.width+'px';
+  hl.style.transform=`translateX(${btnRect.left-navRect.left}px)`;
 }
 
 /* ══════════════════════════════════════════════════════
