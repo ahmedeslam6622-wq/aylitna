@@ -874,9 +874,10 @@ function render(){
   else if(view==='profile')body=buildProfilePage();
   else if(view==='profile-edit')body=buildProfileEdit();
   else if(view==='view-profile')body=buildViewProfile(viewingProfile);
-  app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
+    app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
     `<div class="main">${body}</div>`+
-    if(view==='chat'){setupChatInput();scrollChat()}
+    buildNav()+buildFullscreen()+buildThemeSheet(th,fs);
+  if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
   setTimeout(positionNavHighlight,0);
@@ -1739,7 +1740,7 @@ function positionNavHighlight(){
   const nav=document.getElementById('navBar');
   const hl=document.getElementById('navHighlight');
   if(!nav||!hl)return;
-  const activeBtn=nav.querySelector('.nav-btn [data-active], .nav-ico.active')?.closest('.nav-btn');
+  const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
   if(!activeBtn){hl.style.opacity='0';return;}
   const navRect=nav.getBoundingClientRect();
   const btnRect=activeBtn.getBoundingClientRect();
