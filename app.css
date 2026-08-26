@@ -196,7 +196,7 @@ input,textarea,select{font-family:var(--font-b)}
    floating header pills — .hdr and .pills-wrap are siblings in the DOM
    (see render() in app.js), so this general sibling selector reaches it
    directly whenever .hdr carries .scrolled. */
-.hdr.scrolled ~ .pills-wrap{opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-color:transparent;pointer-events:none}
+.hdr.scrolled ~ .pills-wrap{opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-color:none;pointer-events:none}
 .pills{display:flex;gap:6px}
 .pill{padding:7px 15px;border-radius:30px;border:1.5px solid var(--bd);font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;background:transparent;font-weight:600;transition:all .18s;flex-shrink:0}
 .pill.on{background:var(--pri);border-color:var(--pri);color:#fff}
