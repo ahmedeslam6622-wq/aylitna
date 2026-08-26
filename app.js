@@ -1154,7 +1154,7 @@ function buildCarousel(p,mediaList){
       </div>`;
     }
     return`<div class="carousel-slide">
-      <img class="post-img" src="${m.url}" alt="" loading="lazy"
+      <img class="post-img carousel-img" src="${m.url}" alt="" loading="lazy"
         onclick="setFull('${p.id}',${i})"
         oncontextmenu="saveImg(event,'${m.url}')"
         ontouchstart="startLP('${m.url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
@@ -2003,7 +2003,18 @@ async function togglePostVideo(video){
   }
 }
 function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
-function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
+function setFilter(n){
+  filter=n==='All'?null:(filter===n?null:n);
+  const main=document.querySelector('.main');
+  if(main)main.innerHTML=buildFeed();
+  // Update pill active states without rebuilding them
+  document.querySelectorAll('.pill').forEach(btn=>{
+    const label=btn.textContent.trim();
+    const isAll=label.startsWith('👪');
+    const on=isAll?!filter:label===filter;
+    btn.className='pill'+(on?' on':'');
+  });
+}
 function setFull(id,mediaIdx){
   fullPost=id||null;
   if(typeof mediaIdx==='number'&&id)carouselIdx[id]=mediaIdx;
@@ -2020,9 +2031,30 @@ function setFull(id,mediaIdx){
 }
 function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
 function confirmDel(id){openCtx=null;if(!confirm('Delete this moment?'))return;deletePost(id)}
-function toggleCtx(id,e){e.stopPropagation();openCtx=openCtx===id?null:id;render()}
-function closeCtx(){openCtx=null;render()}
-function setupFeedListeners(){document.addEventListener('click',()=>{if(openCtx){openCtx=null;render()}},{once:true})}
+function toggleCtx(id,e){
+  e.stopPropagation();
+  const prevId=openCtx;
+  openCtx=openCtx===id?null:id;
+  // Close whatever menu was open before (if different post)
+  if(prevId&&prevId!==id){
+    const prevMenu=document.getElementById('ctx-'+prevId);
+    if(prevMenu)prevMenu.remove();
+  }
+  const card=document.getElementById('post-'+id);
+  if(!card)return;
+  const existing=document.getElementById('ctx-'+id);
+  if(existing){existing.remove();return;} // was open for this post -> just closed it
+  const p=posts.find(p=>p.id===id);if(!p)return;
+  const hdr=card.querySelector('.card-hdr');
+  if(hdr)hdr.insertAdjacentHTML('afterend',buildCtxMenu(p));
+}
+function closeCtx(){
+  if(!openCtx)return;
+  const menu=document.getElementById('ctx-'+openCtx);
+  if(menu)menu.remove();
+  openCtx=null;
+}
+function setupFeedListeners(){document.addEventListener('click',()=>{if(openCtx)closeCtx()},{once:true})}
 function togglePin(id){pinnedPostId=pinnedPostId===id?null:id;lss('ayl_pinned',pinnedPostId||'');closeCtx();toast(pinnedPostId?'📌 Pinned to top':'📌 Unpinned')}
 function copyCaption(id){const p=posts.find(p=>p.id===id);if(!p?.caption)return;navigator.clipboard?.writeText(p.caption).then(()=>toast('📋 Copied!'));closeCtx()}
 function showFullDate(id){const p=posts.find(p=>p.id===id);if(p)toast(fullDate(p.created_at),3500)}
