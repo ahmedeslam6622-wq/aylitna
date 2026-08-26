@@ -73,7 +73,7 @@ input,textarea,select{font-family:var(--font-b)}
   transition:opacity .25s ease, transform .25s ease;
 }
 .hdr.scrolled .hdr-row{
-   display:none
+  display:none;
   opacity:0;
   transform:translateY(-6px);
   pointer-events:none;
