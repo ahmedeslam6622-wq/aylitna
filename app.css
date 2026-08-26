@@ -80,10 +80,10 @@ input,textarea,select{font-family:var(--font-b)}
    float freely above the scrolling feed content with real breathing room,
    independent of the header bar's height. */
 .hdr-scrolled-row{
-  position:fixed;
-  top:calc(14px + env(safe-area-inset-top));
+  position:absolute;
+  top:10px;
   left:16px;right:16px;
-  z-index:50;
+  z-index:150;
   display:flex;justify-content:space-between;align-items:center;
   gap:10px;
   opacity:0;
