@@ -82,10 +82,9 @@ input,textarea,select{font-family:var(--font-b)}
 .hdr-scrolled-row{
   position:absolute;
   top:10px;
-  left:16px;right:16px;
+  left:16px;
   z-index:150;
-  display:flex;justify-content:space-between;align-items:center;
-  gap:10px;
+  display:flex;justify-content:flex-start;align-items:center;
   opacity:0;
   transform:translateY(-8px);
   pointer-events:none;
@@ -184,7 +183,12 @@ input,textarea,select{font-family:var(--font-b)}
 /* ══════════════════════════════════════════════════════
    PILLS
    ══════════════════════════════════════════════════════ */
-.pills-wrap{background:var(--card);border-bottom:1.5px solid var(--bd);padding:8px 14px;flex-shrink:0}
+.pills-wrap{background:var(--card);border-bottom:1.5px solid var(--bd);padding:8px 14px;flex-shrink:0;transition:opacity .2s ease,max-height .25s ease,padding .25s ease;overflow:hidden;max-height:60px}
+/* Hidden entirely once scrolled, so nothing sits underneath/behind the
+   floating header pills — .hdr and .pills-wrap are siblings in the DOM
+   (see render() in app.js), so this general sibling selector reaches it
+   directly whenever .hdr carries .scrolled. */
+.hdr.scrolled ~ .pills-wrap{opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-color:transparent;pointer-events:none}
 .pills{display:flex;gap:6px}
 .pill{padding:7px 15px;border-radius:30px;border:1.5px solid var(--bd);font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;background:transparent;font-weight:600;transition:all .18s;flex-shrink:0}
 .pill.on{background:var(--pri);border-color:var(--pri);color:#fff}
