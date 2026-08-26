@@ -162,6 +162,35 @@ input,textarea,select{font-family:var(--font-b)}
 .icon-btn:active{transform:scale(.88);background:var(--pri-light)}
 
 /* ══════════════════════════════════════════════════════
+   MULTI-MEDIA: draft strip (add-post screen) + feed carousel
+   Paste these as NEW rules anywhere in app.css — nothing here
+   replaces or conflicts with existing rules.
+   ══════════════════════════════════════════════════════ */
+
+/* Draft media strip — horizontal row of queued photo/video thumbnails
+   on the "Share a moment" screen, each with its own remove button. */
+.draft-media-strip{display:flex;gap:8px;padding:4px 0 14px;align-items:center}
+.draft-media-item{position:relative;flex-shrink:0;width:76px;height:76px;border-radius:var(--r2);overflow:hidden;border:1.5px solid var(--bd);background:var(--bg2)}
+.draft-media-item img,.draft-media-item video{width:100%;height:100%;object-fit:cover}
+.draft-media-badge{position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 4px;color:#fff}
+.draft-media-rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;display:flex;align-items:center;justify-content:center}
+.draft-media-count{flex-shrink:0;font-size:var(--fs-xs);color:var(--txt3);font-weight:700;padding:0 6px}
+.photo-btn:disabled{opacity:.4;pointer-events:none}
+
+/* Feed carousel — swipeable via native CSS scroll-snap, no JS drag lib.
+   Same visual footprint as the old single .post-img so cards don't jump
+   in size between single-media and multi-media posts. */
+.post-carousel{position:relative;background:var(--bg2)}
+.carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.carousel-track::-webkit-scrollbar{display:none}
+.carousel-slide{flex:0 0 100%;scroll-snap-align:start;position:relative}
+.carousel-slide .post-img,.carousel-slide .post-video{width:100%;max-height:380px;object-fit:cover;display:block;cursor:pointer}
+.carousel-count{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;backdrop-filter:blur(4px)}
+.carousel-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:5px;pointer-events:none}
+.carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);transition:background .2s,transform .2s}
+.carousel-dot.active{background:#fff;transform:scale(1.3)}
+
+/* ══════════════════════════════════════════════════════
    OFFLINE BANNER
    ══════════════════════════════════════════════════════ */
 .offline-banner{background:#FEF3C7;border-bottom:1.5px solid #F59E0B;padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:var(--fs-xs);font-weight:700;color:#92400E;animation:slide-down .3s ease}
