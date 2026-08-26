@@ -80,6 +80,7 @@ let isOnline=navigator.onLine, profiles={}, draftProfilePic=null, selProfileColo
 let postTags={};
 let chatView='group'; // 'group' | dmKey
 let titleLang='en'; // 'en' | 'ar' — which header title label is showing
+let hdrCollapsed={title:false,search:false,profile:false,theme:false}; // scrolled-state pill collapse
 let viewingProfile=null; // name of profile being viewed
 let dmUnread={}; // { dmKey: count }
 
@@ -896,30 +897,60 @@ function setupHeaderScroll(){
    ══════════════════════════════════════════════════════ */
 function buildHeader(newPosts){
   const prof=profiles[myName];
-  const profEl=prof?.photo
-    ?`<button class="icon-btn" onclick="goView('profile')" style="padding:0;overflow:hidden"><img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>`
-    :`<button class="icon-btn" onclick="goView('profile')">👤</button>`;
-  return`<div class="hdr"><div class="hdr-row">
-    <div class="brand-static">
-      <div><div class="brand-arabic">عيلتنا <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span></div><div class="brand-eng">Our Family</div></div>
+  const profImg=prof?.photo
+    ?`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    :`👤`;
+  return`<div class="hdr">
+    <div class="hdr-row">
+      <div class="brand-static">
+        <div><div class="brand-arabic">عيلتنا <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span></div><div class="brand-eng">Our Family</div></div>
+      </div>
+      <div class="hdr-right">
+        ${newPosts>0&&view==='feed'?`<div class="new-badge">${newPosts} new ✨</div>`:''}
+        <button class="icon-btn" onclick="toggleSearch()">🔍</button>
+        <button class="icon-btn" onclick="goView('profile')" style="padding:0;overflow:hidden">${profImg}</button>
+        <button class="icon-btn" onclick="openThemeSheet()">🎨</button>
+      </div>
     </div>
-    <button class="brand-pill" onclick="toggleTitleLang()">
-      ${titleLang==='en'
-        ?`<span class="brand-eng-pill">Our Family</span>`
-        :`<span class="brand-arabic-pill">عيلتنا</span>`}
-      <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>
-    </button>
-    <div class="hdr-right">
-      ${newPosts>0&&view==='feed'?`<div class="new-badge">${newPosts} new ✨</div>`:''}
-      <button class="icon-btn" onclick="toggleSearch()">🔍</button>
-      ${profEl}
-      <button class="icon-btn" onclick="openThemeSheet()">🎨</button>
+    <div class="hdr-scrolled-row">
+      ${buildGlassPill('title')}
+      ${buildGlassPill('search')}
+      ${buildGlassPill('profile',profImg)}
+      ${buildGlassPill('theme')}
     </div>
-  </div></div>`;
+  </div>`;
+}
+/* Builds one collapsible glass pill for the scrolled header state.
+   Collapsed = just the arrow tab showing; tap the arrow to expand/collapse.
+   The pill's own tap (title/search/profile/theme action) is separate from
+   the arrow's tap — arrow only toggles collapse, doesn't fire the action. */
+function buildGlassPill(kind,profImg){
+  const collapsed=hdrCollapsed[kind];
+  let inner='',action='';
+  if(kind==='title'){
+    inner=titleLang==='en'?`<span class="brand-eng-pill">Our Family</span>`:`<span class="brand-arabic-pill">عيلتنا</span>`;
+    inner+=`<span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>`;
+    action=`toggleTitleLang()`;
+  } else if(kind==='search'){
+    inner=`🔍`;action=`toggleSearch()`;
+  } else if(kind==='profile'){
+    inner=profImg||'👤';action=`goView('profile')`;
+  } else if(kind==='theme'){
+    inner=`🎨`;action=`openThemeSheet()`;
+  }
+  return`<div class="glass-pill-wrap ${kind}${collapsed?' collapsed':''}" id="ghp-${kind}">
+    <button class="glass-pill" onclick="${action}">${inner}</button>
+    <button class="glass-arrow" onclick="event.stopPropagation();toggleHdrCollapse('${kind}')" aria-label="Toggle">${collapsed?'›':'‹'}</button>
+  </div>`;
+}
+function toggleHdrCollapse(kind){
+  hdrCollapsed[kind]=!hdrCollapsed[kind];
+  const wrap=document.getElementById('ghp-'+kind);
+  if(wrap)wrap.classList.toggle('collapsed',hdrCollapsed[kind]);
 }
 function toggleTitleLang(){
   titleLang=titleLang==='en'?'ar':'en';
-  const pill=document.querySelector('.brand-pill');
+  const pill=document.querySelector('#ghp-title .glass-pill');
   if(pill){
     pill.innerHTML=(titleLang==='en'
       ?`<span class="brand-eng-pill">Our Family</span>`
