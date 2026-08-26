@@ -912,11 +912,8 @@ function buildHeader(newPosts){
         <button class="icon-btn" onclick="openThemeSheet()">🎨</button>
       </div>
     </div>
-    <div class="hdr-scrolled-row">
+        <div class="hdr-scrolled-row">
       ${buildGlassPill('title')}
-      ${buildGlassPill('search')}
-      ${buildGlassPill('profile',profImg)}
-      ${buildGlassPill('theme')}
     </div>
   </div>`;
 }
