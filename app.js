@@ -79,6 +79,7 @@ let pinnedPostId=null, seenBy={}, newCmtPosts={};
 let isOnline=navigator.onLine, profiles={}, draftProfilePic=null, selProfileColor=0;
 let postTags={};
 let chatView='group'; // 'group' | dmKey
+let titleLang='en'; // 'en' | 'ar' — which header title label is showing
 let viewingProfile=null; // name of profile being viewed
 let dmUnread={}; // { dmKey: count }
 
@@ -872,6 +873,22 @@ function render(){
   if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
+  setupHeaderScroll();
+}
+
+/* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
+   small threshold. Re-attached every render() since .main is a fresh
+   element each time (see innerHTML above). Style .hdr.scrolled in app.css —
+   see the placeholder rule there. */
+function setupHeaderScroll(){
+  const main=document.querySelector('.main');
+  const hdr=document.querySelector('.hdr');
+  if(!main||!hdr)return;
+  const onScroll=()=>{
+    hdr.classList.toggle('scrolled', main.scrollTop>8);
+  };
+  main.addEventListener('scroll', onScroll, {passive:true});
+  onScroll(); // set initial state in case render() happened mid-scroll
 }
 
 /* ══════════════════════════════════════════════════════
@@ -883,7 +900,15 @@ function buildHeader(newPosts){
     ?`<button class="icon-btn" onclick="goView('profile')" style="padding:0;overflow:hidden"><img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>`
     :`<button class="icon-btn" onclick="goView('profile')">👤</button>`;
   return`<div class="hdr"><div class="hdr-row">
-    <div><div class="brand-arabic">عيلتنا <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span></div><div class="brand-eng">Our Family</div></div>
+    <div class="brand-static">
+      <div><div class="brand-arabic">عيلتنا <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span></div><div class="brand-eng">Our Family</div></div>
+    </div>
+    <button class="brand-pill" onclick="toggleTitleLang()">
+      ${titleLang==='en'
+        ?`<span class="brand-eng-pill">Our Family</span>`
+        :`<span class="brand-arabic-pill">عيلتنا</span>`}
+      <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>
+    </button>
     <div class="hdr-right">
       ${newPosts>0&&view==='feed'?`<div class="new-badge">${newPosts} new ✨</div>`:''}
       <button class="icon-btn" onclick="toggleSearch()">🔍</button>
@@ -891,6 +916,16 @@ function buildHeader(newPosts){
       <button class="icon-btn" onclick="openThemeSheet()">🎨</button>
     </div>
   </div></div>`;
+}
+function toggleTitleLang(){
+  titleLang=titleLang==='en'?'ar':'en';
+  const pill=document.querySelector('.brand-pill');
+  if(pill){
+    pill.innerHTML=(titleLang==='en'
+      ?`<span class="brand-eng-pill">Our Family</span>`
+      :`<span class="brand-arabic-pill">عيلتنا</span>`)
+      +`<span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>`;
+  }
 }
 
 /* ══════════════════════════════════════════════════════
