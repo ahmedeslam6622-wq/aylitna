@@ -387,8 +387,10 @@ async function uploadPhoto(dataURL){
   try{
     const fd=new FormData();fd.append('file',dataURLtoBlob(dataURL));fd.append('upload_preset',CLD_PRESET);
     const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd});
-    const d=await r.json();return d.secure_url||dataURL;
-  }catch{return dataURL}
+    const d=await r.json();
+    if(d.error){console.log('Photo upload error:',d.error);toast('❌ Photo upload failed: '+d.error.message);return null;}
+    return d.secure_url||null;
+  }catch(e){console.log('Photo upload error:',e);toast('❌ Photo upload failed — check your connection');return null;}
 }
 async function uploadVideo(file){
   try{
@@ -1441,6 +1443,7 @@ async function submitPost(){
     for(const item of draftMedia){
       if(item.type==='photo'){
         const url=await uploadPhoto(item.dataURL);
+        if(!url){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
         media.push({type:'photo',url});
       } else {
         const url=await uploadVideo(item.file);
