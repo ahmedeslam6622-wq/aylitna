@@ -60,7 +60,7 @@ input,textarea,select{font-family:var(--font-b)}
    actual photos. The pills themselves are position:absolute so they don't
    collapse along with the box. */
 .hdr.scrolled{
-  background:transparent;
+  background:none;
   border-bottom-color:transparent;
   box-shadow:none;
   min-height:0;
@@ -114,7 +114,7 @@ input,textarea,select{font-family:var(--font-b)}
   border-radius:999px;
   background:rgba(255,255,255,0.18);
   -webkit-backdrop-filter:blur(20px) saturate(1.4);
-  backdrop-filter:blur(20px) saturate(1.4);
+  backdrop-filter:blur(15px) saturate(1.4);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
   cursor:pointer;
   font-size:18px;
