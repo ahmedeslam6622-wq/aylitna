@@ -76,15 +76,16 @@ input,textarea,select{font-family:var(--font-b)}
 .hdr-right{display:flex;align-items:center;gap:6px}
 
 /* ── Scrolled-state floating glass pills ──────────────────────────────
-   Absolutely positioned over the header area (which is now transparent),
-   so they sit directly on top of the scrolling feed content underneath.
-   Hidden and slightly offset by default; fades/slides in once .scrolled
-   is active on .hdr. */
+   Fixed to the viewport (not confined to .hdr's own compact box), so they
+   float freely above the scrolling feed content with real breathing room,
+   independent of the header bar's height. */
 .hdr-scrolled-row{
-  position:absolute;
-  top:calc(10px + env(safe-area-inset-top));
+  position:fixed;
+  top:calc(14px + env(safe-area-inset-top));
   left:16px;right:16px;
+  z-index:50;
   display:flex;justify-content:space-between;align-items:center;
+  gap:10px;
   opacity:0;
   transform:translateY(-8px);
   pointer-events:none;
@@ -96,7 +97,7 @@ input,textarea,select{font-family:var(--font-b)}
   pointer-events:auto;
 }
 .glass-pill-wrap{
-  display:flex;align-items:center;
+  display:flex;align-items:center;gap:6px;
   transition:transform .3s cubic-bezier(.34,1.4,.64,1);
 }
 .glass-pill{
