@@ -1869,20 +1869,30 @@ function buildNav(){
 /* ══════════════════════════════════════════════════════
    FULLSCREEN + THEME SHEET
    ══════════════════════════════════════════════════════ */
+function buildFullscreenInner(p){
+  const o=getOct(p.oct);
+  // Multi-media posts: show whichever slide was actually tapped
+  // (carouselIdx[p.id], set by setFull's mediaIdx param), not always the
+  // first item. Falls back to the old single photo_url for posts with no
+  // media array (or exactly one item), unchanged from before.
+  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
+  const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
+  const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
+  const isPhoto=current.type==='photo'&&current.url;
+  return`<div class="fs-top">
+      <button class="fs-close" onclick="setFull(null)">✕ Close</button>
+      ${isPhoto?`<button class="fs-save" onclick="saveImg(null,'${current.url}')">⬇ Save</button>`:''}
+    </div>
+    ${isPhoto?`<img class="fs-img" src="${current.url}" alt="">`:''}
+    ${mediaList&&mediaList.length>1?`<div class="fs-meta" style="margin-bottom:-8px">${idx+1} / ${mediaList.length}</div>`:''}
+    <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
+    ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
+    <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>`;
+}
 function buildFullscreen(){
   if(!fullPost)return`<div class="fullscreen" id="fullscreen"></div>`;
   const p=posts.find(p=>p.id===fullPost);if(!p)return`<div class="fullscreen" id="fullscreen"></div>`;
-  const o=getOct(p.oct);
-  return`<div class="fullscreen show" id="fullscreen">
-    <div class="fs-top">
-      <button class="fs-close" onclick="setFull(null)">✕ Close</button>
-      ${p.photo_url?`<button class="fs-save" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>`:''}
-    </div>
-    ${p.photo_url?`<img class="fs-img" src="${p.photo_url}" alt="">`:''}
-    <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
-    ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
-    <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>
-  </div>`;
+  return`<div class="fullscreen show" id="fullscreen">${buildFullscreenInner(p)}</div>`;
 }
 function buildThemeSheet(curTheme,curFS){
   const customPri=ls('ayl_custom_pri','#C4622D');
@@ -1994,7 +2004,20 @@ async function togglePostVideo(video){
 }
 function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
 function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
-function setFull(id,mediaIdx){fullPost=id||null;if(typeof mediaIdx==='number')carouselIdx[id]=mediaIdx;render()}
+function setFull(id,mediaIdx){
+  fullPost=id||null;
+  if(typeof mediaIdx==='number'&&id)carouselIdx[id]=mediaIdx;
+  const el=document.getElementById('fullscreen');
+  if(!el)return;
+  if(fullPost){
+    const p=posts.find(p=>p.id===fullPost);
+    el.className='fullscreen show';
+    el.innerHTML=p?buildFullscreenInner(p):'';
+  } else {
+    el.className='fullscreen';
+    el.innerHTML='';
+  }
+}
 function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
 function confirmDel(id){openCtx=null;if(!confirm('Delete this moment?'))return;deletePost(id)}
 function toggleCtx(id,e){e.stopPropagation();openCtx=openCtx===id?null:id;render()}
