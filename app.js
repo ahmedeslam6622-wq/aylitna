@@ -49,6 +49,7 @@ const THEMES  = [
 ];
 const CMT_PAGE = 5;
 const MAX_CAP  = 300;
+const MAX_MEDIA = 10; // cap per post so uploads don't run away
 const METERED_API_KEY = 'JSia8dCBTVVw7f8RmASIFQ4DhJ_YJSgHYpPAovOQ89T2cBN4';
 
 async function getTurnServers(){
@@ -70,7 +71,9 @@ async function getTurnServers(){
 let posts=[], messages={group:[]}, dmMessages={}, comments={};
 // messages = { group: [...], dmKey: [...] }  dmKey = sorted pair e.g. "Ahmed|Omar"
 let myName='', filter=null, view='feed', prevView='feed';
-let draftPhoto=null, draftVideo=null, draftVideoFile=null, selOct='everyday', showNameInput=false, fullPost=null;
+// draftMedia: [{type:'photo', dataURL}, {type:'video', file, previewURL}, ...]
+// replaces the old single draftPhoto/draftVideo/draftVideoFile.
+let draftMedia=[], selOct='everyday', showNameInput=false, fullPost=null;
 let reminderDismissed=false, greetingDismissed=false;
 let loadingFeed=false, unreadMsgs=0, lastMsgSeen=0, lastSeen=0;
 let openComments={}, cmtDraft={}, cmtPages={}, openCtx=null;
@@ -83,6 +86,7 @@ let titleLang='en'; // 'en' | 'ar' — which header title label is showing
 let hdrCollapsed={title:false,search:false,profile:false,theme:false}; // scrolled-state pill collapse
 let viewingProfile=null; // name of profile being viewed
 let dmUnread={}; // { dmKey: count }
+let carouselIdx={}; // { postId: currentSlideIndex } for multi-media posts
 
 /* ══════════════════════════════════════════════════════
    UTILS
@@ -252,10 +256,27 @@ async function loadPosts(){
   const{data,error}=await sb.from('posts').select('*').order('created_at',{ascending:false}).limit(120);
   if(!error)posts=data||[];
 }
-async function addPost(name,caption,photoURL,videoURL,oct){
-  const p={id:Date.now()+'',name,caption,photo_url:photoURL,video_url:videoURL||null,oct,created_at:new Date().toISOString(),reactions:{}};
+/* media: array of {type:'photo'|'video', url}. Kept alongside photo_url/
+   video_url (set to the FIRST media item) so anything reading the old
+   single-value columns — AI tagging, old cached posts, etc — still works
+   unchanged. New multi-item posts populate both. */
+async function addPost(name,caption,media,oct){
+  const first=media[0]||{};
+  const p={
+    id:Date.now()+'',name,caption,
+    photo_url:first.type==='photo'?first.url:null,
+    video_url:first.type==='video'?first.url:null,
+    media,
+    oct,created_at:new Date().toISOString(),reactions:{}
+  };
   if(!USE_SB){posts.unshift(p);lssj('ayl_posts',posts);return}
-  const{data}=await sb.from('posts').insert({name,caption,photo_url:photoURL,video_url:videoURL||null,oct,reactions:{}}).select().single();
+  const{data}=await sb.from('posts').insert({
+    name,caption,
+    photo_url:first.type==='photo'?first.url:null,
+    video_url:first.type==='video'?first.url:null,
+    media,
+    oct,reactions:{}
+  }).select().single();
   if(data)posts.unshift(data);
 }
 async function updateRxn(pid,rxn){
@@ -424,7 +445,7 @@ function buildAiTags(postId){
 function repaintAiTags(postId){
   const card=document.getElementById('post-'+postId);if(!card)return;
   const existing=card.querySelector('.ai-tags,.ai-tagging');
-  const imgWrap=card.querySelector('.post-img-wrap');if(!imgWrap)return;
+  const imgWrap=card.querySelector('.post-img-wrap,.post-carousel');if(!imgWrap)return;
   const html=buildAiTags(postId);
   if(existing)existing.outerHTML=html;
   else if(html)imgWrap.insertAdjacentHTML('afterend',html);
@@ -1069,19 +1090,15 @@ function buildCard(p,idx){
     ${seenList.slice(0,4).map(n=>{const sc=getC(n);const sp=profiles[n];return sp?.photo?`<div class="seen-av"><img src="${sp.photo}"></div>`:`<span class="seen-av" style="background:${sc.bg};border-color:${sc.br};color:${sc.tx}">${n[0]}</span>`}).join('')}
     <span>Seen by ${seenList.slice(0,3).join(', ')}${seenList.length>3?` +${seenList.length-3}`:''}</span>
   </div>`:'';
-  return`<div class="card${isNew?' is-new':''}${isPinned?' pinned':''}" id="post-${p.id}" style="animation-delay:${idx*.04}s">
-    ${isPinned?`<div class="pin-banner">📌 Pinned</div>`:''}
-    <div class="card-hdr">
-      <div onclick="openProfile('${p.name}')" style="cursor:pointer">${buildAv(p.name,'av')}</div>
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('${p.name}')">
-        <div class="cname">${p.name}</div>
-        <div class="ctime" onclick="showFullDate('${p.id}');event.stopPropagation()">${ago(p.created_at)}</div>
-      </div>
-      <span class="oct-tag" style="background:${o.bg};color:${o.tx};border:1px solid ${o.br}">${o.e} ${o.l}</span>
-      <button class="more-btn" onclick="toggleCtx('${p.id}',event)">⋯</button>
-    </div>
-    ${openCtx===p.id?buildCtxMenu(p):''}
-    ${p.video_url
+
+  /* Media rendering: if this post has 2+ items in `media`, show a
+     swipeable carousel. If exactly 1 item in `media`, or an old post with
+     only photo_url/video_url set, fall back to the original single-media
+     markup unchanged — so nothing about old posts changes visually. */
+  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
+  const mediaHtml = mediaList&&mediaList.length>1
+    ? buildCarousel(p,mediaList)
+    : p.video_url
       ?`<div class="post-video-wrap">
           <video class="post-video" src="${getVideoUrl(p.video_url)}" playsinline preload="none"
             onclick="togglePostVideo(this)"></video>
@@ -1099,13 +1116,65 @@ function buildCard(p,idx){
             <button class="img-overlay-btn" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>
           </div>
         </div>${buildAiTags(p.id)}`
-      :`<div class="no-img" style="background:${o.bg};border-color:${o.br}"><span style="font-size:16px">${o.e}</span><span class="no-img-txt" style="color:${o.tx}">${o.l}</span></div>`
-    }
+      :`<div class="no-img" style="background:${o.bg};border-color:${o.br}"><span style="font-size:16px">${o.e}</span><span class="no-img-txt" style="color:${o.tx}">${o.l}</span></div>`;
+
+  return`<div class="card${isNew?' is-new':''}${isPinned?' pinned':''}" id="post-${p.id}" style="animation-delay:${idx*.04}s">
+    ${isPinned?`<div class="pin-banner">📌 Pinned</div>`:''}
+    <div class="card-hdr">
+      <div onclick="openProfile('${p.name}')" style="cursor:pointer">${buildAv(p.name,'av')}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('${p.name}')">
+        <div class="cname">${p.name}</div>
+        <div class="ctime" onclick="showFullDate('${p.id}');event.stopPropagation()">${ago(p.created_at)}</div>
+      </div>
+      <span class="oct-tag" style="background:${o.bg};color:${o.tx};border:1px solid ${o.br}">${o.e} ${o.l}</span>
+      <button class="more-btn" onclick="toggleCtx('${p.id}',event)">⋯</button>
+    </div>
+    ${openCtx===p.id?buildCtxMenu(p):''}
+    ${mediaHtml}
     ${p.caption?`<div class="caption">${rich(p.caption)}</div>`:''}
     ${seenHtml}
     ${buildRxns(p)}
     ${buildCmtSection(p)}
   </div>`;
+}
+/* Swipeable multi-photo/video carousel — pure CSS scroll-snap, no JS drag
+   library needed. Dots update on scroll via onCarouselScroll(). Each slide
+   is either an <img> or a tap-to-play <video>, same behavior as single
+   posts. */
+function buildCarousel(p,mediaList){
+  const idx=carouselIdx[p.id]||0;
+  const slides=mediaList.map((m,i)=>{
+    if(m.type==='video'){
+      return`<div class="carousel-slide">
+        <video class="post-video" src="${getVideoUrl(m.url)}" playsinline preload="none"
+          onclick="togglePostVideo(this)"></video>
+        <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
+      </div>`;
+    }
+    return`<div class="carousel-slide">
+      <img class="post-img" src="${m.url}" alt="" loading="lazy"
+        onclick="setFull('${p.id}',${i})"
+        oncontextmenu="saveImg(event,'${m.url}')"
+        ontouchstart="startLP('${m.url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
+    </div>`;
+  }).join('');
+  const dots=mediaList.map((_,i)=>`<span class="carousel-dot${i===idx?' active':''}"></span>`).join('');
+  return`<div class="post-carousel">
+    <div class="carousel-track" id="carousel-${p.id}" onscroll="onCarouselScroll('${p.id}',this)">${slides}</div>
+    <div class="carousel-count">${idx+1}/${mediaList.length}</div>
+    <div class="carousel-dots">${dots}</div>
+  </div>`;
+}
+function onCarouselScroll(pid,track){
+  const w=track.clientWidth;if(!w)return;
+  const idx=Math.round(track.scrollLeft/w);
+  if(carouselIdx[pid]===idx)return;
+  carouselIdx[pid]=idx;
+  const card=document.getElementById('post-'+pid);if(!card)return;
+  card.querySelectorAll('.carousel-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+  const countEl=card.querySelector('.carousel-count');
+  const total=card.querySelectorAll('.carousel-slide').length;
+  if(countEl)countEl.textContent=(idx+1)+'/'+total;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1308,18 +1377,16 @@ function buildAdd(){
   const pa=!showNameInput
     ?`<div class="posting-as"><div><div class="pa-lbl">Posting as</div><div class="pa-name">${myName}</div></div><button class="change-btn" onclick="showNameInput=true;render()">Change</button></div>`
     :`<label class="field-lbl">Your name</label><input class="field" id="nameIn" value="${myName}" placeholder="e.g. Omar" autocapitalize="words" oninput="checkSub()">`;
+  const canAddMore=draftMedia.length<MAX_MEDIA;
   return`<div class="add-wrap">
     <div class="page-ttl">Share a moment 📸🎬</div>
     ${pa}
     <div class="photo-row">
-      <button class="photo-btn" onclick="document.getElementById('cameraIn').click()"><div class="photo-btn-ico">📷</div><div class="photo-btn-txt">Camera</div></button>
-      <button class="photo-btn" onclick="document.getElementById('galleryIn').click()"><div class="photo-btn-ico">🖼️</div><div class="photo-btn-txt">Gallery</div></button>
-      <button class="photo-btn" onclick="document.getElementById('videoIn').click()"><div class="photo-btn-ico">🎬</div><div class="photo-btn-txt">Video</div></button>
+      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('cameraIn').click()"`:'disabled'}><div class="photo-btn-ico">📷</div><div class="photo-btn-txt">Camera</div></button>
+      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('galleryIn').click()"`:'disabled'}><div class="photo-btn-ico">🖼️</div><div class="photo-btn-txt">Gallery</div></button>
+      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('videoIn').click()"`:'disabled'}><div class="photo-btn-ico">🎬</div><div class="photo-btn-txt">Video</div></button>
     </div>
-    ${draftVideo?`<div class="draft-wrap">
-      <video src="${draftVideo}" controls style="width:100%;border-radius:12px;max-height:220px;background:#000"></video>
-      <button class="remove-img" onclick="draftVideo=null;draftVideoFile=null;render()">✕ Remove</button>
-    </div>`:draftPhoto?`<div class="draft-wrap"><img class="draft-img" src="${draftPhoto}"><button class="remove-img" onclick="draftPhoto=null;render()">✕ Remove</button></div>`:''}
+    ${draftMedia.length?buildDraftMediaStrip():''}
     <label class="field-lbl">Occasion</label>
     <div class="oct-row scrollx">${OCTS.map(o=>`<button class="oct-btn${selOct===o.id?' on':''}" onclick="selOct='${o.id}';render()">${o.e} ${o.l}</button>`).join('')}</div>
     <label class="field-lbl">Caption</label>
@@ -1333,6 +1400,30 @@ function buildAdd(){
     <button class="submit-btn" id="subBtn" onclick="submitPost()" ${showNameInput?'disabled':''}>Share with family ❤️</button>
   </div>`;
 }
+/* Horizontal strip of thumbnails for everything queued in draftMedia,
+   each with its own remove (✕) button. Photos show the compressed
+   dataURL directly; videos show a small tappable preview via <video>
+   (muted, no controls) so it's clear which slot is a video. */
+function buildDraftMediaStrip(){
+  const items=draftMedia.map((m,i)=>{
+    const thumb=m.type==='video'
+      ?`<video src="${m.previewURL}" muted></video><span class="draft-media-badge">🎬</span>`
+      :`<img src="${m.dataURL}">`;
+    return`<div class="draft-media-item">
+      ${thumb}
+      <button class="draft-media-rm" onclick="removeDraftMedia(${i})">✕</button>
+    </div>`;
+  }).join('');
+  return`<div class="draft-media-strip scrollx">${items}
+    <div class="draft-media-count">${draftMedia.length}/${MAX_MEDIA}</div>
+  </div>`;
+}
+function removeDraftMedia(idx){
+  const item=draftMedia[idx];
+  if(item?.previewURL)URL.revokeObjectURL(item.previewURL);
+  draftMedia.splice(idx,1);
+  render();
+}
 async function submitPost(){
   if(!requireOnline())return;
   const name=(showNameInput?(document.getElementById('nameIn')?.value||''):myName).trim();
@@ -1340,23 +1431,30 @@ async function submitPost(){
   if(!name||caption.length>MAX_CAP)return;
   const upEl=document.getElementById('uploading');
   upEl.className='uploading-overlay show';
-  if(draftVideo){
-    upEl.querySelector('.uploading-txt').textContent='Uploading video… ❤️';
+  const hasVideo=draftMedia.some(m=>m.type==='video');
+  if(hasVideo){
+    upEl.querySelector('.uploading-txt').textContent='Uploading… ❤️';
     upEl.querySelector('.uploading-sub').textContent='This may take a moment';
   }
   try{
-    let photoURL=null,videoURL=null;
-    if(draftVideo&&draftVideoFile){
-      videoURL=await uploadVideo(draftVideoFile);
-      if(!videoURL){upEl.className='uploading-overlay';return;}
-    }else if(draftPhoto){
-      photoURL=await uploadPhoto(draftPhoto);
+    const media=[];
+    for(const item of draftMedia){
+      if(item.type==='photo'){
+        const url=await uploadPhoto(item.dataURL);
+        media.push({type:'photo',url});
+      } else {
+        const url=await uploadVideo(item.file);
+        if(!url){upEl.className='uploading-overlay';toast('❌ A video failed to upload');return;}
+        media.push({type:'video',url});
+      }
     }
-    await addPost(name,caption,photoURL,videoURL,selOct);
+    await addPost(name,caption,media,selOct);
     if(name!==myName){myName=name;lss('ayl_name',name)}
     const newPost=posts[0];
-    if(photoURL&&newPost&&draftPhoto)tagPhotoWithAI(newPost.id,draftPhoto);
-    draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false;
+    const firstPhoto=draftMedia.find(m=>m.type==='photo');
+    if(firstPhoto&&newPost)tagPhotoWithAI(newPost.id,firstPhoto.dataURL);
+    draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});
+    draftMedia=[];selOct='everyday';showNameInput=false;
     if(!USE_SB)await loadPosts();
     view='feed';render();toast('✨ Moment shared!');vibrate([20,10,20]);playSound('send');
   }catch(e){alert('Something went wrong. Please try again.')}
@@ -1891,9 +1989,9 @@ async function togglePostVideo(video){
     if(btn){btn.style.display='flex';btn.textContent='▶';}
   }
 }
-function goView(v){view=v;openCtx=null;if(v==='add'){draftPhoto=null;draftVideo=null;draftVideoFile=null;selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
+function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
 function setFilter(n){filter=n==='All'?null:(filter===n?null:n);render()}
-function setFull(id){fullPost=id||null;render()}
+function setFull(id,mediaIdx){fullPost=id||null;if(typeof mediaIdx==='number')carouselIdx[id]=mediaIdx;render()}
 function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
 function confirmDel(id){openCtx=null;if(!confirm('Delete this moment?'))return;deletePost(id)}
 function toggleCtx(id,e){e.stopPropagation();openCtx=openCtx===id?null:id;render()}
@@ -1927,14 +2025,30 @@ function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.
 /* ══════════════════════════════════════════════════════
    FILE INPUTS
    ══════════════════════════════════════════════════════ */
-document.getElementById('galleryIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);draftVideo=null;draftVideoFile=null;this.value='';if(view!=='add')view='add';render()};
-document.getElementById('cameraIn').onchange=async function(){const f=this.files[0];if(!f)return;draftPhoto=await compress(f);draftVideo=null;draftVideoFile=null;this.value='';if(view!=='add')view='add';render()};
+document.getElementById('galleryIn').onchange=async function(){
+  const files=[...this.files].slice(0,MAX_MEDIA-draftMedia.length);
+  this.value='';
+  for(const f of files){
+    const dataURL=await compress(f);
+    draftMedia.push({type:'photo',dataURL});
+  }
+  if(view!=='add')view='add';render();
+};
+document.getElementById('cameraIn').onchange=async function(){
+  const f=this.files[0];this.value='';if(!f)return;
+  if(draftMedia.length>=MAX_MEDIA)return;
+  const dataURL=await compress(f);
+  draftMedia.push({type:'photo',dataURL});
+  if(view!=='add')view='add';render();
+};
 document.getElementById('videoIn').onchange=function(){
-  const f=this.files[0];if(!f)return;
-  if(!f.type.startsWith('video/')){toast('Please select a video file');this.value='';return;}
-  draftVideoFile=f;draftPhoto=null;
-  draftVideo=URL.createObjectURL(f);
-  this.value='';if(view!=='add')view='add';render();
+  const files=[...this.files].slice(0,MAX_MEDIA-draftMedia.length);
+  this.value='';
+  for(const f of files){
+    if(!f.type.startsWith('video/')){toast('Please select a video file');continue;}
+    draftMedia.push({type:'video',file:f,previewURL:URL.createObjectURL(f)});
+  }
+  if(view!=='add')view='add';render();
 };
 document.getElementById('commentImgIn').onchange=async function(){
   const f=this.files[0];if(!f||!commentImgTarget)return;
