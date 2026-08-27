@@ -96,6 +96,43 @@ const lss = (k,v)=>{try{localStorage.setItem(k,String(v))}catch{}};
 const lsj = (k,d=[])=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const lssj= (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
+//Checks if user is iOS or Android.
+const getMobileOS = () => {
+  // 1. Check modern secure browser data if available
+  if (navigator.userAgentData?.platform) {
+    const platform = navigator.userAgentData.platform.toLowerCase();
+    if (platform.includes('android')) return 'Android';
+    if (platform.includes('ios')) return 'iOS';
+  }
+
+  // 2. Safe, standard fallback string check
+  const ua = navigator.userAgent.toLowerCase();
+  
+  if (ua.includes('android')) {
+    return 'Android';
+  }
+  
+  // Catches iPhones, iPods, and modern iPads
+  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod') || 
+     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    return 'iOS';
+  }
+
+  return 'Android';
+};
+
+// How to use it:
+const os = getMobileOS();
+
+if (os === 'Android') {
+  console.log("user: android");
+} else if (os === 'iOS') {
+  console.log("user: iOS");
+} else {
+  console.log("critical error, user is not android, iOS");
+}
+
+
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
   if(!nameColors[name]){
