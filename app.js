@@ -96,6 +96,15 @@ const lss = (k,v)=>{try{localStorage.setItem(k,String(v))}catch{}};
 const lsj = (k,d=[])=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const lssj= (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
+//OS Check
+function detectPlatform(){
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+  if (/android/i.test(ua)) return 'android';
+  return 'other';
+}
+
+const os = detectPlatform();
 
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
