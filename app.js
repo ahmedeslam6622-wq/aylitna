@@ -163,9 +163,9 @@ function cmtCount(pid){return(comments[pid]||[]).filter(c=>!c._ph).length}
 function cmtCountRaw(pid){return(comments[pid]||[]).length}
 
 let toastTimer=null;
-function toast(msg,dur=2400){
+function toast(msg,dur=2400,type='default'){
   const el=document.getElementById('toast');if(!el)return;
-  el.textContent=msg;el.className='toast show';
+  el.textContent=msg;el.className='toast show'+(type!=='default'?' toast-'+type:'');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='toast',dur);
 }
 function vibrate(ms=20){if(navigator.vibrate)navigator.vibrate(ms)}
@@ -551,11 +551,32 @@ function subscribeCmtsChannel(){
 }
 /* Also resubscribe everything whenever the tab/app becomes visible again —
    covers the common mobile case where the socket dies while backgrounded
-   and the status callback itself doesn't fire until something touches it. */
+   and the status callback itself doesn't fire until something touches it.
+
+   Supabase's realtime-js has a known limitation where the auth token used
+   by the WebSocket doesn't reliably refresh after the tab/app has been in
+   standby (github.com/supabase/supabase-js#1732) — meaning a plain
+   resubscribe can silently keep using a stale token and never actually
+   reconnect. To not depend on that working perfectly, this also directly
+   re-fetches posts/messages/comments-for-open-posts on every return to the
+   app, so content is correct even if the socket itself stays broken. */
+async function refreshAllDataOnResume(){
+  if(!USE_SB)return;
+  await loadPosts();
+  nameColors={};
+  if(view==='feed'){const main=document.querySelector('.main');if(main)main.innerHTML=buildFeed();}
+  if(chatView==='group')await loadMessages();
+  else if(chatView!=='dms')await loadDMs(dmKey(myName,chatView));
+  if(view==='chat')repaintChat();
+  for(const pid of Object.keys(openComments)){
+    if(openComments[pid]){await loadComments(pid);repaintCmts(pid);}
+  }
+}
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&USE_SB&&myName){
     subscribeRealtime();
     if(callChannel)subscribeCallSignaling();
+    refreshAllDataOnResume();
   }
 });
 
