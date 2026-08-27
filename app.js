@@ -97,58 +97,6 @@ const lsj = (k,d=[])=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v
 const lssj= (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
 
-// Checks if user is iOS, Android, or Desktop.
-const getMobileOS = () => {
-  // 1. Check modern secure browser data if available
-  if (navigator.userAgentData) {
-    const platform = navigator.userAgentData.platform.toLowerCase();
-    
-    // Check desktop platforms first if userAgentData indicates mobile status
-    if (navigator.userAgentData.mobile === false) {
-      return 'Desktop';
-    }
-    
-    if (platform.includes('android')) return 'Android';
-    if (platform.includes('ios')) return 'iOS';
-    if (platform.includes('windows') || platform.includes('macos') || platform.includes('linux')) {
-      return 'Desktop';
-    }
-  }
-
-  // 2. Safe, standard fallback string check
-  const ua = navigator.userAgent.toLowerCase();
-  const platformFallback = navigator.platform.toLowerCase();
-
-  // Explicit Desktop platform strings
-  if (platformFallback.includes('win') || platformFallback.includes('linux')) {
-    return 'Desktop';
-  }
-  
-  // MacIntel check: if it doesn't have multiple touch points, it's a desktop Mac
-  if (platformFallback === 'macintel' && navigator.maxTouchPoints <= 1) {
-    return 'Desktop';
-  }
-
-  // Mobile OS checks
-  if (ua.includes('android')) {
-    return 'Android';
-  }
-  
-  // Catches iPhones, iPods, and modern iPads
-  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod') || 
-     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-    return 'iOS';
-  }
-
-  // Final fallback strategy
-  return 'Desktop'; 
-};
-
-// Execute and print the detected operating system
-const os = getMobileOS();
-console.log(os);
-
-
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
   if(!nameColors[name]){
