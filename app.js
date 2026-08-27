@@ -477,35 +477,88 @@ async function tagPhotoWithAI(postId,imageDataURL){
 /* ══════════════════════════════════════════════════════
    REALTIME
    ══════════════════════════════════════════════════════ */
+let realtimeChannels={posts:null,msgs:null,cmts:null};
+let realtimeResubTimers={posts:null,msgs:null,cmts:null};
+
 function subscribeRealtime(){
   if(!USE_SB)return;
-  sb.channel('posts').on('postgres_changes',{event:'*',schema:'public',table:'posts'},async()=>{
-    await loadPosts();nameColors={};if(view==='feed')showNewBanner();
-  }).subscribe();
-  sb.channel('msgs').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async(payload)=>{
-    const rec=payload.new;if(!rec)return;
-    const key=rec.dm_key;
-    if(!key){
-      await loadMessages();
-      if(view==='chat'&&chatView==='group'){repaintChat();scrollChat();}
-      else if(!isOwn(rec.name)){unreadMsgs++;repaintNav();}
-    } else {
-      await loadDMs(key);
-      if(view==='chat'&&chatView===key){repaintChat();scrollChat();}
-      else if(!isOwn(rec.name)){dmUnread[key]=(dmUnread[key]||0)+1;repaintNav();}
+  subscribePostsChannel();
+  subscribeMsgsChannel();
+  subscribeCmtsChannel();
+}
+/* Each channel below is rebuilt with a fresh name on every (re)subscribe
+   and watches its own connection status. If Supabase's Realtime socket
+   drops — which happens routinely on mobile from screen lock, backgrounding,
+   or switching between WiFi/cellular — the channel silently goes dead and
+   nothing updates again until the whole app restarts. This retries the
+   specific channel automatically instead, so live updates keep working
+   without requiring a manual reload. */
+function subscribePostsChannel(){
+  if(realtimeChannels.posts){try{sb.removeChannel(realtimeChannels.posts)}catch{}}
+  realtimeChannels.posts=sb.channel('posts-'+Date.now()).on('postgres_changes',
+    {event:'*',schema:'public',table:'posts'},async()=>{
+      await loadPosts();nameColors={};if(view==='feed')showNewBanner();
     }
-    if(!isOwn(rec.name))playSound('receive');
-  }).subscribe();
-  sb.channel('cmts').on('postgres_changes',{event:'*',schema:'public',table:'comments'},async(payload)=>{
-    const pid=payload.new?.post_id||payload.old?.post_id;
-    if(pid){
-      await loadComments(pid);repaintCmts(pid);repaintCmtBadge(pid);
-      if(!openComments[pid]&&payload.eventType==='INSERT'&&!isOwn(payload.new?.name||'')){
-        newCmtPosts[pid]=true;repaintCmtBadge(pid);
+  ).subscribe(status=>{
+    if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+      clearTimeout(realtimeResubTimers.posts);
+      realtimeResubTimers.posts=setTimeout(subscribePostsChannel,1500);
+    }
+  });
+}
+function subscribeMsgsChannel(){
+  if(realtimeChannels.msgs){try{sb.removeChannel(realtimeChannels.msgs)}catch{}}
+  realtimeChannels.msgs=sb.channel('msgs-'+Date.now()).on('postgres_changes',
+    {event:'*',schema:'public',table:'messages'},async(payload)=>{
+      const rec=payload.new;if(!rec)return;
+      const key=rec.dm_key;
+      if(!key){
+        await loadMessages();
+        if(view==='chat'&&chatView==='group'){repaintChat();scrollChat();}
+        else if(!isOwn(rec.name)){unreadMsgs++;repaintNav();}
+      } else {
+        await loadDMs(key);
+        if(view==='chat'&&chatView===key){repaintChat();scrollChat();}
+        else if(!isOwn(rec.name)){dmUnread[key]=(dmUnread[key]||0)+1;repaintNav();}
+      }
+      if(!isOwn(rec.name))playSound('receive');
+    }
+  ).subscribe(status=>{
+    if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+      clearTimeout(realtimeResubTimers.msgs);
+      realtimeResubTimers.msgs=setTimeout(subscribeMsgsChannel,1500);
+    }
+  });
+}
+function subscribeCmtsChannel(){
+  if(realtimeChannels.cmts){try{sb.removeChannel(realtimeChannels.cmts)}catch{}}
+  realtimeChannels.cmts=sb.channel('cmts-'+Date.now()).on('postgres_changes',
+    {event:'*',schema:'public',table:'comments'},async(payload)=>{
+      const pid=payload.new?.post_id||payload.old?.post_id;
+      if(pid){
+        await loadComments(pid);repaintCmts(pid);repaintCmtBadge(pid);
+        if(!openComments[pid]&&payload.eventType==='INSERT'&&!isOwn(payload.new?.name||'')){
+          newCmtPosts[pid]=true;repaintCmtBadge(pid);
+        }
       }
     }
-  }).subscribe();
+  ).subscribe(status=>{
+    if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+      clearTimeout(realtimeResubTimers.cmts);
+      realtimeResubTimers.cmts=setTimeout(subscribeCmtsChannel,1500);
+    }
+  });
 }
+/* Also resubscribe everything whenever the tab/app becomes visible again —
+   covers the common mobile case where the socket dies while backgrounded
+   and the status callback itself doesn't fire until something touches it. */
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&USE_SB&&myName){
+    subscribeRealtime();
+    if(callChannel)subscribeCallSignaling();
+  }
+});
+
 
 /* ══════════════════════════════════════════════════════
    PUSH NOTIFICATIONS
