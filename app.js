@@ -96,18 +96,40 @@ const lss = (k,v)=>{try{localStorage.setItem(k,String(v))}catch{}};
 const lsj = (k,d=[])=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const lssj= (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
-//Checks if user is iOS or Android.
+
+// Checks if user is iOS, Android, or Desktop.
 const getMobileOS = () => {
   // 1. Check modern secure browser data if available
-  if (navigator.userAgentData?.platform) {
+  if (navigator.userAgentData) {
     const platform = navigator.userAgentData.platform.toLowerCase();
+    
+    // Check desktop platforms first if userAgentData indicates mobile status
+    if (navigator.userAgentData.mobile === false) {
+      return 'Desktop';
+    }
+    
     if (platform.includes('android')) return 'Android';
     if (platform.includes('ios')) return 'iOS';
+    if (platform.includes('windows') || platform.includes('macos') || platform.includes('linux')) {
+      return 'Desktop';
+    }
   }
 
   // 2. Safe, standard fallback string check
   const ua = navigator.userAgent.toLowerCase();
+  const platformFallback = navigator.platform.toLowerCase();
+
+  // Explicit Desktop platform strings
+  if (platformFallback.includes('win') || platformFallback.includes('linux')) {
+    return 'Desktop';
+  }
   
+  // MacIntel check: if it doesn't have multiple touch points, it's a desktop Mac
+  if (platformFallback === 'macintel' && navigator.maxTouchPoints <= 1) {
+    return 'Desktop';
+  }
+
+  // Mobile OS checks
   if (ua.includes('android')) {
     return 'Android';
   }
@@ -118,19 +140,13 @@ const getMobileOS = () => {
     return 'iOS';
   }
 
-  return 'Android';
+  // Final fallback strategy
+  return 'Desktop'; 
 };
 
-// How to use it:
+// Execute and print the detected operating system
 const os = getMobileOS();
-
-if (os === 'Android') {
-  console.log("user: android");
-} else if (os === 'iOS') {
-  console.log("user: iOS");
-} else {
-  console.log("critical error, user is not android, iOS");
-}
+console.log(os);
 
 
 function dmKey(a,b){return[a,b].sort().join('|')}
