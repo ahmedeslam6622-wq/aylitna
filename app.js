@@ -106,11 +106,6 @@ function detectPlatform(){
 
 const os = detectPlatform();
 
-
-
-
-
-
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
   if(!nameColors[name]){
@@ -970,6 +965,7 @@ async function init(){
 }
 }
 
+
 /* ══════════════════════════════════════════════════════
    MAIN RENDER
    ══════════════════════════════════════════════════════ */
@@ -1015,7 +1011,6 @@ function setupHeaderScroll(){
   main.addEventListener('scroll', onScroll, {passive:true});
   onScroll(); // set initial state in case render() happened mid-scroll
 }
-
 
 /* ══════════════════════════════════════════════════════
    HEADER
