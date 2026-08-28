@@ -429,6 +429,43 @@ input,textarea,select{font-family:var(--font)}
   flex: 1;
   max-width: 64px;
   transition: transform 0.15s;
+  overflow: hidden;
+  border-radius: var(--r2);
+}
+
+/* ── iOS: sliding tab indicator ─────────────────────────────────────
+   A single pill that moves under whichever nav button is active,
+   positioned via JS (positionNavSlide in app.js) using measured pixel
+   offsets — not CSS-only, since button widths vary with content. Has an
+   explicit default width so it's never a stray 0px or full-width box
+   before JS finishes its first measurement. */
+.nav-slide{
+  position:absolute;
+  top:6px;bottom:6px;left:0;
+  width:56px;
+  background:var(--pri-light);
+  border-radius:var(--r2);
+  opacity:0;
+  pointer-events:none;
+  transition:transform .35s cubic-bezier(.34,1.4,.64,1), width .35s cubic-bezier(.34,1.4,.64,1), opacity .2s;
+  z-index:0;
+}
+.nav-btn{position:relative;z-index:1}
+
+/* ── Android: Material-style ripple ─────────────────────────────────
+   Spawned per-tap by navRipple() in app.js at the exact touch point,
+   expands and fades, then removes itself from the DOM. */
+.nav-ripple{
+  position:absolute;
+  border-radius:50%;
+  background:rgba(0,0,0,0.12);
+  transform:scale(0);
+  pointer-events:none;
+  animation:nav-ripple-anim .5s ease-out forwards;
+}
+[data-theme="midnight"] .nav-ripple{background:rgba(255,255,255,0.18)}
+@keyframes nav-ripple-anim{
+  to{transform:scale(1.8);opacity:0}
 }
 
 .nav-btn:active {
