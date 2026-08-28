@@ -423,10 +423,12 @@ async function loadSeenByFromDB(){
   seenBy=lsj('ayl_seen_by',{});
   if(!USE_SB)return;
   const ids=posts.slice(0,20).map(p=>p.id);if(!ids.length)return;
-  const{data}=await sb.from('post_views').select('post_id,viewer').in('post_id',ids).catch(()=>({data:null}));
-  if(!data)return;
-  data.forEach(r=>{if(!seenBy[r.post_id])seenBy[r.post_id]=[];if(!seenBy[r.post_id].includes(r.viewer))seenBy[r.post_id].push(r.viewer)});
-  lssj('ayl_seen_by',seenBy);
+  try{
+    const{data}=await sb.from('post_views').select('post_id,viewer').in('post_id',ids);
+    if(!data)return;
+    data.forEach(r=>{if(!seenBy[r.post_id])seenBy[r.post_id]=[];if(!seenBy[r.post_id].includes(r.viewer))seenBy[r.post_id].push(r.viewer)});
+    lssj('ayl_seen_by',seenBy);
+  }catch(e){console.log('seenBy fetch failed:',e)}
 }
 async function markSeenBy(){
   if(!myName||!posts.length)return;
@@ -434,7 +436,7 @@ async function markSeenBy(){
   lssj('ayl_seen_by',seenBy);
   if(!USE_SB)return;
   const rows=posts.slice(0,8).map(p=>({post_id:p.id,viewer:myName}));
-  await sb.from('post_views').upsert(rows,{onConflict:'post_id,viewer',ignoreDuplicates:true}).catch(()=>{});
+  try{await sb.from('post_views').upsert(rows,{onConflict:'post_id,viewer',ignoreDuplicates:true})}catch(e){console.log('markSeenBy failed:',e)}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -479,7 +481,7 @@ async function tagPhotoWithAI(postId,imageDataURL){
     const d=await res.json();
     const tags=(d.content?.[0]?.text||'').split(',').map(t=>t.trim().toLowerCase()).filter(t=>t.length>1&&t.length<25).slice(0,6);
     postTags[postId]=tags;
-    if(USE_SB&&tags.length)await sb.from('posts').update({ai_tags:tags}).eq('id',postId).catch(()=>{});
+    if(USE_SB&&tags.length)await sb.from('posts').update({ai_tags:tags}).eq('id',postId);
   }catch{postTags[postId]=[]}
   repaintAiTags(postId);
 }
@@ -944,8 +946,10 @@ async function init(){
     loadSeenByFromDB().then(()=>markSeenBy());
   });
   if(USE_SB){
-    const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null).catch(()=>({data:null}));
-    if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
+    try{
+      const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null);
+      if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
+    }catch(e){console.log('ai_tags fetch failed:',e)}
   }
   subscribeRealtime();
   if(myName){initNotifs();initPeer();}
