@@ -409,6 +409,8 @@ input,textarea,select{font-family:var(--font-b)}
   flex-shrink: 0;
   box-shadow: 0 8px 32px var(--shadow2);
   min-height: var(--nav-h);
+  -webkit-backdrop-filter:blur(15px) saturate(1.7);
+  backdrop-filter:blur(15px) saturate(1.7);
   z-index: 999;
 }
 
