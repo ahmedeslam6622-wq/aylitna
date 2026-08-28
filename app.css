@@ -117,8 +117,8 @@ input,textarea,select{font-family:var(--font-b)}
   border-radius:999px;
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
-  -webkit-backdrop-filter:blur(20px) saturate(1.4);
-  backdrop-filter:blur(20px) saturate(1.4);
+  -webkit-backdrop-filter:blur(15px) saturate(1.7);
+  backdrop-filter:blur(15px) saturate(1.7);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
   cursor:pointer;
   font-size: 23px; /* Increased from 18px */
