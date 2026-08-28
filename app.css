@@ -111,8 +111,8 @@ input,textarea,select{font-family:var(--font-b)}
   transition:transform .3s cubic-bezier(.34,1.4,.64,1);
 }
 .glass-pill{
-  display:flex;align-items:center;gap:10px; /* Increased from 8px for better inner spacing */
-  padding: 14px 22px; /* Increased from 10px 16px to make it larger */
+  display:flex;align-items:center;gap:11px; /* Increased from 8px for better inner spacing */
+  padding: 16px 24px; /* Increased from 10px 16px to make it larger */
   border-radius:999px;
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
@@ -120,7 +120,7 @@ input,textarea,select{font-family:var(--font-b)}
   backdrop-filter:blur(20px) saturate(1.4);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
   cursor:pointer;
-  font-size: 22px; /* Increased from 18px */
+  font-size: 23px; /* Increased from 18px */
   color:var(--txt);
   transition:transform .15s ease, opacity .3s ease, width .3s cubic-bezier(.34,1.4,.64,1), padding .3s ease;
   overflow:hidden;
@@ -131,8 +131,8 @@ input,textarea,select{font-family:var(--font-b)}
 /* Larger Profile Pill */
 .glass-pill-wrap.profile .glass-pill{
   padding:4px;
-  width: 56px; /* Increased from 40px */
-  height: 56px; /* Increased from 40px to maintain the 1:1 circular aspect ratio */
+  width: 58px; /* Increased from 40px */
+  height: 58px; /* Increased from 40px to maintain the 1:1 circular aspect ratio */
   justify-content:center;
 }
 .glass-pill-wrap.profile .glass-pill img{width:100%;height:100%;object-fit:cover;border-radius:50%}
