@@ -447,7 +447,7 @@ input,textarea,select{font-family:var(--font)}
   border-radius:999px;
   opacity:0;
   pointer-events:none;
-  transition:transform .18s cubic-bezier(.4,0,.2,1), width .18s cubic-bezier(.4,0,.2,1), opacity .15s;
+  transition:transform .15s ease-out, width .15s ease-out, opacity .12s;
   z-index:0;
 }
 .nav-btn{position:relative;z-index:1}
