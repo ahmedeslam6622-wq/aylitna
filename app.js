@@ -950,8 +950,17 @@ async function init(){
   subscribeRealtime();
   if(myName){initNotifs();initPeer();}
   checkBirthdays();
-  if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker'in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.update(); // force an immediate check, bypassing the browser's default 24h throttle
+    let refreshed=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(refreshed)return;refreshed=true;
+      location.reload(); // new SW just took over — reload once to get fresh files immediately
+    });
+  }).catch(()=>{});
 }
+
 
 /* ══════════════════════════════════════════════════════
    MAIN RENDER
