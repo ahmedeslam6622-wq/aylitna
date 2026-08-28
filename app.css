@@ -430,7 +430,7 @@ input,textarea,select{font-family:var(--font)}
   max-width: 64px;
   transition: transform 0.15s;
   overflow: hidden;
-  border-radius: var(--r2);
+  border-radius: 999px;
 }
 
 /* ── iOS: sliding tab indicator ─────────────────────────────────────
@@ -475,7 +475,7 @@ input,textarea,select{font-family:var(--font)}
 .nav-ico {
   width: 36px;
   height: 36px;
-  border-radius: var(--r2);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
