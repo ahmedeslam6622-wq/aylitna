@@ -384,17 +384,117 @@ input,textarea,select{font-family:var(--font-b)}
 /* ══════════════════════════════════════════════════════
    BOTTOM NAV
    ══════════════════════════════════════════════════════ */
-.nav{background:var(--card);border-top:1.5px solid var(--bd);display:flex;align-items:center;justify-content:space-around;padding:6px 4px;padding-bottom:calc(6px + env(safe-area-inset-bottom));flex-shrink:0;box-shadow:0 -2px 12px var(--shadow2);min-height:var(--nav-h)}
-.nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:4px 8px;position:relative;flex:1;max-width:64px;transition:transform .15s}
-.nav-btn:active{transform:scale(.88)}
-.nav-ico{width:36px;height:36px;border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:22px;transition:background .2s,transform .2s cubic-bezier(.34,1.56,.64,1)}
-.nav-ico.active{background:var(--pri-light)}
-.nav-btn:active .nav-ico{transform:scale(.85)}
-.nav-lbl{font-size:10px;color:var(--txt3);font-weight:700;transition:color .2s}
-.nav-lbl.active{color:var(--pri)}
-.fab{width:52px;height:52px;border-radius:50%;background:var(--pri);border:none;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 4px 18px var(--shadow),0 0 0 4px var(--pri-light);transition:transform .2s cubic-bezier(.34,1.56,.64,1);flex-shrink:0}
-.fab:active{transform:scale(.92)}
-.unread-badge{position:absolute;top:0;right:2px;background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:800;border:2px solid var(--card);animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+.nav {
+  /* Dynamic width based on contents */
+  width: max-content; 
+  min-width: 280px;
+  
+  /* Centers the floating element horizontally */
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  
+  /* Rounded capsule shape */
+  border-radius: 100px; 
+  padding: 10px 24px;
+  
+  /* Visual styling */
+  background: var(--card);
+  border: 1.5px solid var(--bd);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px var(--shadow2);
+  min-height: var(--nav-h);
+  z-index: 999;
+}
+
+/* Rest of your existing button and badge styles remain the same */
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  position: relative;
+  flex: 1;
+  max-width: 64px;
+  transition: transform 0.15s;
+}
+
+.nav-btn:active {
+  transform: scale(.88);
+}
+
+.nav-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: background .2s, transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+
+.nav-ico.active {
+  background: var(--pri-light);
+}
+
+.nav-btn:active .nav-ico {
+  transform: scale(.85);
+}
+
+.nav-lbl {
+  font-size: 10px;
+  color: var(--txt3);
+  font-weight: 700;
+  transition: color .2s;
+}
+
+.nav-lbl.active {
+  color: var(--pri);
+}
+
+.fab {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--pri);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  box-shadow: 0 4px 18px var(--shadow), 0 0 0 4px var(--pri-light);
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+  flex-shrink: 0;
+}
+
+.fab:active {
+  transform: scale(.92);
+}
+
+.unread-badge {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  background: var(--red);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 800;
+  border: 2px solid var(--card);
+  animation: pop .3s cubic-bezier(.34,1.56,.64,1);
+}
+
 
 /* ══════════════════════════════════════════════════════
    FULLSCREEN IMAGE
