@@ -13,8 +13,11 @@
   --font-b:'Nunito',-apple-system,BlinkMacSystemFont,sans-serif;
   --fs:15px;--fs-sm:13px;--fs-xs:11px;--fs-lg:17px;--fs-xl:22px;
   --tr:0.18s cubic-bezier(0.4,0,0.2,1);--nav-h:68px;
+   --glass-bg:rgba(255,255,255,0.18);
+   --glass-border:rgba(255,255,255,0.35);
 }
-[data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;}
+[data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;--glass-bg:rgba(20,17,24,0.55);
+--glass-border:rgba(255,255,255,0.12);}
 [data-theme="rose"]{--bg:#FFF5F7;--bg2:#FFE8ED;--card:#FFF;--card2:#FFF0F3;--pri:#E11D6A;--pri2:#F9A8C9;--pri-light:#FFE4EE;--pri-dark:#BE185D;--txt:#1A0A10;--txt2:#7A4055;--txt3:#C49AAA;--bd:#F5CEDD;--bd2:#EDADC3;--shadow:rgba(225,29,106,.12);--shadow2:rgba(26,10,16,.08);}
 [data-theme="forest"]{--bg:#F4F7F2;--bg2:#E8F0E4;--card:#FFF;--card2:#F0F5EE;--pri:#2D7A3A;--pri2:#6BAE75;--pri-light:#E0F2E3;--pri-dark:#1F5C2A;--txt:#0D1A10;--txt2:#4A6B50;--txt3:#9AB8A0;--bd:#C8DEC9;--bd2:#B0CEB4;--shadow:rgba(45,122,58,.12);--shadow2:rgba(13,26,16,.08);}
 [data-theme="ocean"]{--bg:#F0F6FF;--bg2:#E0EEFF;--card:#FFF;--card2:#EBF3FF;--pri:#1A6FC4;--pri2:#60A5FA;--pri-light:#DCEEFF;--pri-dark:#135BA0;--txt:#071525;--txt2:#3A5A7A;--txt3:#8AAAC5;--bd:#C2D8EF;--bd2:#A8C4E0;--shadow:rgba(26,111,196,.12);--shadow2:rgba(7,21,37,.08);}
@@ -112,9 +115,9 @@ input,textarea,select{font-family:var(--font-b)}
 .glass-pill{
   display:flex;align-items:center;gap:8px;
   padding:10px 16px;
-  border:1px solid rgba(255,255,255,0.35);
   border-radius:999px;
-  background:rgba(255,255,255,0.18);
+  background:var(--glass-bg);
+border:1px solid var(--glass-border);
   -webkit-backdrop-filter:blur(20px) saturate(1.4);
   backdrop-filter:blur(20px) saturate(1.4);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
