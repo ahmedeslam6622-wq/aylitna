@@ -1,4 +1,4 @@
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3'; // bump this on every future deploy that changes sw.js itself
 const PHOTO_CACHE = 'ayl-photos-v1';
 const VIDEO_CACHE = 'ayl-videos-v1';
 
@@ -6,26 +6,29 @@ self.addEventListener('install', e => {
   self.skipWaiting(); // activate this new worker immediately, don't wait for old tabs to close
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(self.clients.claim()); // take control of open pages right away
+  e.waitUntil((async () => {
+    await self.clients.claim(); // take control of open pages right away
+    // Drop any old named caches from previous versions so nothing stale lingers
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.filter(k => k !== PHOTO_CACHE && k !== VIDEO_CACHE).map(k => caches.delete(k))
+    );
+  })());
 });
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-
-  // App shell files (index.html, app.js, app.css, manifest.json) — ALWAYS
-  // network-first with no fallback to cache unless truly offline. This is
-  // what was missing: without this explicit block, some browsers'
-  // HTTP cache (separate from the Cache API) can still serve a stale
-  // app.css/app.js to an installed PWA even though the SW fetch handler
-  // technically re-fetches, because the underlying network request itself
-  // gets satisfied from disk cache. no-store forces an actual round-trip.
+  // App shell files — ALWAYS network-first with no-store, no cache fallback
+  // unless truly offline. no-store forces an actual network round-trip,
+  // bypassing the browser's own HTTP disk cache (separate from the Cache
+  // Storage API), which can otherwise serve a stale app.css/app.js even
+  // when this fetch handler itself re-fetches correctly.
   if (url.endsWith('/aylitna/') || url.endsWith('index.html') || url.endsWith('app.js') || url.endsWith('app.css') || url.endsWith('manifest.json')) {
     e.respondWith(
       fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request))
     );
     return;
   }
-
   // Cache photos — serve from cache first, update in background
   if (url.includes('res.cloudinary.com/df618arjm')) {
     e.respondWith(
