@@ -106,6 +106,11 @@ function detectPlatform(){
 
 const os = detectPlatform();
 
+
+
+
+
+
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
   if(!nameColors[name]){
@@ -965,7 +970,6 @@ async function init(){
 }
 }
 
-
 /* ══════════════════════════════════════════════════════
    MAIN RENDER
    ══════════════════════════════════════════════════════ */
@@ -995,6 +999,7 @@ function render(){
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
   setupHeaderScroll();
+  if(os==='ios')requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
 }
 
 /* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
@@ -1011,6 +1016,7 @@ function setupHeaderScroll(){
   main.addEventListener('scroll', onScroll, {passive:true});
   onScroll(); // set initial state in case render() happened mid-scroll
 }
+
 
 /* ══════════════════════════════════════════════════════
    HEADER
@@ -1445,7 +1451,11 @@ function moreCmts(pid){cmtPages[pid]=(cmtPages[pid]||1)+1;repaintCmts(pid)}
 function repaintCard(pid){const card=document.getElementById('post-'+pid);const p=posts.find(p=>p.id===pid);if(!card||!p)return;const cs=card.querySelector('.comments-section');if(cs){const tmp=document.createElement('div');tmp.innerHTML=buildCmtSection(p);cs.replaceWith(tmp.firstChild)}}
 function repaintCmts(pid){const p=posts.find(p=>p.id===pid);if(!p||!openComments[pid])return;repaintCard(pid);repaintCmtBadge(pid)}
 function repaintCmtBadge(pid){const el=document.getElementById('cb-'+pid);if(el)el.textContent=cmtCountRaw(pid)}
-function repaintNav(){const nav=document.querySelector('.nav');if(nav)nav.outerHTML=buildNav()}
+function repaintNav(){
+  const nav=document.querySelector('.nav');
+  if(nav)nav.outerHTML=buildNav();
+  if(os==='ios')requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
+}
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
   const v=document.getElementById('chatInput')?.value||'';
@@ -1945,22 +1955,63 @@ function buildStats(){
 function buildNav(){
   const isFeed=view==='feed',isChat=view==='chat',isSt=view==='stats',isMem=view==='members';
   const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
-  return`<div class="nav">
-    <button class="nav-btn" onclick="goView('feed')">
+  const rippleAttr=os==='android'?' onpointerdown="navRipple(event,this)"':'';
+  return`<div class="nav" id="navBar">
+    ${os==='ios'?`<div class="nav-slide" id="navSlide"></div>`:''}
+    <button class="nav-btn" data-view="feed" onclick="goView('feed')"${rippleAttr}>
       <div class="nav-ico${isFeed?' active':''}">🏠</div><div class="nav-lbl${isFeed?' active':''}">Home</div>
     </button>
-    <button class="nav-btn" onclick="goView('chat');markSeen()" style="position:relative">
+    <button class="nav-btn" data-view="chat" onclick="goView('chat');markSeen()" style="position:relative"${rippleAttr}>
       <div class="nav-ico${isChat?' active':''}">💬</div><div class="nav-lbl${isChat?' active':''}">Chat</div>
       ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
     </button>
-    <button class="fab" onclick="goView('add')">＋</button>
-    <button class="nav-btn" onclick="goView('stats')">
+    <button class="fab" onclick="goView('add')"${rippleAttr}>＋</button>
+    <button class="nav-btn" data-view="stats" onclick="goView('stats')"${rippleAttr}>
       <div class="nav-ico${isSt?' active':''}">📊</div><div class="nav-lbl${isSt?' active':''}">Stats</div>
     </button>
-    <button class="nav-btn" onclick="goView('members')">
+    <button class="nav-btn" data-view="members" onclick="goView('members')"${rippleAttr}>
       <div class="nav-ico${isMem?' active':''}">👨‍👩‍👧‍👦</div><div class="nav-lbl${isMem?' active':''}">Family</div>
     </button>
   </div>`;
+}
+/* ── iOS: sliding tab indicator ────────────────────────────────────────
+   Positions .nav-slide under whichever .nav-btn matches the current view.
+   Uses double-requestAnimationFrame (not setTimeout) so the DOM has
+   genuinely finished layout before measuring — a setTimeout(fn,0) here
+   was the exact cause of a stuck/invisible indicator earlier, since a
+   macrotask delay doesn't guarantee a completed layout pass the way two
+   nested rAF calls do. Retries once if the measured width is still 0,
+   as a safety net for any remaining edge case. */
+function positionNavSlide(){
+  if(os!=='ios')return;
+  const nav=document.getElementById('navBar');
+  const slide=document.getElementById('navSlide');
+  if(!nav||!slide)return;
+  const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
+  if(!activeBtn){slide.style.opacity='0';return;}
+  const navRect=nav.getBoundingClientRect();
+  const btnRect=activeBtn.getBoundingClientRect();
+  if(btnRect.width===0){requestAnimationFrame(positionNavSlide);return;}
+  slide.style.opacity='1';
+  slide.style.width=btnRect.width+'px';
+  slide.style.transform=`translateX(${btnRect.left-navRect.left}px)`;
+}
+/* ── Android: ripple touch feedback ──────────────────────────────────
+   Spawns a short-lived expanding circle from the exact tap point,
+   matching Material Design's press feedback. Self-removing via
+   animationend, so nothing accumulates in the DOM over time. */
+function navRipple(e,btn){
+  const rect=btn.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height);
+  const x=(e.clientX??rect.left+rect.width/2)-rect.left-size/2;
+  const y=(e.clientY??rect.top+rect.height/2)-rect.top-size/2;
+  const ripple=document.createElement('span');
+  ripple.className='nav-ripple';
+  ripple.style.width=ripple.style.height=size+'px';
+  ripple.style.left=x+'px';
+  ripple.style.top=y+'px';
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend',()=>ripple.remove(),{once:true});
 }
 
 /* ══════════════════════════════════════════════════════
