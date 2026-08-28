@@ -126,7 +126,7 @@ input,textarea,select{font-family:var(--font-b)}
   overflow:hidden;
   white-space:nowrap;
 }
-.glass-pill:active{transform:scale(.100)}
+.glass-pill:active{transform:scale(.125)}
 .glass-pill-wrap.profile .glass-pill{padding:4px;width:40px;height:40px;justify-content:center}
 .glass-pill-wrap.profile .glass-pill img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .glass-arrow{
