@@ -115,7 +115,7 @@ input,textarea,select{font-family:var(--font-b)}
   padding:10px 16px;
   border-radius:999px;
   background:var(--glass-bg);
-border:1px solid var(--glass-border);
+  border:1px solid var(--glass-border);
   -webkit-backdrop-filter:blur(20px) saturate(1.4);
   backdrop-filter:blur(20px) saturate(1.4);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
@@ -126,7 +126,7 @@ border:1px solid var(--glass-border);
   overflow:hidden;
   white-space:nowrap;
 }
-.glass-pill:active{transform:scale(.94)}
+.glass-pill:active{transform:scale(.100)}
 .glass-pill-wrap.profile .glass-pill{padding:4px;width:40px;height:40px;justify-content:center}
 .glass-pill-wrap.profile .glass-pill img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .glass-arrow{
