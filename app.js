@@ -587,7 +587,6 @@ async function refreshAllDataOnResume(){
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&USE_SB&&myName){
     subscribeRealtime();
-    if(callChannel)subscribeCallSignaling();
     refreshAllDataOnResume();
   }
 });
