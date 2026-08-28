@@ -13,6 +13,8 @@ const VAPID   = 'BClsAtEWOVK95B0atTRO4d6-QacLuKZg_X5p6r3YXKaOI35BF7TsRR-NOPDnEC_
 const ANTHROPIC_KEY = ''; // add your Anthropic key here for AI photo tagging
 const USE_SB  = !!(SB_URL && SB_KEY);
 let sb = null;
+let lastScrollTop = 0;
+const nav = document.querySelector('.nav');
 if (USE_SB) sb = supabase.createClient(SB_URL, SB_KEY);
 
 /* ══════════════════════════════════════════════════════
@@ -105,6 +107,28 @@ function detectPlatform(){
 }
 
 const os = detectPlatform();
+
+
+
+window.addEventListener('scroll', () => {
+  let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  
+  if (scrollTop > lastScrollTop && scrollTop > 100) {
+    // Scrolling down: Fade out and slide down slightly
+    nav.style.opacity = '0.3';
+    nav.style.transform = 'translateX(-50%) translateY(10px) scale(0.95)';
+  } else {
+    // Scrolling up: Bring back to full focus
+    nav.style.opacity = '1';
+    nav.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+  }
+  
+  // Smooth recovery transitions
+  nav.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; 
+}, { passive: true });
+
+
 
 function dmKey(a,b){return[a,b].sort().join('|')}
 function getC(name){
