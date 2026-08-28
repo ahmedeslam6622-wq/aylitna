@@ -1010,7 +1010,7 @@ function setupHeaderScroll(){
   main.addEventListener('scroll', onScroll, {passive:true});
   onScroll(); // set initial state in case render() happened mid-scroll
 }
-}
+
 
 /* ══════════════════════════════════════════════════════
    HEADER
