@@ -102,7 +102,6 @@ input,textarea,select{font-family:var(--font-b)}
   transition:opacity .3s ease .05s, transform .3s ease .05s;
 }
 .hdr.scrolled .hdr-scrolled-row{
-   display: none;
   opacity:1;
   transform:translateY(0);
   pointer-events:auto;
