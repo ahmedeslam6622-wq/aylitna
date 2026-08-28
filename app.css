@@ -400,8 +400,8 @@ input,textarea,select{font-family:var(--font-b)}
   padding: 10px 24px;
   
   /* Visual styling */
-  background: var(--card);
-  border: 1.5px solid var(--bd);
+  background: var(--glass-bg);
+  border: var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-around;
