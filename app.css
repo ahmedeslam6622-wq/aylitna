@@ -451,7 +451,7 @@ input,textarea,select{font-family:var(--font)}
   opacity:0;
   pointer-events:none;
   will-change:transform,width;
-  transition:transform .35s cubic-bezier(0.16,1,0.3,1), width .35s cubic-bezier(0.16,1,0.3,1), opacity .2s ease;
+  transition:transform .35s cubic-bezier(0.16,1,0.3,1), width .35s cubic-bezier(0.16,1,0.3,1), opacity .4s ease;
   z-index:1;
 }
 [data-theme="midnight"] .nav-slide{background-color:rgba(255,255,255,0.08)}
