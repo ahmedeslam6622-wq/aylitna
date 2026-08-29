@@ -976,6 +976,17 @@ async function init(){
 function render(){
   const app=document.getElementById('app');
   if(!myName){renderOnboarding(app);return}
+  // Capture the current slide position BEFORE the rebuild destroys it, so
+  // the freshly-created slide can be placed there instantly (no transition)
+  // before animating to its real target. Without this, render() replacing
+  // #navBar's innerHTML creates a brand-new .nav-slide with no prior
+  // transform set — it then animates FROM the CSS default (effectively
+  // Home's position) instead of from wherever it actually was, which is
+  // the "jumps to Home first" bug.
+  const prevSlide=document.getElementById('navSlide');
+  const prevSlideState=prevSlide&&prevSlide.style.opacity==='1'
+    ?{transform:prevSlide.style.transform,width:prevSlide.style.width}
+    :null;
   const newPosts=posts.filter(p=>new Date(p.created_at).getTime()>lastSeen).length;
   const th=ls('ayl_theme','default'),fs=ls('ayl_fs','md');
   const offline=!isOnline?`<div class="offline-banner"><span>📡</span> No internet — some features may not work</div>`:'';
@@ -999,7 +1010,20 @@ function render(){
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
   setupHeaderScroll();
-  if(os==='ios')requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
+  if(os==='ios'){
+    if(prevSlideState){
+      const newSlide=document.getElementById('navSlide');
+      if(newSlide){
+        newSlide.style.transition='none';
+        newSlide.style.opacity='1';
+        newSlide.style.width=prevSlideState.width;
+        newSlide.style.transform=prevSlideState.transform;
+        newSlide.offsetHeight; // force layout flush so the instant jump actually applies before re-enabling transition
+        newSlide.style.transition='';
+      }
+    }
+    requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
+  }
 }
 
 /* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
