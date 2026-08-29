@@ -1976,12 +1976,11 @@ function buildNav(){
 }
 /* ── iOS: sliding tab indicator ────────────────────────────────────────
    Positions .nav-slide under whichever .nav-btn matches the current view.
-   Uses double-requestAnimationFrame (not setTimeout) so the DOM has
-   genuinely finished layout before measuring — a setTimeout(fn,0) here
-   was the exact cause of a stuck/invisible indicator earlier, since a
-   macrotask delay doesn't guarantee a completed layout pass the way two
-   nested rAF calls do. Retries once if the measured width is still 0,
-   as a safety net for any remaining edge case. */
+   Uses offsetLeft/offsetWidth (relative to #navBar, the nearest positioned
+   ancestor) rather than getBoundingClientRect() — the browser computes
+   that relative-to-parent offset natively, sidestepping any ambiguity
+   between #navBar's padding box vs border box that raw viewport-relative
+   rects can introduce. Retries via rAF if layout hasn't settled yet. */
 function positionNavSlide(){
   if(os!=='ios')return;
   const nav=document.getElementById('navBar');
@@ -1989,25 +1988,27 @@ function positionNavSlide(){
   if(!nav||!slide)return;
   const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
   if(!activeBtn){slide.style.opacity='0';return;}
-  const navRect=nav.getBoundingClientRect();
-  const btnRect=activeBtn.getBoundingClientRect();
-  if(btnRect.width===0){requestAnimationFrame(positionNavSlide);return;}
+  if(activeBtn.offsetWidth===0){requestAnimationFrame(positionNavSlide);return;}
   slide.style.opacity='1';
-  slide.style.width=btnRect.width+'px';
-  slide.style.transform=`translateX(${btnRect.left-navRect.left}px)`;
+  slide.style.width=activeBtn.offsetWidth+'px';
+  slide.style.transform=`translateX(${activeBtn.offsetLeft}px)`;
 }
 /* ── Android: ripple touch feedback ──────────────────────────────────
    Spawns a short-lived expanding circle from the exact tap point,
    matching Material Design's press feedback. Self-removing via
    animationend, so nothing accumulates in the DOM over time. */
 function navRipple(e,btn){
+  if(os!=='android')return;
   const rect=btn.getBoundingClientRect();
-  const size=Math.max(rect.width,rect.height);
-  const x=(e.clientX??rect.left+rect.width/2)-rect.left-size/2;
-  const y=(e.clientY??rect.top+rect.height/2)-rect.top-size/2;
+  const diameter=Math.max(rect.width,rect.height);
+  const radius=diameter/2;
+  const clientX=e.clientX??(rect.left+rect.width/2);
+  const clientY=e.clientY??(rect.top+rect.height/2);
+  const x=clientX-rect.left-radius;
+  const y=clientY-rect.top-radius;
   const ripple=document.createElement('span');
   ripple.className='nav-ripple';
-  ripple.style.width=ripple.style.height=size+'px';
+  ripple.style.width=ripple.style.height=diameter+'px';
   ripple.style.left=x+'px';
   ripple.style.top=y+'px';
   btn.appendChild(ripple);
