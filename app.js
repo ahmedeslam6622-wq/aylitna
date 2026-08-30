@@ -2267,7 +2267,7 @@ async function togglePostVideo(video){
     if(btn){btn.style.display='flex';btn.textContent='▶';}
   }
 }
-function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();render();if(v==='chat')scrollChat()}
+function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();document.body.classList.toggle('chat-active',v==='chat');render();if(v==='chat')scrollChat()}
 function setFilter(n){
   filter=n==='All'?null:(filter===n?null:n);
   const main=document.querySelector('.main');
