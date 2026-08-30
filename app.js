@@ -5,7 +5,6 @@
    ══════════════════════════════════════════════════════ */
 const SB_URL  = 'https://ptpprauzusyrbrigfyji.supabase.co';
 const SB_KEY  = 'sb_publishable_K4QVE01BB4XSfmUlemIJZQ_TyFDDR1H';
-const CLOUDINARY_SIGN_URL = 'https://ptpprauzusyrbrigfyji.supabase.co/functions/v1/cloudinary-sign';
 const CLD_CLOUD      = 'df618arjm';
 const CLD_PRESET     = 'zsz6vswy';
 const CLD_VID_CLOUD  = 'hhjzkoeh';
@@ -256,84 +255,12 @@ function requireOnline(action){
    PHOTO CACHE
    ══════════════════════════════════════════════════════ */
 const PHOTO_CACHE='ayl-photos-v1';
-/* ══════════════════════════════════════════════════════
-   CLOUDINARY SIGNING — signed uploads + lazy signed delivery
-   ══════════════════════════════════════════════════════ */
-const _signedUrlCache = {};
-
-async function getSignedPhotoUrl(publicId){
-  if(!publicId) return null;
-  const cached = _signedUrlCache[publicId];
-  if(cached && cached.expiresAt > Date.now()) return cached.url;
-  try{
-    const { data: sessionData } = await sb.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if(!token) return null;
-    const res = await fetch(CLOUDINARY_SIGN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ action: 'deliver', publicId, resourceType: 'image' }),
-    });
-    const data = await res.json();
-    if(data.error){ console.log('Signed URL error:', data.error); return null; }
-    _signedUrlCache[publicId] = { url: data.url, expiresAt: Date.now() + 50 * 60 * 1000 };
-    return data.url;
-  }catch(e){ console.log('getSignedPhotoUrl failed:', e); return null; }
-}
-
-let _photoObserver = null;
-function getPhotoObserver(){
-  if(_photoObserver) return _photoObserver;
-  _photoObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(!entry.isIntersecting) return;
-      const img = entry.target;
-      _photoObserver.unobserve(img);
-      loadSignedImage(img);
-    });
-  }, { rootMargin: '400px' });
-  return _photoObserver;
-}
-async function loadSignedImage(img){
-  const publicId = img.dataset.publicId;
-  if(!publicId) return;
-  const url = await getSignedPhotoUrl(publicId);
-  if(url){ img.src = url; }
-  else{
-    const wrap = img.closest('.post-img-wrap, .carousel-slide, .profile-gallery, .comment-img-wrap');
-    if(wrap){ const blur = wrap.querySelector('.img-blur'); if(blur) blur.innerHTML = '<span style="font-size:12px;color:var(--txt3)">⚠️ Couldn\'t load</span>'; }
-  }
-}
-function observeSignedPhotos(container){
-  const root = container || document;
-  const observer = getPhotoObserver();
-  root.querySelectorAll('img[data-public-id]').forEach(img => { observer.observe(img); });
-}
-function isPublicId(value){ return !!value && typeof value === 'string' && !value.includes('://'); }
-function buildPhotoImg(value, idPrefix, extraAttrs){
-  extraAttrs = extraAttrs || '';
-  if(isPublicId(value)){
-    return `<img class="post-img" data-public-id="${value}" alt="" loading="lazy" onload="imgLoaded('${idPrefix}')" ${extraAttrs}>`;
-  }
-  return `<img class="post-img" src="${value}" alt="" loading="lazy" onload="imgLoaded('${idPrefix}')" ${extraAttrs}>`;
-}
-async function resolvePhotoUrl(value){
-  if(!value) return null;
-  if(isPublicId(value)) return await getSignedPhotoUrl(value);
-  return value;
-}
-async function savePostImg(postId){
-  const p=posts.find(p=>p.id===postId);if(!p?.photo_url)return;
-  const url=await resolvePhotoUrl(p.photo_url);
-  if(url)saveImg(null,url);
-  else toast('❌ Could not load photo to save');
-}
 async function cachePhoto(url){if(!url||!('caches'in window))return;try{const c=await caches.open(PHOTO_CACHE);if(!(await c.match(url)))await c.add(url)}catch{}}
 function imgLoaded(postId){
   document.getElementById('iblur-'+postId)?.classList.add('hidden');
   document.querySelector('#post-'+postId+' .post-img')?.classList.add('loaded');
   const p=posts.find(p=>p.id===postId);
-  if(p?.photo_url&&!isPublicId(p.photo_url))cachePhoto(p.photo_url);
+  if(p?.photo_url)cachePhoto(p.photo_url);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -473,27 +400,12 @@ async function delComment(pid,cid){
 async function uploadPhoto(dataURL){
   if(!CLD_CLOUD)return dataURL;
   try{
-    const { data: sessionData } = await sb.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if(!token){ toast('❌ Not signed in — please unlock the app first'); return null; }
-    const signRes = await fetch(CLOUDINARY_SIGN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ action: 'upload', resourceType: 'image' }),
-    });
-    const signData = await signRes.json();
-    if(signData.error){ console.log('Photo sign error:', signData.error); toast('❌ Could not authorize upload: ' + signData.error); return null; }
-    const fd = new FormData();
-    fd.append('file', dataURLtoBlob(dataURL));
-    fd.append('api_key', signData.api_key);
-    fd.append('timestamp', signData.timestamp);
-    fd.append('signature', signData.signature);
-    fd.append('type', signData.type);
-    const r = await fetch(`https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`, { method: 'POST', body: fd });
-    const d = await r.json();
-    if(d.error){ console.log('Photo upload error:', d.error); toast('❌ Photo upload failed: ' + d.error.message); return null; }
-    return d.public_id || null;
-  }catch(e){ console.log('Photo upload error:', e); toast('❌ Photo upload failed — check your connection'); return null; }
+    const fd=new FormData();fd.append('file',dataURLtoBlob(dataURL));fd.append('upload_preset',CLD_PRESET);
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.error){console.log('Photo upload error:',d.error);toast('❌ Photo upload failed: '+d.error.message);return null;}
+    return d.secure_url||null;
+  }catch(e){console.log('Photo upload error:',e);toast('❌ Photo upload failed — check your connection');return null;}
 }
 
 async function uploadVideo(file){
@@ -1099,7 +1011,6 @@ function render(){
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
   setupHeaderScroll();
-  observeSignedPhotos(app);
   if(os==='ios'){
     if(prevSlideState){
       const newSlide=document.getElementById('navSlide');
@@ -1210,7 +1121,7 @@ function buildSearchBar(){
   </div>`;
 }
 function toggleSearch(){showSearch=!showSearch;if(!showSearch)searchQ='';render();if(showSearch)setTimeout(()=>document.getElementById('searchIn')?.focus(),100)}
-function onSearch(v){searchQ=v;const main=document.querySelector('.main');if(main){main.innerHTML=buildFeed();observeSignedPhotos(main);}}
+function onSearch(v){searchQ=v;const main=document.querySelector('.main');if(main)main.innerHTML=buildFeed()}
 function clearSearch(){searchQ='';render()}
 
 /* ══════════════════════════════════════════════════════
@@ -1326,10 +1237,13 @@ function buildCard(p,idx){
            :p.photo_url
       ?`<div class="post-img-wrap">
           <div class="img-blur" id="iblur-${p.id}"><div class="img-spinner"></div></div>
-          ${buildPhotoImg(p.photo_url, p.id, `onclick="setFull('${p.id}')" oncontextmenu="saveImg(event,'${isPublicId(p.photo_url)?'':p.photo_url}')" ontouchstart="startLP('${isPublicId(p.photo_url)?'':p.photo_url}',event)" ontouchend="endLP()" ontouchmove="endLP()"`)}
+          <img class="post-img" src="${p.photo_url}" alt="" loading="lazy"
+            onclick="setFull('${p.id}')" onload="imgLoaded('${p.id}')"
+            oncontextmenu="saveImg(event,'${p.photo_url}')"
+            ontouchstart="startLP('${p.photo_url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
           <div class="img-overlay-btns">
             <button class="img-overlay-btn" onclick="setFull('${p.id}')">🔍 View</button>
-            <button class="img-overlay-btn" onclick="savePostImg('${p.id}')">⬇ Save</button>
+            <button class="img-overlay-btn" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>
           </div>
         </div>${buildAiTags(p.id)}`
       :`<div class="no-img" style="background:${o.bg};border-color:${o.br}"><span style="font-size:16px">${o.e}</span><span class="no-img-txt" style="color:${o.tx}">${o.l}</span></div>`;
@@ -1367,8 +1281,11 @@ function buildCarousel(p,mediaList){
         <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
       </div>`;
     }
-        return`<div class="carousel-slide">
-      ${buildPhotoImg(m.url, p.id+'-'+i, `onclick="setFull('${p.id}',${i})"`)}
+    return`<div class="carousel-slide">
+      <img class="post-img carousel-img" src="${m.url}" alt="" loading="lazy"
+        onclick="setFull('${p.id}',${i})"
+        oncontextmenu="saveImg(event,'${m.url}')"
+        ontouchstart="startLP('${m.url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
     </div>`;
   }).join('');
   const dots=mediaList.map((_,i)=>`<span class="carousel-dot${i===idx?' active':''}"></span>`).join('');
@@ -1400,7 +1317,7 @@ function buildCtxMenu(p){
     ${isOwn(p.name)?`<button class="ctx-item danger" onclick="confirmDel('${p.id}')"><span class="ctx-item-ico">🗑️</span>Delete</button>`:''}
     <button class="ctx-item" onclick="togglePin('${p.id}')"><span class="ctx-item-ico">📌</span>${isPinned?'Unpin':'Pin to top'}</button>
     ${p.photo_url?`<button class="ctx-item" onclick="setFull('${p.id}')"><span class="ctx-item-ico">🔍</span>Fullscreen</button>`:''}
-        ${p.photo_url?`<button class="ctx-item" onclick="savePostImg('${p.id}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
+    ${p.photo_url?`<button class="ctx-item" onclick="saveImg(null,'${p.photo_url}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
     ${p.video_url?`<button class="ctx-item" onclick="saveImg(null,'${p.video_url}')"><span class="ctx-item-ico">⬇️</span>Save video</button>`:''}
     <button class="ctx-item" onclick="copyCaption('${p.id}')"><span class="ctx-item-ico">📋</span>Copy caption</button>
     <button class="ctx-item" onclick="closeCtx()"><span class="ctx-item-ico">✕</span>Close</button>
@@ -1654,12 +1571,12 @@ async function submitPost(){
     upEl.querySelector('.uploading-sub').textContent='This may take a moment';
   }
   try{
-        const media=[];
+    const media=[];
     for(const item of draftMedia){
       if(item.type==='photo'){
-        const publicId=await uploadPhoto(item.dataURL);
-        if(!publicId){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
-        media.push({type:'photo',url:publicId});
+        const url=await uploadPhoto(item.dataURL);
+        if(!url){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
+        media.push({type:'photo',url});
       } else {
         const url=await uploadVideo(item.file);
         if(!url){upEl.className='uploading-overlay';toast('❌ A video failed to upload');return;}
@@ -1844,7 +1761,7 @@ function buildViewProfile(name){
     ${photoPosts.length?`<div class="profile-section">
       <div class="profile-section-title">📸 Moments (${photoPosts.length})</div>
       <div class="profile-gallery">
-        ${photoPosts.slice(0,9).map(p=>buildPhotoImg(p.photo_url, 'gal-'+p.id, `class="profile-gallery-img" onclick="setFull('${p.id}')"`)).join('')}
+        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
       </div>
     </div>`:''}
     ${ps.filter(p=>!p.photo_url&&p.caption).length?`<div class="profile-section">
@@ -1894,7 +1811,7 @@ function buildProfilePage(){
     ${photoPosts.length?`<div class="profile-section">
       <div class="profile-section-title">📸 Your moments (${photoPosts.length})</div>
       <div class="profile-gallery">
-                  ${photoPosts.slice(0,9).map(p=>buildPhotoImg(p.photo_url, 'mygal-'+p.id, `class="profile-gallery-img" onclick="setFull('${p.id}')"`)).join('')}
+        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
         ${photoPosts.length===0?`<div class="profile-gallery-empty">📸</div>`:''} 
       </div>
     </div>`:`<div class="profile-section"><div class="profile-section-title">No photos yet</div></div>`}
@@ -2132,30 +2049,16 @@ function buildFullscreenInner(p){
   const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
   const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
   const isPhoto=current.type==='photo'&&current.url;
-  const imgId='fs-img-'+p.id+'-'+idx;
   return`<div class="fs-top">
       <button class="fs-close" onclick="setFull(null)">✕ Close</button>
-      ${isPhoto?`<button class="fs-save" onclick="savePostImg('${p.id}')">⬇ Save</button>`:''}
+      ${isPhoto?`<button class="fs-save" onclick="saveImg(null,'${current.url}')">⬇ Save</button>`:''}
     </div>
-    ${isPhoto?(isPublicId(current.url)?`<img class="fs-img" id="${imgId}" alt="">`:`<img class="fs-img" src="${current.url}" alt="">`):''}
+    ${isPhoto?`<img class="fs-img" src="${current.url}" alt="">`:''}
     ${mediaList&&mediaList.length>1?`<div class="fs-meta" style="margin-bottom:-8px">${idx+1} / ${mediaList.length}</div>`:''}
     <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
     ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
     <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>`;
 }
-     
-async function hydrateFullscreenImg(p){
-  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
-  const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
-  const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
-  if(current.type!=='photo'||!current.url||!isPublicId(current.url))return;
-  const imgId='fs-img-'+p.id+'-'+idx;
-  const el=document.getElementById(imgId);
-  if(!el)return;
-  const url=await getSignedPhotoUrl(current.url);
-  if(url)el.src=url;
-}
-     
 function buildFullscreen(){
   if(!fullPost)return`<div class="fullscreen" id="fullscreen"></div>`;
   const p=posts.find(p=>p.id===fullPost);if(!p)return`<div class="fullscreen" id="fullscreen"></div>`;
@@ -2273,7 +2176,7 @@ function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m
 function setFilter(n){
   filter=n==='All'?null:(filter===n?null:n);
   const main=document.querySelector('.main');
-  if(main){main.innerHTML=buildFeed();observeSignedPhotos(main);}
+  if(main)main.innerHTML=buildFeed();
   // Update pill active states without rebuilding them
   document.querySelectorAll('.pill').forEach(btn=>{
     const label=btn.textContent.trim();
@@ -2291,7 +2194,6 @@ function setFull(id,mediaIdx){
     const p=posts.find(p=>p.id===fullPost);
     el.className='fullscreen show';
     el.innerHTML=p?buildFullscreenInner(p):'';
-    if(p)hydrateFullscreenImg(p);
   } else {
     el.className='fullscreen';
     el.innerHTML='';
