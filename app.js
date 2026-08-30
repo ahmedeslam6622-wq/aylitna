@@ -2340,85 +2340,45 @@ async function checkPasscode(password) {
 }
 
 
-/* ══════════════════════════════════════════════════════
-   BOOT
-   ══════════════════════════════════════════════════════ */
 // ══════════════════════════════════════════════════════
-// PASSCODE GATE — wiring
-// Paste this near the bottom of app.js, ABOVE the final
-// (async () => { ... await isUnlocked() ... })() block from
-// passcode_gate_wiring.js — this defines showGate()/hideGate()
-// that block relies on indirectly (via your own button handler).
+// PASSCODE GATE — robust boot (replaces the previous
+// (async () => { isUnlocked... })() block entirely)
+//
+// Instead of checking isUnlocked() once at an arbitrary moment
+// during load (which can race against Supabase restoring the
+// session from localStorage), this listens for Supabase's own
+// auth-state event — which fires reliably once the SDK has
+// finished checking storage, whether that's fast or slow.
 // ══════════════════════════════════════════════════════
 
-function showGate(){
-  const el = document.getElementById('gate');
-  if (el) el.classList.remove('hidden');
-  setTimeout(() => document.getElementById('passcodeInput')?.focus(), 100);
-}
-function hideGate(){
-  const el = document.getElementById('gate');
-  if (el) el.classList.add('hidden');
+let appBooted = false;
+
+function bootAppOnce(){
+  if (appBooted) return;
+  appBooted = true;
+  hideGate();
+  init();
 }
 
-function setupGate(){
-  const input = document.getElementById('passcodeInput');
-  const btn = document.getElementById('passcodeSubmit');
-  const errorEl = document.getElementById('passcodeError');
-  const card = document.querySelector('.gate-card');
-  if (!input || !btn) return;
+setupGate();
 
-  async function attemptUnlock(){
-    const password = input.value;
-    if (!password){
-      errorEl.textContent = 'Enter a passcode';
-      errorEl.classList.add('show');
-      return;
+if (USE_SB) {
+  sb.auth.onAuthStateChange((event, session) => {
+    const unlocked = session?.user?.app_metadata?.unlocked === true;
+    if (unlocked) {
+      bootAppOnce();
+    } else if (!appBooted) {
+      showGate();
     }
-
-    btn.disabled = true;
-    btn.classList.add('loading');
-    errorEl.classList.remove('show');
-
-    const result = await checkPasscode(password);
-
-    btn.disabled = false;
-    btn.classList.remove('loading');
-
-    if (result.ok){
-      hideGate();
-      init();
-    } else {
-      errorEl.textContent = result.error;
-      errorEl.classList.add('show');
-      input.value = '';
-      input.focus();
-      if (card){
-        card.classList.remove('shake');
-        void card.offsetWidth; // force reflow so the animation can retrigger
-        card.classList.add('shake');
-      }
-    }
-  }
-
-  btn.addEventListener('click', attemptUnlock);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') attemptUnlock();
   });
-  input.addEventListener('input', () => {
-    errorEl.classList.remove('show');
-  });
+
+  // onAuthStateChange fires INITIAL_SESSION once restoration finishes,
+  // but as a safety net in case that event is ever missed or delayed
+  // indefinitely, also fall back to showing the gate after a short
+  // timeout if nothing has booted the app yet.
+  setTimeout(() => {
+    if (!appBooted) showGate();
+  }, 2500);
+} else {
+  bootAppOnce();
 }
-
-// ══════════════════════════════════════════════════════
-// Replace the bottom-of-file `init();` line with this:
-// ══════════════════════════════════════════════════════
-(async () => {
-  setupGate(); // wire up button/input listeners regardless of outcome below
-  const unlocked = await isUnlocked();
-  if (unlocked) {
-    init();
-  } else {
-    showGate();
-  }
-})();
