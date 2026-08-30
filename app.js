@@ -1099,6 +1099,7 @@ function render(){
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
   setupHeaderScroll();
+  observeSignedPhotos(app);
   if(os==='ios'){
     if(prevSlideState){
       const newSlide=document.getElementById('navSlide');
@@ -1209,7 +1210,7 @@ function buildSearchBar(){
   </div>`;
 }
 function toggleSearch(){showSearch=!showSearch;if(!showSearch)searchQ='';render();if(showSearch)setTimeout(()=>document.getElementById('searchIn')?.focus(),100)}
-function onSearch(v){searchQ=v;const main=document.querySelector('.main');if(main)main.innerHTML=buildFeed()}
+function onSearch(v){searchQ=v;const main=document.querySelector('.main');if(main){main.innerHTML=buildFeed();observeSignedPhotos(main);}}
 function clearSearch(){searchQ='';render()}
 
 /* ══════════════════════════════════════════════════════
@@ -1322,16 +1323,13 @@ function buildCard(p,idx){
             onclick="togglePostVideo(this)"></video>
           <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
         </div>`
-      :p.photo_url
+           :p.photo_url
       ?`<div class="post-img-wrap">
           <div class="img-blur" id="iblur-${p.id}"><div class="img-spinner"></div></div>
-          <img class="post-img" src="${p.photo_url}" alt="" loading="lazy"
-            onclick="setFull('${p.id}')" onload="imgLoaded('${p.id}')"
-            oncontextmenu="saveImg(event,'${p.photo_url}')"
-            ontouchstart="startLP('${p.photo_url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
+          ${buildPhotoImg(p.photo_url, p.id, `onclick="setFull('${p.id}')" oncontextmenu="saveImg(event,'${isPublicId(p.photo_url)?'':p.photo_url}')" ontouchstart="startLP('${isPublicId(p.photo_url)?'':p.photo_url}',event)" ontouchend="endLP()" ontouchmove="endLP()"`)}
           <div class="img-overlay-btns">
             <button class="img-overlay-btn" onclick="setFull('${p.id}')">🔍 View</button>
-            <button class="img-overlay-btn" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>
+            <button class="img-overlay-btn" onclick="savePostImg('${p.id}')">⬇ Save</button>
           </div>
         </div>${buildAiTags(p.id)}`
       :`<div class="no-img" style="background:${o.bg};border-color:${o.br}"><span style="font-size:16px">${o.e}</span><span class="no-img-txt" style="color:${o.tx}">${o.l}</span></div>`;
@@ -1369,11 +1367,8 @@ function buildCarousel(p,mediaList){
         <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
       </div>`;
     }
-    return`<div class="carousel-slide">
-      <img class="post-img carousel-img" src="${m.url}" alt="" loading="lazy"
-        onclick="setFull('${p.id}',${i})"
-        oncontextmenu="saveImg(event,'${m.url}')"
-        ontouchstart="startLP('${m.url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
+        return`<div class="carousel-slide">
+      ${buildPhotoImg(m.url, p.id+'-'+i, `onclick="setFull('${p.id}',${i})"`)}
     </div>`;
   }).join('');
   const dots=mediaList.map((_,i)=>`<span class="carousel-dot${i===idx?' active':''}"></span>`).join('');
@@ -1405,7 +1400,7 @@ function buildCtxMenu(p){
     ${isOwn(p.name)?`<button class="ctx-item danger" onclick="confirmDel('${p.id}')"><span class="ctx-item-ico">🗑️</span>Delete</button>`:''}
     <button class="ctx-item" onclick="togglePin('${p.id}')"><span class="ctx-item-ico">📌</span>${isPinned?'Unpin':'Pin to top'}</button>
     ${p.photo_url?`<button class="ctx-item" onclick="setFull('${p.id}')"><span class="ctx-item-ico">🔍</span>Fullscreen</button>`:''}
-    ${p.photo_url?`<button class="ctx-item" onclick="saveImg(null,'${p.photo_url}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
+        ${p.photo_url?`<button class="ctx-item" onclick="savePostImg('${p.id}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
     ${p.video_url?`<button class="ctx-item" onclick="saveImg(null,'${p.video_url}')"><span class="ctx-item-ico">⬇️</span>Save video</button>`:''}
     <button class="ctx-item" onclick="copyCaption('${p.id}')"><span class="ctx-item-ico">📋</span>Copy caption</button>
     <button class="ctx-item" onclick="closeCtx()"><span class="ctx-item-ico">✕</span>Close</button>
@@ -1659,12 +1654,12 @@ async function submitPost(){
     upEl.querySelector('.uploading-sub').textContent='This may take a moment';
   }
   try{
-    const media=[];
+        const media=[];
     for(const item of draftMedia){
       if(item.type==='photo'){
-        const url=await uploadPhoto(item.dataURL);
-        if(!url){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
-        media.push({type:'photo',url});
+        const publicId=await uploadPhoto(item.dataURL);
+        if(!publicId){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
+        media.push({type:'photo',url:publicId});
       } else {
         const url=await uploadVideo(item.file);
         if(!url){upEl.className='uploading-overlay';toast('❌ A video failed to upload');return;}
@@ -1849,7 +1844,7 @@ function buildViewProfile(name){
     ${photoPosts.length?`<div class="profile-section">
       <div class="profile-section-title">📸 Moments (${photoPosts.length})</div>
       <div class="profile-gallery">
-        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
+        ${photoPosts.slice(0,9).map(p=>buildPhotoImg(p.photo_url, 'gal-'+p.id, `class="profile-gallery-img" onclick="setFull('${p.id}')"`)).join('')}
       </div>
     </div>`:''}
     ${ps.filter(p=>!p.photo_url&&p.caption).length?`<div class="profile-section">
@@ -1899,7 +1894,7 @@ function buildProfilePage(){
     ${photoPosts.length?`<div class="profile-section">
       <div class="profile-section-title">📸 Your moments (${photoPosts.length})</div>
       <div class="profile-gallery">
-        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
+                  ${photoPosts.slice(0,9).map(p=>buildPhotoImg(p.photo_url, 'mygal-'+p.id, `class="profile-gallery-img" onclick="setFull('${p.id}')"`)).join('')}
         ${photoPosts.length===0?`<div class="profile-gallery-empty">📸</div>`:''} 
       </div>
     </div>`:`<div class="profile-section"><div class="profile-section-title">No photos yet</div></div>`}
@@ -2133,24 +2128,34 @@ function navRipple(e,btn){
    ══════════════════════════════════════════════════════ */
 function buildFullscreenInner(p){
   const o=getOct(p.oct);
-  // Multi-media posts: show whichever slide was actually tapped
-  // (carouselIdx[p.id], set by setFull's mediaIdx param), not always the
-  // first item. Falls back to the old single photo_url for posts with no
-  // media array (or exactly one item), unchanged from before.
   const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
   const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
   const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
   const isPhoto=current.type==='photo'&&current.url;
+  const imgId='fs-img-'+p.id+'-'+idx;
   return`<div class="fs-top">
       <button class="fs-close" onclick="setFull(null)">✕ Close</button>
-      ${isPhoto?`<button class="fs-save" onclick="saveImg(null,'${current.url}')">⬇ Save</button>`:''}
+      ${isPhoto?`<button class="fs-save" onclick="savePostImg('${p.id}')">⬇ Save</button>`:''}
     </div>
-    ${isPhoto?`<img class="fs-img" src="${current.url}" alt="">`:''}
+    ${isPhoto?(isPublicId(current.url)?`<img class="fs-img" id="${imgId}" alt="">`:`<img class="fs-img" src="${current.url}" alt="">`):''}
     ${mediaList&&mediaList.length>1?`<div class="fs-meta" style="margin-bottom:-8px">${idx+1} / ${mediaList.length}</div>`:''}
     <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
     ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
     <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>`;
 }
+     
+async function hydrateFullscreenImg(p){
+  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
+  const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
+  const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
+  if(current.type!=='photo'||!current.url||!isPublicId(current.url))return;
+  const imgId='fs-img-'+p.id+'-'+idx;
+  const el=document.getElementById(imgId);
+  if(!el)return;
+  const url=await getSignedPhotoUrl(current.url);
+  if(url)el.src=url;
+}
+     
 function buildFullscreen(){
   if(!fullPost)return`<div class="fullscreen" id="fullscreen"></div>`;
   const p=posts.find(p=>p.id===fullPost);if(!p)return`<div class="fullscreen" id="fullscreen"></div>`;
@@ -2268,7 +2273,7 @@ function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m
 function setFilter(n){
   filter=n==='All'?null:(filter===n?null:n);
   const main=document.querySelector('.main');
-  if(main)main.innerHTML=buildFeed();
+  if(main){main.innerHTML=buildFeed();observeSignedPhotos(main);}
   // Update pill active states without rebuilding them
   document.querySelectorAll('.pill').forEach(btn=>{
     const label=btn.textContent.trim();
@@ -2286,6 +2291,7 @@ function setFull(id,mediaIdx){
     const p=posts.find(p=>p.id===fullPost);
     el.className='fullscreen show';
     el.innerHTML=p?buildFullscreenInner(p):'';
+    if(p)hydrateFullscreenImg(p);
   } else {
     el.className='fullscreen';
     el.innerHTML='';
