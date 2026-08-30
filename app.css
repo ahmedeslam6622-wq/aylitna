@@ -978,15 +978,23 @@ body.chat-active .nav {
   transform: translateY(-50%);
   flex-direction: column;
   border-radius: 24px;
-  padding: 10px 6px;
-  width: 48px;
+  padding: 8px 6px;
+  width: 44px;
   gap: 8px;
 }
 body.chat-active .nav .nav-lbl {
   display: none;
 }
-
-
+body.chat-active .nav .nav-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+body.chat-active .nav .fab {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
 /* ══════════════════════════════════════════════════════
    ANIMATIONS
    ══════════════════════════════════════════════════════ */
