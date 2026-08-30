@@ -2291,7 +2291,134 @@ document.getElementById('profilePicIn').onchange=async function(){
   const f=this.files[0];if(!f)return;draftProfilePic=await compress(f,400);this.value='';render();
 };
 
+const VERIFY_PASSCODE_URL = 'https://ptpprauzusyrbrigfyji.supabase.co/functions/v1/verify-passcode';
+
+async function isUnlocked() {
+  if (!USE_SB) return true;
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (error || !data?.session) return false;
+    const claim = data.session.user?.app_metadata?.unlocked;
+    return claim === true;
+  } catch (e) {
+    console.log('isUnlocked check failed:', e);
+    return false;
+  }
+}
+
+async function checkPasscode(password) {
+  if (!password || typeof password !== 'string') {
+    return { ok: false, error: 'Incorrect password' };
+  }
+  try {
+    const res = await fetch(VERIFY_PASSCODE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      return { ok: false, error: data.error || 'Incorrect password' };
+    }
+
+    const { error: setErr } = await sb.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    });
+
+    if (setErr) {
+      console.log('setSession failed:', setErr);
+      return { ok: false, error: 'Server error' };
+    }
+
+    return { ok: true };
+  } catch (e) {
+    console.log('checkPasscode failed:', e);
+    return { ok: false, error: 'Server error' };
+  }
+}
+
+
 /* ══════════════════════════════════════════════════════
    BOOT
    ══════════════════════════════════════════════════════ */
-init();
+// ══════════════════════════════════════════════════════
+// PASSCODE GATE — wiring
+// Paste this near the bottom of app.js, ABOVE the final
+// (async () => { ... await isUnlocked() ... })() block from
+// passcode_gate_wiring.js — this defines showGate()/hideGate()
+// that block relies on indirectly (via your own button handler).
+// ══════════════════════════════════════════════════════
+
+function showGate(){
+  const el = document.getElementById('gate');
+  if (el) el.classList.remove('hidden');
+  setTimeout(() => document.getElementById('passcodeInput')?.focus(), 100);
+}
+function hideGate(){
+  const el = document.getElementById('gate');
+  if (el) el.classList.add('hidden');
+}
+
+function setupGate(){
+  const input = document.getElementById('passcodeInput');
+  const btn = document.getElementById('passcodeSubmit');
+  const errorEl = document.getElementById('passcodeError');
+  const card = document.querySelector('.gate-card');
+  if (!input || !btn) return;
+
+  async function attemptUnlock(){
+    const password = input.value;
+    if (!password){
+      errorEl.textContent = 'Enter a passcode';
+      errorEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    errorEl.classList.remove('show');
+
+    const result = await checkPasscode(password);
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+
+    if (result.ok){
+      hideGate();
+      init();
+    } else {
+      errorEl.textContent = result.error;
+      errorEl.classList.add('show');
+      input.value = '';
+      input.focus();
+      if (card){
+        card.classList.remove('shake');
+        void card.offsetWidth; // force reflow so the animation can retrigger
+        card.classList.add('shake');
+      }
+    }
+  }
+
+  btn.addEventListener('click', attemptUnlock);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') attemptUnlock();
+  });
+  input.addEventListener('input', () => {
+    errorEl.classList.remove('show');
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// Replace the bottom-of-file `init();` line with this:
+// ══════════════════════════════════════════════════════
+(async () => {
+  setupGate(); // wire up button/input listeners regardless of outcome below
+  const unlocked = await isUnlocked();
+  if (unlocked) {
+    init();
+  } else {
+    showGate();
+  }
+})();
