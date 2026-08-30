@@ -2350,6 +2350,54 @@ async function checkPasscode(password) {
 // auth-state event — which fires reliably once the SDK has
 // finished checking storage, whether that's fast or slow.
 // ══════════════════════════════════════════════════════
+function setupGate(){
+  const input = document.getElementById('passcodeInput');
+  const btn = document.getElementById('passcodeSubmit');
+  const errorEl = document.getElementById('passcodeError');
+  const card = document.querySelector('.gate-card');
+  if (!input || !btn) return;
+
+  async function attemptUnlock(){
+    const password = input.value;
+    if (!password){
+      errorEl.textContent = 'Enter a passcode';
+      errorEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    errorEl.classList.remove('show');
+
+    const result = await checkPasscode(password);
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+
+    if (result.ok){
+      // onAuthStateChange (below) picks this up via setSession() and
+      // calls bootAppOnce() itself — nothing more to do here.
+    } else {
+      errorEl.textContent = result.error;
+      errorEl.classList.add('show');
+      input.value = '';
+      input.focus();
+      if (card){
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+    }
+  }
+
+  btn.addEventListener('click', attemptUnlock);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') attemptUnlock();
+  });
+  input.addEventListener('input', () => {
+    errorEl.classList.remove('show');
+  });
+}
 
 let appBooted = false;
 
