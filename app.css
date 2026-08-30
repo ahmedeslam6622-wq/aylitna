@@ -970,7 +970,22 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .toast.toast-success{background:rgba(18,61,36,0.92)}
 .new-post-banner{position:sticky;top:10px;display:flex;justify-content:center;z-index:25;pointer-events:none;padding:0 16px;margin-bottom:4px}
 .new-post-pill{background:var(--pri);color:#fff;border-radius:30px;padding:10px 22px;font-size:var(--fs-sm);font-weight:800;box-shadow:0 4px 16px var(--shadow);pointer-events:all;border:none;font-family:var(--font);animation:slide-down .3s cubic-bezier(.34,1.2,.64,1)}
-body.chat-active .nav{top:50%;right:16px;left:auto;bottom:auto;transform:translateY(-50%);flex-direction:column;border-radius:28px;padding:10px 8px}
+body.chat-active .nav {
+  top: 50%;
+  right: 6px;
+  left: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+  flex-direction: column;
+  border-radius: 24px;
+  padding: 10px 6px;
+  width: 48px;
+  gap: 8px;
+}
+body.chat-active .nav .nav-lbl {
+  display: none;
+}
+
 
 /* ══════════════════════════════════════════════════════
    ANIMATIONS
