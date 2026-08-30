@@ -473,13 +473,29 @@ async function delComment(pid,cid){
 async function uploadPhoto(dataURL){
   if(!CLD_CLOUD)return dataURL;
   try{
-    const fd=new FormData();fd.append('file',dataURLtoBlob(dataURL));fd.append('upload_preset',CLD_PRESET);
-    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd});
-    const d=await r.json();
-    if(d.error){console.log('Photo upload error:',d.error);toast('❌ Photo upload failed: '+d.error.message);return null;}
-    return d.secure_url||null;
-  }catch(e){console.log('Photo upload error:',e);toast('❌ Photo upload failed — check your connection');return null;}
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if(!token){ toast('❌ Not signed in — please unlock the app first'); return null; }
+    const signRes = await fetch(CLOUDINARY_SIGN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'upload', resourceType: 'image' }),
+    });
+    const signData = await signRes.json();
+    if(signData.error){ console.log('Photo sign error:', signData.error); toast('❌ Could not authorize upload: ' + signData.error); return null; }
+    const fd = new FormData();
+    fd.append('file', dataURLtoBlob(dataURL));
+    fd.append('api_key', signData.api_key);
+    fd.append('timestamp', signData.timestamp);
+    fd.append('signature', signData.signature);
+    fd.append('type', signData.type);
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if(d.error){ console.log('Photo upload error:', d.error); toast('❌ Photo upload failed: ' + d.error.message); return null; }
+    return d.public_id || null;
+  }catch(e){ console.log('Photo upload error:', e); toast('❌ Photo upload failed — check your connection'); return null; }
 }
+
 async function uploadVideo(file){
   try{
     const fd=new FormData();
