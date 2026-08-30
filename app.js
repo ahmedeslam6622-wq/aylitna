@@ -2399,6 +2399,16 @@ function setupGate(){
   });
 }
 
+function showGate(){
+  const el = document.getElementById('gate');
+  if (el) el.classList.remove('hidden');
+  setTimeout(() => document.getElementById('passcodeInput')?.focus(), 100);
+}
+function hideGate(){
+  const el = document.getElementById('gate');
+  if (el) el.classList.add('hidden');
+}
+
 let appBooted = false;
 
 function bootAppOnce(){
