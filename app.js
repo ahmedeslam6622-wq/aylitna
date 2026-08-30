@@ -447,9 +447,63 @@ async function markSeenBy(){
 
 /* ══════════════════════════════════════════════════════
    PROFILES
+   Synced via Supabase `profiles` table (photo/bio/birthday/color),
+   so every family member sees everyone else's profile correctly —
+   not just the person who set it. localStorage is kept as an
+   instant-display cache (so the UI isn't blank on load) but
+   Supabase is now the source of truth once a fetch completes.
    ══════════════════════════════════════════════════════ */
-function loadProfiles(){profiles=lsj('ayl_profiles',{});}
-function saveProfiles(){lssj('ayl_profiles',profiles);}
+function loadProfiles(){profiles=lsj('ayl_profiles',{});} // instant local cache, may be stale
+async function loadProfilesFromDB(){
+  if(!USE_SB)return;
+  try{
+    const{data,error}=await sb.from('profiles').select('*');
+    if(error||!data)return;
+    const fresh={};
+    data.forEach(row=>{
+      fresh[row.name]={
+        photo:row.photo||undefined,
+        bio:row.bio||undefined,
+        birthday:row.birthday||undefined,
+        colorIdx:row.color_idx??undefined,
+        color:row.color_idx!=null?MC[row.color_idx]:undefined,
+      };
+    });
+    profiles=fresh;
+    saveProfilesLocal(); // refresh the local cache to match
+  }catch(e){console.log('loadProfilesFromDB failed:',e)}
+}
+function saveProfilesLocal(){lssj('ayl_profiles',profiles);}
+// One-time migration: if this device has a local profile from before the
+// DB existed, push it up so it isn't silently lost the first time
+// loadProfilesFromDB() overwrites the local `profiles` object.
+async function migrateLocalProfilesToDB(){
+  if(!USE_SB)return;
+  const local=lsj('ayl_profiles',{});
+  for(const[name,prof]of Object.entries(local)){
+    if(!prof)continue;
+    try{
+      const{data}=await sb.from('profiles').select('name').eq('name',name).maybeSingle();
+      if(!data)await saveProfileToDB(name,prof); // only push if not already in the DB
+    }catch(e){console.log('profile migration check failed for',name,e)}
+  }
+}
+async function saveProfileToDB(name,prof){
+  if(!USE_SB)return;
+  try{
+    await sb.from('profiles').upsert({
+      name,
+      photo:prof.photo||null,
+      bio:prof.bio||null,
+      birthday:prof.birthday||null,
+      color_idx:prof.colorIdx??null,
+      updated_at:new Date().toISOString(),
+    },{onConflict:'name'});
+  }catch(e){console.log('saveProfileToDB failed:',e)}
+}
+// Legacy name kept so any other call sites (if present) still work —
+// now just updates the local cache; DB writes happen via saveProfileToDB.
+function saveProfiles(){saveProfilesLocal();}
 function getMyProfile(){return profiles[myName]||{}}
 
 /* ══════════════════════════════════════════════════════
@@ -495,14 +549,15 @@ async function tagPhotoWithAI(postId,imageDataURL){
 /* ══════════════════════════════════════════════════════
    REALTIME
    ══════════════════════════════════════════════════════ */
-let realtimeChannels={posts:null,msgs:null,cmts:null};
-let realtimeResubTimers={posts:null,msgs:null,cmts:null};
+let realtimeChannels={posts:null,msgs:null,cmts:null,profiles:null};
+let realtimeResubTimers={posts:null,msgs:null,cmts:null,profiles:null};
 
 function subscribeRealtime(){
   if(!USE_SB)return;
   subscribePostsChannel();
   subscribeMsgsChannel();
   subscribeCmtsChannel();
+  subscribeProfilesChannel();
 }
 /* Each channel below is rebuilt with a fresh name on every (re)subscribe
    and watches its own connection status. If Supabase's Realtime socket
@@ -564,6 +619,24 @@ function subscribeCmtsChannel(){
     if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
       clearTimeout(realtimeResubTimers.cmts);
       realtimeResubTimers.cmts=setTimeout(subscribeCmtsChannel,1500);
+    }
+  });
+}
+/* Profile changes from other family members (photo/bio/birthday/color) —
+   refetch the whole table on any change and refresh whatever's currently
+   on screen, same blunt-but-safe approach the other channels use. */
+function subscribeProfilesChannel(){
+  if(realtimeChannels.profiles){try{sb.removeChannel(realtimeChannels.profiles)}catch{}}
+  realtimeChannels.profiles=sb.channel('profiles-'+Date.now()).on('postgres_changes',
+    {event:'*',schema:'public',table:'profiles'},async()=>{
+      await loadProfilesFromDB();
+      nameColors={};
+      render();
+    }
+  ).subscribe(status=>{
+    if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+      clearTimeout(realtimeResubTimers.profiles);
+      realtimeResubTimers.profiles=setTimeout(subscribeProfilesChannel,1500);
     }
   });
 }
@@ -950,6 +1023,7 @@ async function init(){
     });
     loadSeenByFromDB().then(()=>markSeenBy());
   });
+  migrateLocalProfilesToDB().then(()=>loadProfilesFromDB()).then(()=>{ nameColors={}; render(); });
   if(USE_SB){
     try{
       const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null);
@@ -1855,18 +1929,39 @@ function pickProfileColor(idx){
   const grid=document.querySelector('.color-grid');
   if(grid)grid.innerHTML=MC.map((c,i)=>`<div class="color-swatch${selProfileColor===i?' active':''}" style="background:${c.bg};border-color:${c.br}" onclick="pickProfileColor(${i})"></div>`).join('');
 }
-function removeProfilePic(){const prof=getMyProfile();delete prof.photo;draftProfilePic=null;profiles[myName]=prof;saveProfiles();nameColors={};render();toast('Profile photo removed')}
+function removeProfilePic(){const prof=getMyProfile();delete prof.photo;draftProfilePic=null;profiles[myName]=prof;saveProfilesLocal();saveProfileToDB(myName,prof);nameColors={};render();toast('Profile photo removed')}
 async function saveProfile(){
   const newName=(document.getElementById('profileNameIn')?.value||'').trim()||myName;
   const bio=(document.getElementById('profileBioIn')?.value||'').trim();
   const bday=document.getElementById('profileBdayIn')?.value||'';
   const prof=getMyProfile();
-  if(draftProfilePic){prof.photo=draftProfilePic;draftProfilePic=null;delete prof.colorIdx;delete prof.color;}
-  else if(!prof.photo){prof.colorIdx=selProfileColor;prof.color=MC[selProfileColor];}
+
+  if(draftProfilePic){
+    // New photo picked — upload it to Cloudinary (same simple flow as
+    // post photos) instead of storing the raw base64 locally/in the DB.
+    const upEl=document.getElementById('uploading');
+    if(upEl)upEl.className='uploading-overlay show';
+    const url=await uploadPhoto(draftProfilePic);
+    if(upEl)upEl.className='uploading-overlay';
+    if(!url){toast('❌ Profile photo failed to upload');return;}
+    prof.photo=url;draftProfilePic=null;delete prof.colorIdx;delete prof.color;
+  } else if(!prof.photo){
+    prof.colorIdx=selProfileColor;prof.color=MC[selProfileColor];
+  }
   prof.bio=bio;prof.birthday=bday;
-  if(newName!==myName){profiles[newName]={...prof};delete profiles[myName];myName=newName;lss('ayl_name',myName);}
-  else profiles[myName]=prof;
-  saveProfiles();nameColors={};
+
+  if(newName!==myName){
+    profiles[newName]={...prof};delete profiles[myName];
+    // Move the row in the DB too — write the new name, remove the old one.
+    await saveProfileToDB(newName,prof);
+    if(USE_SB){try{await sb.from('profiles').delete().eq('name',myName);}catch(e){console.log('old profile row cleanup failed:',e)}}
+    myName=newName;lss('ayl_name',myName);
+  } else {
+    profiles[myName]=prof;
+    await saveProfileToDB(myName,prof);
+  }
+
+  saveProfilesLocal();nameColors={};
   toast('✓ Profile saved!');vibrate(20);goView('profile');
 }
 
