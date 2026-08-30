@@ -19,6 +19,46 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 </head>
 <body>
+  <!-- ══════════════════════════════════════════════════════
+     PASSCODE GATE
+     Place this as a sibling div, right before <div id="app">,
+     inside your existing index.html <body>.
+     Uses your app's own CSS variables — no new design system,
+     it inherits the current theme automatically (including
+     dark mode via [data-theme="midnight"] etc, since it reads
+     the same --glass-bg / --pri / --bg vars your nav already uses).
+     ══════════════════════════════════════════════════════ -->
+
+<div id="gate" class="gate-overlay">
+  <div class="gate-card">
+    <div class="gate-icon">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="11" width="16" height="10" rx="2.5"></rect>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+      </svg>
+    </div>
+
+    <div class="gate-title">عيلتنا</div>
+    <div class="gate-sub">Enter the family passcode</div>
+
+    <input
+      type="password"
+      id="passcodeInput"
+      class="gate-input"
+      placeholder="Passcode"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+    >
+
+    <div id="passcodeError" class="gate-error"></div>
+
+    <button id="passcodeSubmit" class="gate-btn">
+      <span class="gate-btn-label">Unlock</span>
+      <span class="gate-btn-spinner"></span>
+    </button>
+  </div>
+</div>
 <div id="app"></div>
 <!-- Overlays -->
 <div class="uploading-overlay" id="uploading">
