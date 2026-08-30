@@ -333,7 +333,7 @@ function imgLoaded(postId){
   document.getElementById('iblur-'+postId)?.classList.add('hidden');
   document.querySelector('#post-'+postId+' .post-img')?.classList.add('loaded');
   const p=posts.find(p=>p.id===postId);
-  if(p?.photo_url)cachePhoto(p.photo_url);
+  if(p?.photo_url&&!isPublicId(p.photo_url))cachePhoto(p.photo_url);
 }
 
 /* ══════════════════════════════════════════════════════
