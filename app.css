@@ -171,136 +171,89 @@ input,textarea,select{font-family:var(--font)}
 .gate-card.shake{animation:gate-shake .4s ease}
 
 /* ══════════════════════════════════════════════════════
-   HEADER
+   GLASS MENU — replaces the old header entirely.
+   A single floating glass button (top-right), matching the
+   app's existing glass-pill/nav visual language, that expands
+   into a small panel with Search / Profile / Theme.
    ══════════════════════════════════════════════════════ */
-.hdr{
-  background:var(--card);
-  border-bottom:1.5px solid var(--bd);
-  padding:10px 16px;
-  padding-top:calc(10px + env(safe-area-inset-top));
-  flex-shrink:0;
-  position:relative;
-  z-index:10;
-  box-shadow:0 2px 12px var(--shadow2);
-  transition:background .3s ease, border-color .3s ease, box-shadow .3s ease, min-height .3s ease, padding .3s ease;
-  min-height:calc(56px + env(safe-area-inset-top));
-  overflow:visible;
-}
-/* Scrolled: the header's own box collapses to (nearly) zero height so
-   .main's scrolling content genuinely extends up underneath the floating
-   pills — otherwise the transparent .hdr only reveals #app's own solid
-   page background (which reads as a black strip on dark themes), not the
-   actual photos. The pills themselves are position:absolute so they don't
-   collapse along with the box. */
-.hdr.scrolled{
-  background:none;
-  border-bottom-color:transparent;
-  box-shadow:none;
-  min-height:0;
-  padding-top:env(safe-area-inset-top);
-  padding-bottom:0;
-}
-
-.hdr-row{
-  display:flex;justify-content:space-between;align-items:center;
-  transition:opacity .25s ease, transform .25s ease;
-}
-.hdr.scrolled .hdr-row{
-   display: none;
-  opacity:0;
-  transform:translateY(-6px);
-  pointer-events:none;
-}
-.brand-arabic{font-family:var(--font);font-size:24px;font-weight:700;color:var(--pri);line-height:1}
-.brand-eng{font-size:var(--fs-xs);color:var(--txt3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
-.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px rgba(34,197,94,.2);vertical-align:middle;margin-left:5px}
-.brand-dot.off{background:var(--txt3);box-shadow:none}
-.hdr-right{display:flex;align-items:center;gap:6px}
-
-/* ── Scrolled-state floating glass pills ──────────────────────────────
-   Fixed to the viewport (not confined to .hdr's own compact box), so they
-   float freely above the scrolling feed content with real breathing room,
-   independent of the header bar's height. */
-.hdr-scrolled-row{
-  position:absolute;
-  top:10px;
-  left:16px;
+.glass-menu-wrap{
+  position:fixed;
+  top:calc(12px + env(safe-area-inset-top));
+  right:16px;
   z-index:150;
-  display:flex;justify-content:flex-start;align-items:center;
-  opacity:0;
-  transform:translateY(-8px);
-  pointer-events:none;
-  transition:opacity .3s ease .05s, transform .3s ease .05s;
 }
-.hdr.scrolled .hdr-scrolled-row{
-  opacity:1;
-  transform:translateY(0);
-  pointer-events:auto;
-}
-.glass-pill-wrap{
-  display:flex;align-items:center;gap:8px; /* Increased slightly to match larger buttons */
-  transition:transform .3s cubic-bezier(.34,1.4,.64,1);
-}
-.glass-pill{
-  display:flex;align-items:center;gap:11px; /* Increased from 8px for better inner spacing */
-  padding: 16px 24px; /* Increased from 10px 16px to make it larger */
-  border-radius:999px;
+.glass-menu-btn{
+  width:44px;height:44px;
+  border-radius:50%;
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
   -webkit-backdrop-filter:blur(15px) saturate(1.7);
   backdrop-filter:blur(15px) saturate(1.7);
   box-shadow:0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
-  cursor:pointer;
-  font-size: 23px; /* Increased from 18px */
-  color:var(--txt);
-  transition:transform .15s ease, opacity .3s ease, width .3s cubic-bezier(.34,1.4,.64,1), padding .3s ease;
-  overflow:hidden;
-  white-space:nowrap;
-}
-.glass-pill:active{transform:scale(.94)}
-
-/* Larger Profile Pill */
-.glass-pill-wrap.profile .glass-pill{
-  padding:4px;
-  width: 58px; /* Increased from 40px */
-  height: 58px; /* Increased from 40px to maintain the 1:1 circular aspect ratio */
-  justify-content:center;
-}
-.glass-pill-wrap.profile .glass-pill img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-
-.glass-arrow{
-  width:22px;height:22px;
-  border-radius:50%;
-  border:1px solid rgba(255,255,255,0.35);
-  background:rgba(255,255,255,0.18);
-  -webkit-backdrop-filter:blur(20px);
-  backdrop-filter:blur(20px);
-  color:var(--txt);
-  font-size:12px;font-weight:800;
   display:flex;align-items:center;justify-content:center;
+  color:var(--txt);
   cursor:pointer;
-  margin-left:-6px;
-  box-shadow:0 2px 8px rgba(0,0,0,.1);
-  transition:transform .2s cubic-bezier(.34,1.4,.64,1);
-  flex-shrink:0;
-  position:relative;z-index:1;
+  position:relative;
+  transition:transform .2s cubic-bezier(.34,1.4,.64,1), border-radius .3s ease;
 }
-.glass-arrow:active{transform:scale(.85)}
-/* Collapsed: pill shrinks to nothing, only its arrow tab remains, and the
-   arrow flips direction to indicate "tap to expand". */
-.glass-pill-wrap.collapsed .glass-pill{
-  width:0;
-  padding-left:0;padding-right:0;
-  border-width:0;
+.glass-menu-btn:active{transform:scale(.9)}
+.glass-menu-wrap.open .glass-menu-btn{border-radius:20px 20px 4px 20px}
+.glass-menu-badge{
+  position:absolute;top:-2px;right:-2px;
+  background:var(--pri);color:#fff;
+  border-radius:50%;
+  min-width:16px;height:16px;
+  font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 3px;
+  box-shadow:0 0 0 2px var(--bg);
+}
+.glass-menu-panel{
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  min-width:168px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8);
+  backdrop-filter:blur(20px) saturate(1.8);
+  border-radius:18px;
+  box-shadow:0 8px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.3);
+  padding:6px;
+  display:flex;flex-direction:column;gap:2px;
   opacity:0;
+  transform:translateY(-8px) scale(.96);
+  transform-origin:top right;
   pointer-events:none;
+  transition:opacity .2s ease, transform .2s cubic-bezier(.34,1.4,.64,1);
 }
-.glass-pill-wrap.collapsed .glass-arrow{transform:rotate(180deg)}
-.brand-eng-pill{font-size:var(--fs-sm);font-weight:800;letter-spacing:.4px;color:var(--txt);text-transform:uppercase}
-.brand-arabic-pill{font-family:var(--font);font-size:19px;font-weight:700;color:var(--txt);line-height:1}
-.new-badge{background:var(--pri);color:#fff;border-radius:20px;padding:3px 10px;font-size:var(--fs-xs);font-weight:800;animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
-.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:16px;transition:transform .2s,background .2s}
-.icon-btn:active{transform:scale(.88);background:var(--pri-light)}
+.glass-menu-wrap.open .glass-menu-panel{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  pointer-events:auto;
+}
+.glass-menu-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:none;border:none;
+  color:var(--txt);
+  font-size:var(--fs-sm);font-weight:700;
+  font-family:var(--font-b);
+  text-align:left;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.glass-menu-item:active{background:var(--pri-light)}
+.glass-menu-item-av{
+  width:20px;height:20px;
+  border-radius:50%;
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg2);
+  flex-shrink:0;
+}
+.glass-menu-item-av img{width:100%;height:100%;object-fit:cover}
 
 /* ══════════════════════════════════════════════════════
    MULTI-MEDIA: draft strip (add-post screen) + feed carousel
@@ -367,7 +320,6 @@ input,textarea,select{font-family:var(--font)}
    floating header pills — .hdr and .pills-wrap are siblings in the DOM
    (see render() in app.js), so this general sibling selector reaches it
    directly whenever .hdr carries .scrolled. */
-.hdr.scrolled ~ .pills-wrap{opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-color:none;pointer-events:none}
 .pills{display:flex;gap:6px}
 .pill{padding:7px 15px;border-radius:30px;border:1.5px solid var(--bd);font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;background:transparent;font-weight:600;transition:all .18s;flex-shrink:0}
 .pill.on{background:var(--pri);border-color:var(--pri);color:#fff}
@@ -565,7 +517,6 @@ input,textarea,select{font-family:var(--font)}
   transition: transform 0.15s;
   overflow: hidden;
   border-radius: 999px;
-  transition: transform .15s ease;
 }
 
 /* ── iOS: sliding tab indicator ─────────────────────────────────────
@@ -607,7 +558,7 @@ input,textarea,select{font-family:var(--font)}
 }
 
 .nav-btn:active {
-  transform: scale(.100);
+  transform: scale(.88);
 }
 
 .nav-ico {
