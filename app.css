@@ -565,6 +565,7 @@ input,textarea,select{font-family:var(--font)}
   transition: transform 0.15s;
   overflow: hidden;
   border-radius: 999px;
+  transition: transform .15s ease
 }
 
 /* ── iOS: sliding tab indicator ─────────────────────────────────────
@@ -606,7 +607,7 @@ input,textarea,select{font-family:var(--font)}
 }
 
 .nav-btn:active {
-  transform: scale(.88);
+  transform: scale(.100);
 }
 
 .nav-ico {
