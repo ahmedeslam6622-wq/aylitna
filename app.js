@@ -1,14 +1,4 @@
 /* ══════════════════════════════════════════════════════
-   APP.JS
-   The app itself: startup (init), every screen's HTML
-   (render functions), every button/tap handler, and the
-   passcode gate. If you're changing what something LOOKS
-   like or DOES when tapped, it's in here.
-   Loaded LAST — depends on config.js and data.js.
-   ══════════════════════════════════════════════════════ */
-
-
-/* ══════════════════════════════════════════════════════
    INIT
    ══════════════════════════════════════════════════════ */
 async function init(){
@@ -560,9 +550,26 @@ function repaintCard(pid){const card=document.getElementById('post-'+pid);const 
 function repaintCmts(pid){const p=posts.find(p=>p.id===pid);if(!p||!openComments[pid])return;repaintCard(pid);repaintCmtBadge(pid)}
 function repaintCmtBadge(pid){const el=document.getElementById('cb-'+pid);if(el)el.textContent=cmtCountRaw(pid)}
 function repaintNav(){
-  const nav=document.querySelector('.nav');
-  if(nav)nav.outerHTML=buildNav();
-  if(os==='ios')requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
+  // Surgical update — only touch the unread badge, never destroy/rebuild
+  // the whole nav. A full outerHTML replace here would tear down the
+  // actual DOM buttons mid-tap whenever a message arrives in the
+  // background (e.g. right as the phone unlocks and realtime catches
+  // up), silently swallowing an in-progress touch.
+  const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
+  const chatBtn=document.querySelector('.nav-btn[data-view="chat"]');
+  if(!chatBtn)return;
+  const isChat=view==='chat';
+  let badge=chatBtn.querySelector('.unread-badge');
+  if(totalUnread>0&&!isChat){
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='unread-badge';
+      chatBtn.appendChild(badge);
+    }
+    badge.textContent=totalUnread;
+  } else if(badge){
+    badge.remove();
+  }
 }
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
