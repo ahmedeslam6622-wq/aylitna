@@ -48,6 +48,16 @@ const OCTS = [
 ];
 const RXN     = ['❤️','😂','😍','👏','😢','🔥','🤗','😮'];
 const CMT_RXN = ['❤️','😂','👍','🔥'];
+
+/* ── SVG icons for the glass menu (replacing emoji) ──────
+   Minimal, consistent 1.8px stroke, rounded caps/joins —
+   matches the app's soft glassmorphic aesthetic better than
+   emoji, and renders identically across every device/OS. */
+const ICO_DOTS=`<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
+const ICO_SEARCH=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>`;
+const ICO_THEME=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14 15 15 15h3a3 3 0 0 0 3-3 9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8" r="1" fill="currentColor" stroke="none"/></svg>`;
+const ICO_USER=`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>`;
+
 const THEMES  = [
   {id:'default', name:'Warm',   e:'🧡', bg:'#FAF8F3', p:'#C4622D'},
   {id:'midnight',name:'Night',  e:'🌙', bg:'#0F0E17', p:'#8B5CF6'},
@@ -91,8 +101,6 @@ let pinnedPostId=null, seenBy={}, newCmtPosts={};
 let isOnline=navigator.onLine, profiles={}, draftProfilePic=null, selProfileColor=0;
 let postTags={};
 let chatView='group'; // 'group' | dmKey
-let titleLang='en'; // 'en' | 'ar' — which header title label is showing
-let hdrCollapsed={title:false,search:false,profile:false,theme:false}; // scrolled-state pill collapse
 let viewingProfile=null; // name of profile being viewed
 let dmUnread={}; // { dmKey: count }
 let carouselIdx={}; // { postId: currentSlideIndex } for multi-media posts
