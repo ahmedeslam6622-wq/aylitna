@@ -565,7 +565,7 @@ input,textarea,select{font-family:var(--font)}
   transition: transform 0.15s;
   overflow: hidden;
   border-radius: 999px;
-  transition: transform .15s ease
+  transition: transform .15s ease;
 }
 
 /* ── iOS: sliding tab indicator ─────────────────────────────────────
