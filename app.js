@@ -83,7 +83,6 @@ function render(){
   if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
-  setupHeaderScroll();
   if(os==='ios'){
     if(prevSlideState){
       const newSlide=document.getElementById('navSlide');
@@ -104,81 +103,50 @@ function render(){
    small threshold. Re-attached every render() since .main is a fresh
    element each time (see innerHTML above). Style .hdr.scrolled in app.css —
    see the placeholder rule there. */
-function setupHeaderScroll(){
-  const main=document.querySelector('.main');
-  const hdr=document.querySelector('.hdr');
-  if(!main||!hdr)return;
-  const onScroll=()=>{
-    hdr.classList.toggle('scrolled', main.scrollTop>8);
-  };
-  main.addEventListener('scroll', onScroll, {passive:true});
-  onScroll(); // set initial state in case render() happened mid-scroll
-}
-
 
 /* ══════════════════════════════════════════════════════
    HEADER
    ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   HEADER — replaced by a single floating glass menu button.
+   No title bar, no scroll-collapse states — just one
+   always-present glass pill (matching the app's existing
+   glass-pill/nav aesthetic) in the top-right corner. Tap it
+   to expand a glass panel with Search / Profile / Theme.
+   ══════════════════════════════════════════════════════ */
+let hdrMenuOpen=false;
 function buildHeader(newPosts){
   const prof=profiles[myName];
   const profImg=prof?.photo
     ?`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-    :`👤`;
-  return`<div class="hdr">
-    <div class="hdr-row">
-      <div class="brand-static">
-        <div><div class="brand-arabic">عيلتنا <span class="${USE_SB?'brand-dot':'brand-dot off'}"></span></div><div class="brand-eng">Our Family</div></div>
-      </div>
-      <div class="hdr-right">
-        ${newPosts>0&&view==='feed'?`<div class="new-badge">${newPosts} new ✨</div>`:''}
-        <button class="icon-btn" onclick="toggleSearch()">🔍</button>
-        <button class="icon-btn" onclick="goView('profile')" style="padding:0;overflow:hidden">${profImg}</button>
-        <button class="icon-btn" onclick="openThemeSheet()">🎨</button>
-      </div>
-    </div>
-        <div class="hdr-scrolled-row">
-      ${buildGlassPill('title')}
+    :ICO_USER;
+  return`<div class="glass-menu-wrap${hdrMenuOpen?' open':''}" id="glassMenu">
+    <button class="glass-menu-btn" onclick="toggleHdrMenu()" aria-label="Menu">
+      ${newPosts>0&&view==='feed'?`<span class="glass-menu-badge">${newPosts}</span>`:''}
+      ${ICO_DOTS}
+    </button>
+    <div class="glass-menu-panel">
+      <button class="glass-menu-item" onclick="toggleSearch();closeHdrMenu()">${ICO_SEARCH}<span>Search</span></button>
+      <button class="glass-menu-item" onclick="goView('profile');closeHdrMenu()">
+        <span class="glass-menu-item-av">${profImg}</span><span>Profile</span>
+      </button>
+      <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_THEME}<span>Theme</span></button>
     </div>
   </div>`;
 }
-/* Builds one collapsible glass pill for the scrolled header state.
-   Collapsed = just the arrow tab showing; tap the arrow to expand/collapse.
-   The pill's own tap (title/search/profile/theme action) is separate from
-   the arrow's tap — arrow only toggles collapse, doesn't fire the action. */
-function buildGlassPill(kind,profImg){
-  const collapsed=hdrCollapsed[kind];
-  let inner='',action='';
-  if(kind==='title'){
-    inner=titleLang==='en'?`<span class="brand-eng-pill">Our Family</span>`:`<span class="brand-arabic-pill">عيلتنا</span>`;
-    inner+=`<span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>`;
-    action=`toggleTitleLang()`;
-  } else if(kind==='search'){
-    inner=`🔍`;action=`toggleSearch()`;
-  } else if(kind==='profile'){
-    inner=profImg||'👤';action=`goView('profile')`;
-  } else if(kind==='theme'){
-    inner=`🎨`;action=`openThemeSheet()`;
-  }
-  return`<div class="glass-pill-wrap ${kind}${collapsed?' collapsed':''}" id="ghp-${kind}">
-    <button class="glass-pill" onclick="${action}">${inner}</button>
-    <button class="glass-arrow" onclick="event.stopPropagation();toggleHdrCollapse('${kind}')" aria-label="Toggle">${collapsed?'›':'‹'}</button>
-  </div>`;
+function toggleHdrMenu(){
+  hdrMenuOpen=!hdrMenuOpen;
+  document.getElementById('glassMenu')?.classList.toggle('open',hdrMenuOpen);
 }
-function toggleHdrCollapse(kind){
-  hdrCollapsed[kind]=!hdrCollapsed[kind];
-  const wrap=document.getElementById('ghp-'+kind);
-  if(wrap)wrap.classList.toggle('collapsed',hdrCollapsed[kind]);
+function closeHdrMenu(){
+  hdrMenuOpen=false;
+  document.getElementById('glassMenu')?.classList.remove('open');
 }
-function toggleTitleLang(){
-  titleLang=titleLang==='en'?'ar':'en';
-  const pill=document.querySelector('#ghp-title .glass-pill');
-  if(pill){
-    pill.innerHTML=(titleLang==='en'
-      ?`<span class="brand-eng-pill">Our Family</span>`
-      :`<span class="brand-arabic-pill">عيلتنا</span>`)
-      +`<span class="${USE_SB?'brand-dot':'brand-dot off'}"></span>`;
-  }
-}
+document.addEventListener('click',(e)=>{
+  if(!hdrMenuOpen)return;
+  const wrap=document.getElementById('glassMenu');
+  if(wrap&&!wrap.contains(e.target))closeHdrMenu();
+});
 
 /* ══════════════════════════════════════════════════════
    SEARCH
