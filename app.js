@@ -109,8 +109,20 @@ function render(){
    ══════════════════════════════════════════════════════ */
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
-   const hdr_branding = document.getElementById(header-branding);
-   
+   document.addEventListener('DOMContentLoaded', () => {
+  const arrows = document.querySelectorAll('.glass-arrow');
+
+  arrows.forEach(arrow => {
+    arrow.addEventListener('click', (event) => {
+      event.stopPropagation(); // Stops conflict if pill is also clickable
+      
+      const wrapper = arrow.closest('.header-branding-wrap');
+      if (wrapper) {
+        wrapper.classList.toggle('collapsed');
+      }
+    });
+  });
+});
    //MENU
   const prof=profiles[myName];
   const profImg=prof?.photo
