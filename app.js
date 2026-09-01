@@ -1487,7 +1487,7 @@ function bootAppOnce(){
 
 setupGate();
 
-if (USE_SB) {
+/*if (USE_SB) {
   sb.auth.onAuthStateChange((event, session) => {
     const unlocked = session?.user?.app_metadata?.unlocked === true;
     if (unlocked) {
@@ -1507,3 +1507,5 @@ if (USE_SB) {
 } else {
   bootAppOnce();
 }
+*/
+bootAppOnce();
