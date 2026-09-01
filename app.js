@@ -116,6 +116,7 @@ function render(){
    ══════════════════════════════════════════════════════ */
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
+   //MENU
   const prof=profiles[myName];
   const profImg=prof?.photo
     ?`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
