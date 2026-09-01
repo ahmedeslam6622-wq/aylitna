@@ -1,7 +1,12 @@
 /* ══════════════════════════════════════════════════════
    INIT
    ══════════════════════════════════════════════════════ */
-console.log("running now");
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("CRASH DETECTED: " + message + " on line " + lineno);
+  return false;
+};
+alert("Script has started parsing successfully!");
+
 async function init(){
   initTheme();
   myName=ls('ayl_name','');
