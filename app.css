@@ -173,76 +173,7 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
                         GLASS 
    ══════════════════════════════════════════════════════ */
-.header-branding-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px; 
-  transition: transform .3s cubic-bezier(.34,1.4,.64,1);
-}
 
-.header-branding {
-  display: flex;
-  align-items: center;
-  gap: 11px; 
-  padding: 16px 24px; 
-  border-radius: 999px;
-  background: var(--glass-bg, rgba(255,255,255,0.1)); /* Added fallback colors */
-  border: 1px solid var(--glass-border, rgba(255,255,255,0.2));
-  -webkit-backdrop-filter: blur(15px) saturate(1.7);
-  backdrop-filter: blur(15px) saturate(1.7);
-  box-shadow: 0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
-  cursor: pointer;
-  font-size: 23px; 
-  color: var(--txt, #fff);
-  overflow: hidden;
-  white-space: nowrap;
-
-  /* ADAPTED: Allow layout shrinking and set animation target */
-  max-width: 600px; 
-  transition: transform .15s ease, opacity .3s ease, max-width .3s cubic-bezier(.34,1.4,.64,1), padding .3s ease;
-}
-
-.header-branding:active { transform: scale(.94); }
-
-.glass-arrow {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.35);
-  background: rgba(255,255,255,0.18);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  color: var(--txt, #fff);
-  font-size: 12px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  margin-left: -6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.1);
-  transition: transform .2s cubic-bezier(.34,1.4,.64,1);
-  flex-shrink: 0;
-  position: relative; z-index: 1;
-}
-
-.glass-arrow:active { transform: scale(.85); }
-
-/* ADAPTED COLLAPSE RULES */
-.header-branding-wrap.collapsed .header-branding {
-  max-width: 0;
-  min-width: 0; /* Forces text container to actually hit absolute zero width */
-  padding-left: 0;
-  padding-right: 0;
-  border-width: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.header-branding-wrap.collapsed .glass-arrow {
-  transform: rotate(180deg);
-}
-
-/* Inner elements styling */
-.brand-eng-pill { font-size: var(--fs-sm, 14px); font-weight: 800; letter-spacing: .4px; color: var(--txt, #fff); text-transform: uppercase; }
-.brand-arabic-pill { font-family: var(--font, sans-serif); font-size: 19px; font-weight: 700; color: var(--txt, #fff); line-height: 1; }
-.new-badge { background: var(--pri, #0070f3); color: #fff; border-radius: 20px; padding: 3px 10px; font-size: var(--fs-xs, 11px); font-weight: 800; }
 
 .glass-menu-wrap{
   position:fixed;
