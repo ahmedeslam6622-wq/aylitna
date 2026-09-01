@@ -109,12 +109,12 @@ function render(){
    ══════════════════════════════════════════════════════ */
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
-   document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const arrows = document.querySelectorAll('.glass-arrow');
 
   arrows.forEach(arrow => {
     arrow.addEventListener('click', (event) => {
-      event.stopPropagation(); // Stops conflict if pill is also clickable
+      event.stopPropagation(); // Prevents clicks bubbling up to wrapper
       
       const wrapper = arrow.closest('.header-branding-wrap');
       if (wrapper) {
@@ -123,6 +123,7 @@ function buildHeader(newPosts){
     });
   });
 });
+
    //MENU
   const prof=profiles[myName];
   const profImg=prof?.photo
