@@ -107,15 +107,10 @@ function render(){
 /* ══════════════════════════════════════════════════════
    HEADER
    ══════════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════════
-   HEADER — replaced by a single floating glass menu button.
-   No title bar, no scroll-collapse states — just one
-   always-present glass pill (matching the app's existing
-   glass-pill/nav aesthetic) in the top-right corner. Tap it
-   to expand a glass panel with Search / Profile / Theme.
-   ══════════════════════════════════════════════════════ */
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
+   const hdr_branding = document.getElementById(header-branding);
+   
    //MENU
   const prof=profiles[myName];
   const profImg=prof?.photo
