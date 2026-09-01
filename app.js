@@ -1529,26 +1529,5 @@ setupGate();
 // ══════════════════════════════════════════════════════
 // SAFE PASSCODE GATE INITIALIZER
 // ══════════════════════════════════════════════════════
-setupGate();
-
-if (USE_SB) {
-  sb.auth.onAuthStateChange((event, session) => {
-    const unlocked = session?.user?.app_metadata?.unlocked === true;
-    if (unlocked) {
-      bootAppOnce();
-    } else {
-      // Force boot the JS framework. 
-      // Our updated init() function will safely catch that they 
-      // are logged out, show the gate, and block any data.
-      bootAppOnce();
-    }
-  });
-
-  // Safety net fallback to guarantee the framework initializes
-  setTimeout(() => {
-    if (!appBooted) bootAppOnce();
-  }, 2500);
-} else {
-  bootAppOnce();
-}
+bootAppOnce();
 
