@@ -109,20 +109,6 @@ function render(){
    ══════════════════════════════════════════════════════ */
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
-document.addEventListener('DOMContentLoaded', () => {
-  const arrows = document.querySelectorAll('.glass-arrow');
-
-  arrows.forEach(arrow => {
-    arrow.addEventListener('click', (event) => {
-      event.stopPropagation(); // Prevents clicks bubbling up to wrapper
-      
-      const wrapper = arrow.closest('.header-branding-wrap');
-      if (wrapper) {
-        wrapper.classList.toggle('collapsed');
-      }
-    });
-  });
-});
 
    //MENU
   const prof=profiles[myName];
