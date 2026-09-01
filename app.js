@@ -9,16 +9,6 @@ alert("Script has started parsing successfully!");
 
 async function init(){
   initTheme();
-  
-  // 🔒 CRITICAL SECURITY CHECK FIRST
-  // If using Supabase and the user isn't unlocked, render the gate instead of the application feed
-  if (USE_SB) {
-    const isUserUnlocked = await isUnlocked();
-    if (!isUserUnlocked) {
-      renderPasscodeGateView();
-      return; // Stop execution here so unauthorized users see nothing else
-    }
-  }
 
   myName=ls('ayl_name','');
   lastSeen=+(ls('ayl_seen',0));
