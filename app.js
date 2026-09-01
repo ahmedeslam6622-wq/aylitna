@@ -9,6 +9,17 @@ alert("Script has started parsing successfully!");
 
 async function init(){
   initTheme();
+  
+  // 🔒 CRITICAL SECURITY CHECK FIRST
+  // If using Supabase and the user isn't unlocked, render the gate instead of the application feed
+  if (USE_SB) {
+    const isUserUnlocked = await isUnlocked();
+    if (!isUserUnlocked) {
+      renderPasscodeGateView();
+      return; // Stop execution here so unauthorized users see nothing else
+    }
+  }
+
   myName=ls('ayl_name','');
   lastSeen=+(ls('ayl_seen',0));
   lastMsgSeen=+(ls('ayl_msgseen',0));
@@ -17,6 +28,8 @@ async function init(){
   loadSeenBy();loadProfiles();
   if(!messages.group)messages.group=[];
   loadingFeed=true;render();
+  // ... rest of your original init code continues unchanged below
+
   await Promise.all([loadPosts(),loadMessages()]);
   loadingFeed=false;
   render(); // Render immediately with posts
@@ -1170,6 +1183,11 @@ function buildThemeSheet(curTheme,curFS){
   </div>`;
 }
 
+// ══════════════════════════════════════════════════════
+// DYNAMIC PASSCODE VIEW GENERATOR
+// ══════════════════════════════════════════════════════
+
+
 /* ══════════════════════════════════════════════════════
    ONBOARDING
    ══════════════════════════════════════════════════════ */
@@ -1508,4 +1526,29 @@ setupGate();
   bootAppOnce();
 }
 */
-bootAppOnce();
+// ══════════════════════════════════════════════════════
+// SAFE PASSCODE GATE INITIALIZER
+// ══════════════════════════════════════════════════════
+setupGate();
+
+if (USE_SB) {
+  sb.auth.onAuthStateChange((event, session) => {
+    const unlocked = session?.user?.app_metadata?.unlocked === true;
+    if (unlocked) {
+      bootAppOnce();
+    } else {
+      // Force boot the JS framework. 
+      // Our updated init() function will safely catch that they 
+      // are logged out, show the gate, and block any data.
+      bootAppOnce();
+    }
+  });
+
+  // Safety net fallback to guarantee the framework initializes
+  setTimeout(() => {
+    if (!appBooted) bootAppOnce();
+  }, 2500);
+} else {
+  bootAppOnce();
+}
+
