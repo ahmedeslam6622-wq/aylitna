@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════════
    INIT
    ══════════════════════════════════════════════════════ */
+console.log("running now");
 async function init(){
   initTheme();
   myName=ls('ayl_name','');
