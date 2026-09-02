@@ -893,60 +893,57 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .uploading-txt{font-size:var(--fs);font-weight:800;color:var(--txt)}
 .uploading-sub{font-size:var(--fs-sm);color:var(--txt2)}
 .toast {
-  position: fixed; 
-  top: calc(env(safe-area-inset-top) + 10px); 
-  left: 50%; 
-  transform: translateX(-50%) translateY(-16px) scale(.92); 
+  position: fixed;
+  /* 1. Use top to handle the hidden state height offset instead of translateY */
+  top: calc(env(safe-area-inset-top) - 20px); 
   
-  /* Start hidden by matching text and border color alpha to 0 */
-  color: rgba(255, 255, 255, 0);
-  border: 1px solid rgba(255, 255, 255, 0);
-  background: rgba(20, 17, 24, 0); 
+  /* 2. Center horizontally using standard layout rules instead of transform */
+  left: 50%;
+  width: max-content;
+  max-width: 92%;
+  margin-left: auto;
+  margin-right: auto;
+  transform: translateX(-50%); /* Match your nav's stable single-axis transform */
   
-  /* Start with no blur so it behaves smoothly */
-  -webkit-backdrop-filter: blur(0px) saturate(1); 
-  backdrop-filter: blur(0px) saturate(1); 
-  
-  border-radius: 26px; 
-  padding: 16px 26px; 
-  font-size: var(--fs-lg); 
-  font-weight: 800; 
-  z-index: 300; 
-  pointer-events: none; 
-  max-width: 92%; 
-  width: max-content; 
-  text-align: center; 
-  line-height: 1.4; 
-  letter-spacing: .1px; 
-  box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); 
-  
-  /* Transition the filters and colors explicitly like the nav bar */
-  transition: 
-    background .35s cubic-bezier(.4,0,.2,1),
-    border-color .35s cubic-bezier(.4,0,.2,1),
-    color .35s cubic-bezier(.4,0,.2,1),
-    backdrop-filter .35s cubic-bezier(.4,0,.2,1),
-    -webkit-backdrop-filter .35s cubic-bezier(.4,0,.2,1),
-    transform .35s cubic-bezier(.4,0,.2,1);
-}
-
-/* Base Shown State */
-.toast.show {
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(0) scale(1);
-  background: rgba(20, 17, 24, 0.92); 
-  border-color: rgba(255, 255, 255, 0.15);
+  /* 3. Render your styling identically to the nav bar from the start */
+  background: rgba(20,17,24,0.92);
+  -webkit-backdrop-filter: blur(15px) saturate(1.7);
+  backdrop-filter: blur(15px) saturate(1.7);
+  border: 1px solid rgba(255,255,255,0.15);
   color: #fff;
-  -webkit-backdrop-filter: blur(15px) saturate(1.7); 
-  backdrop-filter: blur(15px) saturate(1.7); 
+  border-radius: 26px;
+  padding: 16px 26px;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  z-index: 300;
+  
+  /* 4. Use standard visibility and opacity to trigger rendering layout cleanly */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  
+  text-align: center;
+  line-height: 1.4;
+  letter-spacing: .1px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+  
+  /* Match your nav's transition curve exactly */
+  transition: 
+    opacity .35s cubic-bezier(.4,0,.2,1),
+    top .35s cubic-bezier(.4,0,.2,1),
+    visibility .35s;
 }
 
-/* Color Variations (Transition smoothly over the base state) */
-.toast.toast-error.show { 
-  background: rgba(90, 22, 22, 0.92); 
-}
-.toast.toast-success.show { 
-  background: rgba(18, 61, 36, 0.92); 
+.toast.toast-error { background: rgba(90,22,22,0.92); }
+.toast.toast-success { background: rgba(18,61,36,0.92); }
+
+/* The Shown State */
+.toast.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  /* Simply drop it down into view via top, leaving the horizontal transform unbothered */
+  top: calc(env(safe-area-inset-top) + 10px); 
 }
 
 
