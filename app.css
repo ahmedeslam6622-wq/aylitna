@@ -893,53 +893,62 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .uploading-txt{font-size:var(--fs);font-weight:800;color:var(--txt)}
 .uploading-sub{font-size:var(--fs-sm);color:var(--txt2)}
 .toast {
-  position: fixed;
-  top: calc(env(safe-area-inset-top) + 10px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-16px) scale(.92);
-  color: #fff;
-  border-radius: 26px;
-  padding: 16px 26px;
-  font-size: var(--fs-lg);
-  font-weight: 800;
-  z-index: 300;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  max-width: 92%;
-  width: max-content;
-  text-align: center;
-  line-height: 1.4;
-  letter-spacing: .1px;
-  box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
-  transition: opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.64,1), visibility .3s;
+  position: fixed; 
+  top: calc(env(safe-area-inset-top) + 10px); 
+  left: 50%; 
+  transform: translateX(-50%) translateY(-16px) scale(.92); 
   
-  /* Required to clip the pseudo-element background to the border radius */
-  overflow: hidden; 
+  /* Start hidden by matching text and border color alpha to 0 */
+  color: rgba(255, 255, 255, 0);
+  border: 1px solid rgba(255, 255, 255, 0);
+  background: rgba(20, 17, 24, 0); 
+  
+  /* Start with no blur so it behaves smoothly */
+  -webkit-backdrop-filter: blur(0px) saturate(1); 
+  backdrop-filter: blur(0px) saturate(1); 
+  
+  border-radius: 26px; 
+  padding: 16px 26px; 
+  font-size: var(--fs-lg); 
+  font-weight: 800; 
+  z-index: 300; 
+  pointer-events: none; 
+  max-width: 92%; 
+  width: max-content; 
+  text-align: center; 
+  line-height: 1.4; 
+  letter-spacing: .1px; 
+  box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); 
+  
+  /* Transition the filters and colors explicitly like the nav bar */
+  transition: 
+    background .35s cubic-bezier(.4,0,.2,1),
+    border-color .35s cubic-bezier(.4,0,.2,1),
+    color .35s cubic-bezier(.4,0,.2,1),
+    backdrop-filter .35s cubic-bezier(.4,0,.2,1),
+    -webkit-backdrop-filter .35s cubic-bezier(.4,0,.2,1),
+    transform .35s cubic-bezier(.4,0,.2,1);
 }
 
-/* Moving the blur here fixes the transform conflict */
-.toast::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: rgba(20,17,24,0.92);
-  -webkit-backdrop-filter: blur(15px);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: inherit;
-}
-
-/* Handle your semantic color variations on the pseudo-element background */
-.toast.toast-error::before { background: rgba(90,22,22,0.92); }
-.toast.toast-success::before { background: rgba(18,61,36,0.92); }
-
+/* Base Shown State */
 .toast.show {
-  opacity: 1;
-  visibility: visible;
+  pointer-events: auto;
   transform: translateX(-50%) translateY(0) scale(1);
+  background: rgba(20, 17, 24, 0.92); 
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  -webkit-backdrop-filter: blur(15px) saturate(1.7); 
+  backdrop-filter: blur(15px) saturate(1.7); 
 }
+
+/* Color Variations (Transition smoothly over the base state) */
+.toast.toast-error.show { 
+  background: rgba(90, 22, 22, 0.92); 
+}
+.toast.toast-success.show { 
+  background: rgba(18, 61, 36, 0.92); 
+}
+
 
 .new-post-banner{position:sticky;top:10px;display:flex;justify-content:center;z-index:25;pointer-events:none;padding:0 16px;margin-bottom:4px}
 .new-post-pill{background:var(--pri);color:#fff;border-radius:30px;padding:10px 22px;font-size:var(--fs-sm);font-weight:800;box-shadow:0 4px 16px var(--shadow);pointer-events:all;border:none;font-family:var(--font);animation:slide-down .3s cubic-bezier(.34,1.2,.64,1)}
