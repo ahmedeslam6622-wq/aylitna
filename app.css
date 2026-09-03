@@ -312,47 +312,56 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
           The Center-Fitting Floating Pills (Fixed Row)
    ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+         The Self-Contained Morphing Filter Row
+   ══════════════════════════════════════════════════════ */
 .pills-wrap {
   position: fixed;            
-  top: calc(12px + env(safe-area-inset-top)); /* Same top alignment as widgets */
+  top: calc(12px + env(safe-area-inset-top)); 
   
-  /* Dynamic constraints fit it perfectly inside the gap */
-  left: 170px;                /* Pushes past your left header widget */
-  right: 76px;                /* Leaves room for your right menu widget */
+  /* Stays completely locked between your outer widgets at all times */
+  left: 170px;                
+  right: 76px;                
   z-index: 140;               
-  height: 44px;               /* Same height row baseline constraint */
+  height: 44px;               
   box-sizing: border-box;
   
   background: var(--glass-bg); 
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);  
-  
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
   border-radius: 999px;       
-  padding: 0 10px;            /* Narrower internal breathing padding */
+  padding: 0 16px;            
   
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  transition: opacity .2s ease, max-height .25s ease, padding .25s ease, transform .25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  cursor: pointer;
+  
+  /* Smoothly interpolates the width content transition internal elements */
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Sibling scrolling auto-hide animation for the whole row */
-.hdr.scrolled,
-.hdr.scrolled ~ .glass-menu-wrap {
-  transform: translateY(-80px);
-  opacity: 0;
-}
-.hdr.scrolled ~ .pills-wrap {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-80px);
-  pointer-events: none; 
+/* 🏷️ State 1: Default Text Label Appearance */
+.filter-label-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--txt2);
+  white-space: nowrap;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.2s ease, transform 0.25s ease, margin 0.3s ease;
+  margin-right: 0;
 }
 
-.pills {
+/* Hidden chips rest engine setup */
+.pills-wrap .pills {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -360,14 +369,41 @@ input,textarea,select{font-family:var(--font)}
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
-.pills::-webkit-scrollbar {
-  display: none;
+.pills-wrap .pills::-webkit-scrollbar { display: none; }
+
+/* 🚀 State 2: Triggered Internal Expansion Rule */
+.pills-wrap.expanded {
+  /* Box padding adapts natively to maximize horizontal track scroll limits */
+  padding: 0 10px; 
 }
 
+.pills-wrap.expanded .filter-label-text {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-20px);
+  /* Pulls element entirely out of layout stream calculations */
+  margin-right: -55px; 
+}
+
+.pills-wrap.expanded .pills {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Standard native scroll behavior auto-hiding fallback logic */
+.hdr.scrolled ~ .pills-wrap {
+  max-height: 0;
+  opacity: 0;
+  top: calc(0px + env(safe-area-inset-top)); 
+  pointer-events: none; 
+}
+
+/* Your clean default capsule buttons layout tracking variables */
 .pill {
-  padding: 5px 12px;          /* Scaled down profile for the narrow strip row */
+  padding: 5px 12px;          
   border-radius: 30px;
-  border: 1.5px solid var(--bd);
+  border: 1.5px solid var(--bd);     
   font-size: var(--fs-sm);
   color: var(--txt2);
   white-space: nowrap;
@@ -376,17 +412,8 @@ input,textarea,select{font-family:var(--font)}
   transition: all .18s;
   flex-shrink: 0;
 }
-
-.pill.on {
-  background: var(--pri);
-  border-color: var(--pri);
-  color: #fff;
-}
-
-.pill:active {
-  transform: scale(.95);
-}
-
+.pill.on { background: var(--pri); border-color: var(--pri); color: #fff; }
+.pill:active { transform: scale(.95); }
 
 
 /* ══════════════════════════════════════════════════════
