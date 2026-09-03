@@ -193,6 +193,8 @@ input,textarea,select{font-family:var(--font)}
   border: 1px solid var(--glass-border);
   color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
+
+   z-index: 150;
 }
 
 .hdr small {
