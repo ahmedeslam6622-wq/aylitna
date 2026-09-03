@@ -190,8 +190,8 @@ input,textarea,select{font-family:var(--font)}
   
   /* Backdrop Frosted Glass Effect */
   background: var(--glass-bg); 
-  backdrop-filter: blur(12px);                
-  -webkit-backdrop-filter: blur(12px);        
+  -webkit-backdrop-filter:blur(20px) saturate(1.8);
+  backdrop-filter:blur(20px) saturate(1.8);  
   
   /* Styling & Depth */
   border: 1px solid var(--glass-border);
