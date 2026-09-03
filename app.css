@@ -310,6 +310,50 @@ input,textarea,select{font-family:var(--font)}
 .glass-menu-item-av img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ══════════════════════════════════════════════════════
+   FIXED CATEGORY FILTER PANEL
+   ══════════════════════════════════════════════════════ */
+.category-dropdown-panel {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  right: 16px;
+  width: 240px;
+  background: var(--card);
+  border: 1.5px solid var(--bd);
+  border-radius: var(--r2);
+  box-shadow: 0 8px 32px var(--shadow2);
+  z-index: 160;
+  padding: 12px;
+  animation: ctx-in .15s ease;
+}
+
+.category-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: var(--fs-sm);
+  color: var(--txt);
+}
+
+.category-close-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--txt3);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.pills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+/* ══════════════════════════════════════════════════════
           The Center-Fitting Floating Pills (Fixed Row)
    ══════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════
