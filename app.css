@@ -175,8 +175,8 @@ input,textarea,select{font-family:var(--font)}
    ══════════════════════════════════════════════════════ */
 .hdr {
   position: fixed;            
-  top: 16px;                  
-  left: 18px;                 
+  top: 30px;                  
+  left: 16px;                 
   z-index: 150;               
   
   display: flex;
