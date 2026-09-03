@@ -179,12 +179,12 @@ input,textarea,select{font-family:var(--font)}
   top: 16px;                  /* Distance from the top edge */
   left: 16px;                 /* Distance from the left edge */
   z-index: 150;               /* Keeps it on top of other content */
-  width: 58px;
+  width: 70px;
   height: 58px;
    
   
   /* Pill Shape */
-  border-radius: 9999px;      /* Fully rounds the corners */
+  border-radius: 999px;      /* Fully rounds the corners */
   padding: 6px 14px;          /* Inner spacing for pill proportions */
   
   /* Backdrop Frosted Glass Effect */
@@ -201,7 +201,7 @@ input,textarea,select{font-family:var(--font)}
 }
 
 .hdr small {
-  font-size: 23pxpx;
+  font-size: 23px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;  /* Standard UI treatment for badges */
