@@ -171,7 +171,7 @@ input,textarea,select{font-family:var(--font)}
 .gate-card.shake{animation:gate-shake .4s ease}
 
 /* ══════════════════════════════════════════════════════
-                     Header and Menu 
+                          Top UI
    ══════════════════════════════════════════════════════ */
 .hdr {
   position: fixed;            
@@ -195,7 +195,7 @@ input,textarea,select{font-family:var(--font)}
   
   /* Styling & Depth */
   border: 1px solid var(--glass-border);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
 }
 
@@ -360,15 +360,74 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
    PILLS
    ══════════════════════════════════════════════════════ */
-.pills-wrap{background:var(--card);border-bottom:1.5px solid var(--bd);padding:8px 14px;flex-shrink:0;transition:opacity .2s ease,max-height .25s ease,padding .25s ease;overflow:hidden;max-height:60px}
-/* Hidden entirely once scrolled, so nothing sits underneath/behind the
-   floating header-branding pills — .hdr and .pills-wrap are siblings in the DOM
-   (see render() in app.js), so this general sibling selector reaches it
-   directly whenever .hdr carries .scrolled. */
-.pills{display:flex;gap:6px}
-.pill{padding:7px 15px;border-radius:30px;border:1.5px solid var(--bd);font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;background:transparent;font-weight:600;transition:all .18s;flex-shrink:0}
-.pill.on{background:var(--pri);border-color:var(--pri);color:#fff}
-.pill:active{transform:scale(.95)}
+.pills-wrap {
+  /* 1. Transform it into a floating island layout */
+  position: fixed;            
+  top: calc(96px + env(safe-area-inset-top)); /* Sits safely beneath your .hdr and menu heights */
+  left: 16px;                 
+  right: 16px;                
+  z-index: 140;               
+  border-radius: 999px;       /* Gives it that beautiful pill container shape */
+  
+  /* 2. Style to match your floating theme */
+  background: var(--glass-bg); /* Swapped var(--card) for your glass styling tokens */
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);  
+  border: 1px solid var(--glass-border); /* Cleans up the thick 1.5px layout lines */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
+
+  /* 3. Retain your functional layout and animations */
+  padding: 8px 14px;
+  flex-shrink: 0;
+  transition: opacity .2s ease, max-height .25s ease, padding .25s ease, top .25s ease;
+  overflow: hidden;
+  max-height: 60px;
+}
+
+/* 4. Keeps your scroll-hiding logic active, adding an opacity fall-off */
+.hdr.scrolled ~ .pills-wrap {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  pointer-events: none; /* Prevents invisible taps on hidden pills */
+}
+
+/* Ensure the layout wrapper allows smooth touch horizontal swipes */
+.pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Hides Firefox scrollbar */
+}
+.pills::-webkit-scrollbar {
+  display: none; /* Hides Chrome/Safari scrollbar */
+}
+
+.pill {
+  padding: 7px 15px;
+  border-radius: 30px;
+  border: 1.5px solid var(--glass-border); /* Subtle matching borders */
+  font-size: var(--fs-sm);
+  color: var(--txt2);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05); /* Soft background contrast inside the tray */
+  font-weight: 600;
+  transition: all .18s;
+  flex-shrink: 0;
+}
+
+.pill.on {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+}
+
+.pill:active {
+  transform: scale(.95);
+}
+
 
 /* ══════════════════════════════════════════════════════
    REMINDER BANNER
