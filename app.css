@@ -317,10 +317,12 @@ input,textarea,select{font-family:var(--font)}
   top: calc(64px + env(safe-area-inset-top));
   right: 16px;
   width: 240px;
-  background: var(--card);
-  border: 1.5px solid var(--bd);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
   border-radius: var(--r2);
-  box-shadow: 0 8px 32px var(--shadow2);
+  box-shadow: 0 8px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.3);
   z-index: 160;
   padding: 12px;
   animation: ctx-in .15s ease;
