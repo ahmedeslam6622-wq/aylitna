@@ -203,58 +203,20 @@ function buildPills(){
   const names=[...new Set(posts.map(p=>p.name))];
   if(names.length<2)return'';
   
-  // Detect OS for custom animations
-  const platform = (typeof os !== 'undefined') ? os.toLowerCase() : 'ios';
-
-  return `
-    <!-- Full screen backdrop to capture dismiss clicks -->
-    <div class="pills-backdrop" onclick="toggleFilterExplosion(false)"></div>
-
-    <!-- The container that handles the styling and explosion mechanics -->
-    <div class="pills-wrap island-filters mini ${platform}" id="pillCapsule" onclick="toggleFilterExplosion(true, event)">
-      
-      <!-- Minimalist trigger indicator shown only when collapsed -->
-      <div class="mini-trigger-label">🔍 Tap to Filter</div>
-
-      <!-- Scrollable pills layer -->
-      <div class="pills scrollx">
-        ${['All',...names].map(n=>{
-          const on=n==='All'?!filter:filter===n;
-          const c=n!=='All'?getC(n):null;
-          return`<button class="pill${on?' on':''}" onclick="setFilter('${n}'); toggleFilterExplosion(false); event.stopPropagation();"
-            style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
-            ${n==='All'?'👪 All':n}</button>`;
-        }).join('')}
-      </div>
+  // Clean, static markup with no trigger overlays or toggle states
+  return `<div class="pills-wrap">
+    <div class="pills scrollx">
+      ${['All',...names].map(n=>{
+        const on=n==='All'?!filter:filter===n;
+        const c=n!=='All'?getC(n):null;
+        return`<button class="pill${on?' on':''}" onclick="setFilter('${n}')"
+          style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
+          ${n==='All'?'👪 All':n}</button>`;
+      }).join('')}
     </div>
-  `;
+  </div>`;
 }
 
-// Global control function for the explosion interaction
-function toggleFilterDrawer(open) {
-  const wrapper = document.querySelector('.pills-wrap');
-  
-  // Create backdrop element if it doesn't exist yet
-  let backdrop = document.querySelector('.sheet-backdrop');
-  if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.className = 'sheet-backdrop';
-    backdrop.onclick = () => toggleFilterDrawer(false);
-    document.body.appendChild(backdrop);
-  }
-
-  if (open) {
-    // Dynamically inject platform class if missing
-    const platform = (typeof os !== 'undefined') ? os.toLowerCase() : 'ios';
-    wrapper.classList.add(platform);
-    
-    wrapper.classList.add('open');
-    backdrop.classList.add('visible');
-  } else {
-    wrapper.classList.remove('open');
-    backdrop.classList.remove('visible');
-  }
-}
 
 
 /* ══════════════════════════════════════════════════════
