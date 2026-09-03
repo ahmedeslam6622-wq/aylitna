@@ -176,37 +176,50 @@ input,textarea,select{font-family:var(--font)}
 .hdr {
   position: fixed;            /* Locks it to the viewport */
   top: 16px;                  /* Distance from the top edge */
-  left: 20px;                 /* Distance from the left edge */
+  left: 16px;                 /* Distance from the left edge */
   z-index: 150;               /* Keeps it on top of other content */
   
   /* Flexbox Centers the text perfectly inside the pill */
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;                  /* Spaces the text and the green dot */
   
   /* Pill Shape (Auto-scaling) */
   border-radius: 999px;       /* Fully rounds the corners */
-  padding: 8px 18px;          /* Adjusted padding for a balanced pill aesthetic */
+  padding: 12px 22px;         /* Made taller and wider for a balanced pill shape */
   
   /* Backdrop Frosted Glass Effect */
   background: var(--glass-bg); 
   backdrop-filter: blur(12px);                
   -webkit-backdrop-filter: blur(12px);        /* Safari support */
   
-  /* Styling & Typography */
+  /* Styling & Depth */
   border: 1px solid var(--glass-border);
   font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15); /* Single line shadow for depth */
 }
 
 .hdr small {
-  font-size: 16px;
+  font-size: 23px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  text-transform: uppercase;   /* Standard UI treatment for badges */
+  text-transform: uppercase;   
   color: var(--txt);
-  line-height: 1;              /* Prevents extra vertical space from font metrics */
+  line-height: 1;              
 }
 
+/* Green dot with fading shades to the very right */
+.hdr::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: #22c55e;   /* Vibrant green dot */
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Fading ambient glow surrounding the dot */
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.4), 0 0 0 8px rgba(34, 197, 94, 0.15);
+}
 
 .glass-menu-wrap{
   position:fixed;
