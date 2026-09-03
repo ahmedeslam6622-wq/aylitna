@@ -208,26 +208,29 @@ function buildPills() {
   if (names.length < 2) return '';
 
   return `
-    <!-- The container starts hidden -->
-    <div id="categorySheet" class="category-sheet" style="display: none;">
-      <div class="category-sheet-content">
-        <div class="category-sheet-header">
-          <h3>Filter by Category</h3>
-          <button class="close-sheet-btn" onclick="toggleCategorySheet()">✕</button>
-        </div>
-        <div class="pills">
-          ${['All', ...names].map(n => {
-            const on = n === 'All' ? !filter : filter === n;
-            return `
-              <button class="pill${on ? ' on' : ''}" onclick="setFilter('${n}'); toggleCategorySheet();">
-                ${n}
-              </button>
-            `;
-          }).join('')}
-        </div>
+    <div id="categorySheet" class="category-dropdown-panel" style="display: none;">
+      <div class="category-dropdown-header">
+        <strong>Filter by Member</strong>
+        <button class="category-close-btn" onclick="toggleCategorySheet()">✕</button>
+      </div>
+      <div class="pills-grid">
+        ${['All', ...names].map(n => {
+          const on = n === 'All' ? !filter : filter === n;
+          return `
+            <button class="pill${on ? ' on' : ''}" onclick="setFilter('${n}'); toggleCategorySheet();">
+              ${n}
+            </button>
+          `;
+        }).join('')}
       </div>
     </div>
   `;
+}
+
+function toggleCategorySheet() {
+  const sheet = document.getElementById('categorySheet');
+  if (!sheet) return;
+  sheet.style.display = sheet.style.display === 'none' ? 'block' : 'none';
 }
 
 // The trigger function connected to your menu button
