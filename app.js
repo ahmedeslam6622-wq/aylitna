@@ -101,11 +101,7 @@ function render(){
 /* ══════════════════════════════════════════════════════
    HEADER
    ══════════════════════════════════════════════════════ */
-const header = document.querySelector("#header");
-const smallText = document.querySelector('header small');
-header.addEventListener("click", () => {
-   smallText.textContent = "عيلتنا";
-}
+
 let hdrMenuOpen=false;
 function buildHeader(newPosts){
 
