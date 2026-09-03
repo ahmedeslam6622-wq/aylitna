@@ -230,13 +230,6 @@ function buildPills() {
 function toggleCategorySheet() {
   const sheet = document.getElementById('categorySheet');
   if (!sheet) return;
-  sheet.style.display = sheet.style.display === 'none' ? 'block' : 'none';
-}
-
-// The trigger function connected to your menu button
-function toggleCategorySheet() {
-  const sheet = document.getElementById('categorySheet');
-  if (!sheet) return;
   
   if (sheet.style.display === 'none') {
     sheet.style.display = 'block';
@@ -244,7 +237,7 @@ function toggleCategorySheet() {
     sheet.style.display = 'none';
   }
 }
-}
+
 
 
 
