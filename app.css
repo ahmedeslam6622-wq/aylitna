@@ -176,7 +176,7 @@ input,textarea,select{font-family:var(--font)}
 .hdr {
   position: fixed;            /* Locks it to the viewport */
   top: 16px;                  /* Distance from the top edge */
-  left: 16px;                 /* Distance from the left edge */
+  left: 20px;                 /* Distance from the left edge */
   z-index: 150;               /* Keeps it on top of other content */
   
   /* Flexbox Centers the text perfectly inside the pill */
@@ -199,7 +199,7 @@ input,textarea,select{font-family:var(--font)}
 }
 
 .hdr small {
-  font-size: 23px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;   /* Standard UI treatment for badges */
