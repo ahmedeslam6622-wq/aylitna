@@ -197,6 +197,8 @@ function buildReminder(){
   </div>`;
 }
 
+
+
 function buildPills(){
   const names=[...new Set(posts.map(p=>p.name))];
   if(names.length<2)return'';
@@ -229,33 +231,31 @@ function buildPills(){
 }
 
 // Global control function for the explosion interaction
-function toggleFilterExplosion(explode, event) {
-  if(event) event.stopPropagation();
+function toggleFilterDrawer(open) {
+  const wrapper = document.querySelector('.pills-wrap');
   
-  const capsule = document.getElementById('pillCapsule');
-  const backdrop = document.querySelector('.pills-backdrop');
-  const hdr = document.querySelector('.hdr');
-  const menu = document.querySelector('.glass-menu-wrap');
-  
-  if(!capsule) return;
+  // Create backdrop element if it doesn't exist yet
+  let backdrop = document.querySelector('.sheet-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'sheet-backdrop';
+    backdrop.onclick = () => toggleFilterDrawer(false);
+    document.body.appendChild(backdrop);
+  }
 
-  if(explode) {
-    // Only explode if currently mini
-    if(capsule.classList.contains('mini')) {
-      capsule.classList.remove('mini');
-      capsule.classList.add('exploded');
-      if(backdrop) backdrop.classList.add('visible');
-      if(hdr) hdr.classList.add('pushed-away');
-      if(menu) menu.classList.add('pushed-away');
-    }
+  if (open) {
+    // Dynamically inject platform class if missing
+    const platform = (typeof os !== 'undefined') ? os.toLowerCase() : 'ios';
+    wrapper.classList.add(platform);
+    
+    wrapper.classList.add('open');
+    backdrop.classList.add('visible');
   } else {
-    capsule.classList.add('mini');
-    capsule.classList.remove('exploded');
-    if(backdrop) backdrop.classList.remove('visible');
-    if(hdr) hdr.classList.remove('pushed-away');
-    if(menu) menu.classList.remove('pushed-away');
+    wrapper.classList.remove('open');
+    backdrop.classList.remove('visible');
   }
 }
+
 
 /* ══════════════════════════════════════════════════════
    FEED
