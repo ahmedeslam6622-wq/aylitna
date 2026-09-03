@@ -198,18 +198,20 @@ function buildReminder(){
 }
 
 
-
 function buildPills(){
   const names=[...new Set(posts.map(p=>p.name))];
   if(names.length<2)return'';
   
-  // Clean, static markup with no trigger overlays or toggle states
-  return `<div class="pills-wrap">
+  return `<div class="pills-wrap" id="pillCapsule" onclick="this.classList.toggle('expanded')">
+    
+    <!-- This text turns into the pills -->
+    <div class="filter-label-text">✨ Filter</div>
+
     <div class="pills scrollx">
       ${['All',...names].map(n=>{
         const on=n==='All'?!filter:filter===n;
         const c=n!=='All'?getC(n):null;
-        return`<button class="pill${on?' on':''}" onclick="setFilter('${n}')"
+        return`<button class="pill${on?' on':''}" onclick="setFilter('${n}'); event.stopPropagation();"
           style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
           ${n==='All'?'👪 All':n}</button>`;
       }).join('')}
