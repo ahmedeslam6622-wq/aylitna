@@ -186,7 +186,7 @@ input,textarea,select{font-family:var(--font)}
   
   /* Pill Shape */
   border-radius: 999px;       
-  padding: 8px 14px;          /* Scaled down equally (Taller vibe but compact) */
+  padding: 11px 17px;          /* Scaled down equally (Taller vibe but compact) */
   
   /* Backdrop Frosted Glass Effect */
   background: var(--glass-bg); 
@@ -200,7 +200,7 @@ input,textarea,select{font-family:var(--font)}
 }
 
 .hdr small {
-  font-size: 14px;            /* Reduced from 23px for an equal, compact fit */
+  font-size: 18px;            /* Reduced from 23px for an equal, compact fit */
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;   
@@ -211,8 +211,8 @@ input,textarea,select{font-family:var(--font)}
 /* Scaled down green dot with fading shades */
 .hdr::after {
   content: '';
-  width: 6px;                 /* Reduced from 10px */
-  height: 6px;                /* Reduced from 10px */
+  width: 8px;                 /* Reduced from 10px */
+  height: 8px;                /* Reduced from 10px */
   background-color: #22c55e;   
   border-radius: 50%;
   flex-shrink: 0;
