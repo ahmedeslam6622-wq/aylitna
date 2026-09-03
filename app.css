@@ -187,7 +187,7 @@ input,textarea,select{font-family:var(--font)}
   
   /* Pill Shape (Auto-scaling) */
   border-radius: 999px;       /* Fully rounds the corners */
-   padding: 16px 24px; 
+   padding: 16px 16px; 
   
   /* Backdrop Frosted Glass Effect */
   background: var(--glass-bg); 
