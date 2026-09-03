@@ -120,9 +120,9 @@ function buildHeader(newPosts){
       <button class="glass-menu-item" onclick="goView('profile');closeHdrMenu()">
         <span class="glass-menu-item-av">${profImg}</span><span>Profile</span>
       </button>
-      <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_FILTER}<span>Theme</span></button>
+      <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_THEME}<span>Theme</span></button>
       <button class="glass-menu-item" onclick="toggleCategorySheet(); closeHdrMenu()">
-  ${ICO_THEME} <span>Categories</span>
+  ${ICO_FILTER} <span>Filter</span>
 </button>
 
     </div>
