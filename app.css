@@ -173,19 +173,20 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
                      Header and Menu 
    ══════════════════════════════════════════════════════ */
-/* CSS Styles */
 .hdr {
   position: fixed;            /* Locks it to the viewport */
   top: 16px;                  /* Distance from the top edge */
   left: 16px;                 /* Distance from the left edge */
   z-index: 150;               /* Keeps it on top of other content */
-  width: 70px;
-  height: 58px;
-   
   
-  /* Pill Shape */
-  border-radius: 999px;      /* Fully rounds the corners */
-  padding: 6px 14px;          /* Inner spacing for pill proportions */
+  /* Flexbox Centers the text perfectly inside the pill */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Pill Shape (Auto-scaling) */
+  border-radius: 999px;       /* Fully rounds the corners */
+  padding: 8px 18px;          /* Adjusted padding for a balanced pill aesthetic */
   
   /* Backdrop Frosted Glass Effect */
   background: var(--glass-bg); 
@@ -194,18 +195,16 @@ input,textarea,select{font-family:var(--font)}
   
   /* Styling & Typography */
   border: 1px solid var(--glass-border);
-  color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
-
-   z-index: 150;
 }
 
 .hdr small {
   font-size: 23px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  text-transform: uppercase;  /* Standard UI treatment for badges */
-   color: var(--txt);
+  text-transform: uppercase;   /* Standard UI treatment for badges */
+  color: var(--txt);
+  line-height: 1;              /* Prevents extra vertical space from font metrics */
 }
 
 
