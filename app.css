@@ -174,145 +174,99 @@ input,textarea,select{font-family:var(--font)}
                           Top UI
    ══════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════
-               Header Widget Displacement Rules
+               Full Dimming Layer (Behind Sheet)
    ══════════════════════════════════════════════════════ */
-.hdr, .glass-menu-wrap {
-  transition: transform 0.45s cubic-bezier(0.25, 1, 0.2, 1), opacity 0.3s ease;
-}
-/* Push header left and menu right out of the frame when filters explode */
-.hdr.pushed-away {
-  transform: translateX(-150%) scale(0.9);
-  opacity: 0;
-}
-.glass-menu-wrap.pushed-away {
-  transform: translateX(150%) scale(0.9);
-  opacity: 0;
-}
-
-/* ══════════════════════════════════════════════════════
-               Full-Screen Dismissal Backdrop
-   ══════════════════════════════════════════════════════ */
-.pills-backdrop {
+.sheet-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 139;
-  background: rgba(0, 0, 0, 0.2);
+  z-index: 899;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.3s ease;
 }
-.pills-backdrop.visible {
+.sheet-backdrop.visible {
   opacity: 1;
   pointer-events: auto;
 }
 
 /* ══════════════════════════════════════════════════════
-               The Filter Capsule System
+          The Transformed .pills-wrap (Bottom Sheet)
    ══════════════════════════════════════════════════════ */
-.pills-wrap.island-filters {
+.pills-wrap {
+  /* 1. Force the wrapper to act as a hidden bottom drawer */
   position: fixed;
-  z-index: 140;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-/* ── STATE A: Ultra-Small & Dimmed Diminutive Spark ── */
-.pills-wrap.island-filters.mini {
-  /* Fits beautifully in the gap between left header and right menu */
-  top: calc(20px + env(safe-area-inset-top)); 
-  left: 50%;
-  transform: translateX(-50%);
-  width: auto;
-  min-width: 100px;
-  max-width: 140px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
+  left: 0; 
+  right: 0; 
+  bottom: 0;
+  z-index: 900; /* Mounts over content, clears top widgets completely */
   
-  opacity: 0.55; /* Dimmed state */
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.pills-wrap.island-filters.mini:hover,
-.pills-wrap.island-filters.mini:active {
-  opacity: 0.95;
-  transform: translateX(-50%) scale(1.05);
-}
-/* Hide actual items and show micro-label when minimized */
-.pills-wrap.mini .pills { opacity: 0; pointer-events: none; }
-.pills-wrap.mini .mini-trigger-label { 
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--txt);
-  white-space: nowrap;
-}
-
-/* ── STATE B: The Explosion Framework ── */
-.pills-wrap.island-filters.exploded {
-  opacity: 1;
-  pointer-events: auto;
-}
-.pills-wrap.exploded .mini-trigger-label { display: none; }
-.pills-wrap.exploded .pills { 
-  opacity: 1; 
-  display: flex;
-  flex-wrap: wrap; /* Wraps into a full selection array */
-  gap: 10px;
-  padding: 10px 0;
-}
-
-/* ══════════════════════════════════════════════════════
-               OS-Specific Physics Variations
-   ══════════════════════════════════════════════════════ */
-
-/* 🍏 PLATFORM: iOS (Fluid Spring Sheets + High Friction Blur) */
-.pills-wrap.ios {
-  -webkit-backdrop-filter: blur(25px) saturate(2);
-  backdrop-filter: blur(25px) saturate(2);
-}
-.pills-wrap.ios.exploded {
-  /* Smooth fluid spring expansion mimicking native Apple overlays */
-  transition: all 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.12);
-  top: calc(40px + env(safe-area-inset-top));
-  left: 16px;
-  right: 16px;
-  transform: translateX(0);
-  border-radius: 28px;
-  padding: 20px;
-  max-height: 300px;
-}
-
-/* 🤖 PLATFORM: Android (Material Morph & Spatial Scaling) */
-.pills-wrap.android {
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px); /* Minimal blur, heavy solid colors */
-}
-.pills-wrap.android.exploded {
-  /* Fast, sharp asymmetrical linear expansion matching Material Design */
-  transition: all 0.38s cubic-bezier(0.05, 0.7, 0.1, 1.0);
-  top: 0;
-  left: 0;
-  right: 0;
-  transform: translateX(0);
-  border-radius: 0 0 24px 24px; /* Flattens to the screen top edges */
-  padding: calc(20px + env(safe-area-inset-top)) 20px 24px 20px;
-  max-height: 400px;
-  background: var(--bg); /* Shifts to a solid card surface */
-}
-
-/* Sibling hiding override rule: preserves your native structural scroll-away functionality */
-.hdr.scrolled ~ .pills-wrap.mini {
-  transform: translateX(-50%) translateY(-100px);
+  /* Styling to match your premium dark/glass UI tokens */
+  background: var(--card, #1e1e2e); 
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+  
+  /* Padding handles mobile device home bars smoothly */
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
+  
+  /* Starts out hidden beneath the frame layout */
+  transform: translateY(100%);
   opacity: 0;
+  max-height: 400px; /* Overriding your old 60px clamp limit */
+  overflow-y: auto;
+  
+  flex-shrink: 0;
 }
+
+/* 2. Platform-Specific Velocity Physics via your 'os' class hook */
+.pills-wrap.ios {
+  border-radius: 24px 24px 0 0;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.3s ease;
+}
+.pills-wrap.android {
+  border-radius: 16px 16px 0 0;
+  transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1.0), opacity 0.3s ease;
+}
+
+/* 3. The Active/Open Transition Override Triggered via JS */
+.pills-wrap.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 4. Keeps your original track tag layout rendering flawlessly */
+.pills {
+  display: flex;
+  flex-wrap: wrap; /* Grid array wrap instead of a horizontal single strip */
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.pill {
+  padding: 10px 18px; /* Taller tap target profile */
+  border-radius: 30px;
+  border: 1.5px solid var(--glass-border, var(--bd));
+  font-size: var(--fs-sm);
+  color: var(--txt2);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  transition: all .18s;
+  flex-shrink: 0;
+}
+
+.pill.on {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+}
+
+.pill:active {
+  transform: scale(.95);
+}
+
 
 /* ══════════════════════════════════════════════════════
    MULTI-MEDIA: draft strip (add-post screen) + feed carousel
