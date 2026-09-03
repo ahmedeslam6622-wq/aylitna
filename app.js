@@ -121,6 +121,10 @@ function buildHeader(newPosts){
         <span class="glass-menu-item-av">${profImg}</span><span>Profile</span>
       </button>
       <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_THEME}<span>Theme</span></button>
+      <button class="glass-menu-item" onclick="toggleCategorySheet(); closeHdrMenu()">
+  ${ICO_THEME} <span>Categories</span>
+</button>
+
     </div>
   </div>`;
 }
@@ -199,26 +203,46 @@ function buildReminder(){
 }
 
 
-function buildPills(){
-  const names=[...new Set(posts.map(p=>p.name))];
-  if(names.length<2)return'';
-  
-  return `<div class="pills-wrap" id="pillCapsule" onclick="this.classList.toggle('expanded')">
-    
-    <!-- This text turns into the pills -->
-    <div class="filter-label-text">✨ Filter</div>
+function buildPills() {
+  const names = [...new Set(posts.map(p => p.name))];
+  if (names.length < 2) return '';
 
-    <div class="pills scrollx">
-      ${['All',...names].map(n=>{
-        const on=n==='All'?!filter:filter===n;
-        const c=n!=='All'?getC(n):null;
-        return`<button class="pill${on?' on':''}" onclick="setFilter('${n}'); event.stopPropagation();"
-          style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
-          ${n==='All'?'👪 All':n}</button>`;
-      }).join('')}
+  return `
+    <!-- The container starts hidden -->
+    <div id="categorySheet" class="category-sheet" style="display: none;">
+      <div class="category-sheet-content">
+        <div class="category-sheet-header">
+          <h3>Filter by Category</h3>
+          <button class="close-sheet-btn" onclick="toggleCategorySheet()">✕</button>
+        </div>
+        <div class="pills">
+          ${['All', ...names].map(n => {
+            const on = n === 'All' ? !filter : filter === n;
+            return `
+              <button class="pill${on ? ' on' : ''}" onclick="setFilter('${n}'); toggleCategorySheet();">
+                ${n}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
     </div>
-  </div>`;
+  `;
 }
+
+// The trigger function connected to your menu button
+function toggleCategorySheet() {
+  const sheet = document.getElementById('categorySheet');
+  if (!sheet) return;
+  
+  if (sheet.style.display === 'none') {
+    sheet.style.display = 'block';
+  } else {
+    sheet.style.display = 'none';
+  }
+}
+}
+
 
 
 
