@@ -197,21 +197,64 @@ function buildReminder(){
   </div>`;
 }
 
-/* ══════════════════════════════════════════════════════
-   PILLS
-   ══════════════════════════════════════════════════════ */
 function buildPills(){
   const names=[...new Set(posts.map(p=>p.name))];
   if(names.length<2)return'';
-  return`<div class="pills-wrap"><div class="pills scrollx">
-    ${['All',...names].map(n=>{
-      const on=n==='All'?!filter:filter===n;
-      const c=n!=='All'?getC(n):null;
-      return`<button class="pill${on?' on':''}" onclick="setFilter('${n}')"
-        style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
-        ${n==='All'?'👪 All':n}</button>`;
-    }).join('')}
-  </div></div>`;
+  
+  // Detect OS for custom animations
+  const platform = (typeof os !== 'undefined') ? os.toLowerCase() : 'ios';
+
+  return `
+    <!-- Full screen backdrop to capture dismiss clicks -->
+    <div class="pills-backdrop" onclick="toggleFilterExplosion(false)"></div>
+
+    <!-- The container that handles the styling and explosion mechanics -->
+    <div class="pills-wrap island-filters mini ${platform}" id="pillCapsule" onclick="toggleFilterExplosion(true, event)">
+      
+      <!-- Minimalist trigger indicator shown only when collapsed -->
+      <div class="mini-trigger-label">🔍 Tap to Filter</div>
+
+      <!-- Scrollable pills layer -->
+      <div class="pills scrollx">
+        ${['All',...names].map(n=>{
+          const on=n==='All'?!filter:filter===n;
+          const c=n!=='All'?getC(n):null;
+          return`<button class="pill${on?' on':''}" onclick="setFilter('${n}'); toggleFilterExplosion(false); event.stopPropagation();"
+            style="${on&&c?`background:${c.bg};border-color:${c.br};color:${c.tx}`:''}">
+            ${n==='All'?'👪 All':n}</button>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Global control function for the explosion interaction
+function toggleFilterExplosion(explode, event) {
+  if(event) event.stopPropagation();
+  
+  const capsule = document.getElementById('pillCapsule');
+  const backdrop = document.querySelector('.pills-backdrop');
+  const hdr = document.querySelector('.hdr');
+  const menu = document.querySelector('.glass-menu-wrap');
+  
+  if(!capsule) return;
+
+  if(explode) {
+    // Only explode if currently mini
+    if(capsule.classList.contains('mini')) {
+      capsule.classList.remove('mini');
+      capsule.classList.add('exploded');
+      if(backdrop) backdrop.classList.add('visible');
+      if(hdr) hdr.classList.add('pushed-away');
+      if(menu) menu.classList.add('pushed-away');
+    }
+  } else {
+    capsule.classList.add('mini');
+    capsule.classList.remove('exploded');
+    if(backdrop) backdrop.classList.remove('visible');
+    if(hdr) hdr.classList.remove('pushed-away');
+    if(menu) menu.classList.remove('pushed-away');
+  }
 }
 
 /* ══════════════════════════════════════════════════════
