@@ -91,21 +91,6 @@ function render(){
     }
     requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
   }
-     // Bind input listeners safely only when they are rendered on the screen
-  const galleryIn = document.getElementById('galleryIn');
-  if (galleryIn && !galleryIn.onchange) {
-    galleryIn.onchange = async function() {
-      const files = [...this.files].slice(0, MAX_MEDIA - draftMedia.length);
-      this.value = '';
-      for (const f of files) {
-        const dataURL = await compress(f);
-        draftMedia.push({ type: 'photo', dataURL });
-      }
-      if (view !== 'add') view = 'add';
-      render();
-    };
-  }
-
 }
 
 /* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
@@ -1369,8 +1354,21 @@ function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.
 /* ══════════════════════════════════════════════════════
    FILE INPUTS
    ══════════════════════════════════════════════════════ */
+const galleryInput = document.getElementById('galleryIn');
 
-
+// Only run the setup if the element actually exists in the DOM right now
+if (galleryInput) {
+  galleryInput.onchange = async function() {
+    const files = [...this.files].slice(0, MAX_MEDIA - draftMedia.length);
+    this.value = '';
+    for (const f of files) {
+      const dataURL = await compress(f);
+      draftMedia.push({ type: 'photo', dataURL });
+    }
+    if (view !== 'add') view = 'add';
+    render();
+  };
+}
 
 document.getElementById('cameraIn').onchange=async function(){
   const f=this.files[0];this.value='';if(!f)return;
