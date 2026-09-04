@@ -1352,77 +1352,51 @@ function setFS(s){applyFS(s);document.querySelectorAll('.size-step').forEach(b=>
 function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.dataset.s=['sm','md','lg'][i]})}
 
 /* ══════════════════════════════════════════════════════
-   FILE INPUTS & GLOBAL EVENT DELEGATION
+   FILE INPUTS
    ══════════════════════════════════════════════════════ */
+const galleryInput = document.getElementById('galleryIn');
 
-// Global Event Listener for Asset Selection (Catches the .onchange events safely without null crashes)
-document.addEventListener('change', async function(event) {
-  const target = event.target;
-  if (!target) return;
-
-  // GALLERY INPUT
-  if (target.id === 'galleryIn') {
-    const files = [...target.files].slice(0, MAX_MEDIA - draftMedia.length);
-    target.value = '';
+// Only run the setup if the element actually exists in the DOM right now
+if (galleryInput) {
+  galleryInput.onchange = async function() {
+    const files = [...this.files].slice(0, MAX_MEDIA - draftMedia.length);
+    this.value = '';
     for (const f of files) {
       const dataURL = await compress(f);
       draftMedia.push({ type: 'photo', dataURL });
     }
     if (view !== 'add') view = 'add';
     render();
-  }
+  };
+}
 
-  // CAMERA INPUT
-  if (target.id === 'cameraIn') {
-    const files = [...target.files];
-    target.value = '';
-    if (!files.length || draftMedia.length >= MAX_MEDIA) return;
-    const dataURL = await compress(files[0]);
-    draftMedia.push({ type: 'photo', dataURL });
-    if (view !== 'add') view = 'add';
-    render();
+document.getElementById('cameraIn').onchange=async function(){
+  const f=this.files[0];this.value='';if(!f)return;
+  if(draftMedia.length>=MAX_MEDIA)return;
+  const dataURL=await compress(f);
+  draftMedia.push({type:'photo',dataURL});
+  if(view!=='add')view='add';render();
+};
+document.getElementById('videoIn').onchange=function(){
+  const files=[...this.files].slice(0,MAX_MEDIA-draftMedia.length);
+  this.value='';
+  for(const f of files){
+    if(!f.type.startsWith('video/')){toast('Please select a video file');continue;}
+    draftMedia.push({type:'video',file:f,previewURL:URL.createObjectURL(f)});
   }
+  if(view!=='add')view='add';render();
+};
+document.getElementById('commentImgIn').onchange=async function(){
+  const f=this.files[0];if(!f||!commentImgTarget)return;
+  const d=await compress(f,600);this.value='';
+  if(!cmtDraft[commentImgTarget])cmtDraft[commentImgTarget]={text:'',photo:null,replyTo:null};
+  cmtDraft[commentImgTarget].photo=d;repaintCmts(commentImgTarget);
+};
+document.getElementById('profilePicIn').onchange=async function(){
+  const f=this.files[0];if(!f)return;draftProfilePic=await compress(f,400);this.value='';render();
+};
 
-  // VIDEO INPUT
-  if (target.id === 'videoIn') {
-    const files = [...target.files].slice(0, MAX_MEDIA - draftMedia.length);
-    target.value = '';
-    for (const f of files) {
-      if (!f.type.startsWith('video/')) {
-        toast('Please select a video file');
-        continue;
-      }
-      draftMedia.push({ type: 'video', file: f, previewURL: URL.createObjectURL(f) });
-    }
-    if (view !== 'add') view = 'add';
-    render();
-  }
-
-  // COMMENT IMAGE INPUT
-  if (target.id === 'commentImgIn') {
-    const files = [...target.files];
-    if (!files.length || !commentImgTarget) return;
-    const d = await compress(files[0], 600);
-    target.value = '';
-    if (!cmtDraft[commentImgTarget]) cmtDraft[commentImgTarget] = { text: '', photo: null, replyTo: null };
-    cmtDraft[commentImgTarget].photo = d;
-    repaintCmts(commentImgTarget);
-  }
-
-  // PROFILE PICTURE INPUT
-  if (target.id === 'profilePicIn') {
-    const files = [...target.files];
-    if (!files.length) return;
-    draftProfilePic = await compress(files[0], 400);
-    target.value = '';
-    render();
-  }
-});
-
-/* ══════════════════════════════════════════════════════
-   PASSCODE GATE IMPLEMENTATION & APP INITIALIZATION
-   ══════════════════════════════════════════════════════ */
-const VERIFY_PASSCODE_URL = 'https://supabase.co';
+const VERIFY_PASSCODE_URL = 'https://ptpprauzusyrbrigfyji.supabase.co/functions/v1/verify-passcode';
 
 async function isUnlocked() {
   if (!USE_SB) return true;
@@ -1470,16 +1444,30 @@ async function checkPasscode(password) {
   }
 }
 
-function setupGate() {
+
+
+
+
+// ══════════════════════════════════════════════════════
+// PASSCODE GATE — robust boot (replaces the previous
+// (async () => { isUnlocked... })() block entirely)
+//
+// Instead of checking isUnlocked() once at an arbitrary moment
+// during load (which can race against Supabase restoring the
+// session from localStorage), this listens for Supabase's own
+// auth-state event — which fires reliably once the SDK has
+// finished checking storage, whether that's fast or slow.
+// ══════════════════════════════════════════════════════
+function setupGate(){
   const input = document.getElementById('passcodeInput');
   const btn = document.getElementById('passcodeSubmit');
   const errorEl = document.getElementById('passcodeError');
   const card = document.querySelector('.gate-card');
   if (!input || !btn) return;
 
-  async function attemptUnlock() {
+  async function attemptUnlock(){
     const password = input.value;
-    if (!password) {
+    if (!password){
       errorEl.textContent = 'Enter a passcode';
       errorEl.classList.add('show');
       return;
@@ -1494,14 +1482,15 @@ function setupGate() {
     btn.disabled = false;
     btn.classList.remove('loading');
 
-    if (result.ok) {
-      // Handled natively by auth stream hooks
+    if (result.ok){
+      // onAuthStateChange (below) picks this up via setSession() and
+      // calls bootAppOnce() itself — nothing more to do here.
     } else {
       errorEl.textContent = result.error;
       errorEl.classList.add('show');
       input.value = '';
       input.focus();
-      if (card) {
+      if (card){
         card.classList.remove('shake');
         void card.offsetWidth;
         card.classList.add('shake');
@@ -1518,29 +1507,50 @@ function setupGate() {
   });
 }
 
-function showGate() {
+function showGate(){
   const el = document.getElementById('gate');
   if (el) el.classList.remove('hidden');
   setTimeout(() => document.getElementById('passcodeInput')?.focus(), 100);
 }
-
-function hideGate() {
+function hideGate(){
   const el = document.getElementById('gate');
   if (el) el.classList.add('hidden');
 }
 
 let appBooted = false;
 
-function bootAppOnce() {
+function bootAppOnce(){
   if (appBooted) return;
   appBooted = true;
   hideGate();
   init();
 }
 
-// Global initialization sequence execution
 setupGate();
+
+/*if (USE_SB) {
+  sb.auth.onAuthStateChange((event, session) => {
+    const unlocked = session?.user?.app_metadata?.unlocked === true;
+    if (unlocked) {
+      bootAppOnce();
+    } else if (!appBooted) {
+      showGate();
+    }
+  });
+
+  // onAuthStateChange fires INITIAL_SESSION once restoration finishes,
+  // but as a safety net in case that event is ever missed or delayed
+  // indefinitely, also fall back to showing the gate after a short
+  // timeout if nothing has booted the app yet.
+  setTimeout(() => {
+    if (!appBooted) showGate();
+  }, 2500);
+} else {
+  bootAppOnce();
+}
+*/
+// ══════════════════════════════════════════════════════
+// SAFE PASSCODE GATE INITIALIZER
+// ══════════════════════════════════════════════════════
 bootAppOnce();
-
-
 
