@@ -1444,36 +1444,33 @@ async function checkPasscode(password) {
   }
 }
 
+toast('Happy Birthday Omar🎉🎂❤️');
+
 function createConfetti() {
-  // 1. Array of elements to drop (emojis, words, or shapes)
   const items = ['🎉', '🎂', '🎈', '🎁', '✨', 'Omar'];
-  
-  // 2. Create the element
   const confetti = document.createElement('div');
   confetti.classList.add('omar-birthday');
   
-  // 3. Pick a random item from the array
   confetti.innerText = items[Math.floor(Math.random() * items.length)];
-  
-  // 4. Randomize horizontal position (0 to 100% of viewport width)
   confetti.style.left = Math.random() * 100 + 'vw';
   
-  // 5. Randomize animation duration (between 2 to 5 seconds) for natural variance
   const duration = Math.random() * 3 + 2;
   confetti.style.animationDuration = duration + 's';
   
-  // 6. Add to body
   document.body.appendChild(confetti);
   
-  // 7. Clean up the DOM by removing the element after its animation finishes
   setTimeout(() => {
     confetti.remove();
   }, duration * 1000);
 }
 
-// 8. Spawn a new confetti piece every 200 milliseconds
-setInterval(createConfetti, 200);
+// 1. Start the generator and save its ID
+const confettiInterval = setInterval(createConfetti, 50);
 
+// 2. Stop generating new confetti after 5 seconds (5000 milliseconds)
+setTimeout(() => {
+  clearInterval(confettiInterval);
+}, 5000);
 
 
 
