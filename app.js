@@ -1355,22 +1355,7 @@ function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.
    FILE INPUTS & GLOBAL EVENT DELEGATION
    ══════════════════════════════════════════════════════ */
 
-// 1. Safe Event Listener for Element Interaction Triggers (Fixes button crashes)
-document.addEventListener('click', function(event) {
-  const btn = event.target.closest('.photo-btn');
-  if (!btn || btn.hasAttribute('disabled')) return;
-
-  // Identify button via its embedded emoji structure safely
-  if (btn.innerHTML.includes('📷')) {
-    document.getElementById('cameraIn')?.click();
-  } else if (btn.innerHTML.includes('🖼️')) {
-    document.getElementById('galleryIn')?.click();
-  } else if (btn.innerHTML.includes('🎬')) {
-    document.getElementById('videoIn')?.click();
-  }
-});
-
-// 2. Global Event Listener for Asset Selection (Fixes the .onchange null crashes)
+// Global Event Listener for Asset Selection (Catches the .onchange events safely without null crashes)
 document.addEventListener('change', async function(event) {
   const target = event.target;
   if (!target) return;
@@ -1389,10 +1374,10 @@ document.addEventListener('change', async function(event) {
 
   // CAMERA INPUT
   if (target.id === 'cameraIn') {
-    const f = target.files[0];
+    const files = [...target.files];
     target.value = '';
-    if (!f || draftMedia.length >= MAX_MEDIA) return;
-    const dataURL = await compress(f);
+    if (!files.length || draftMedia.length >= MAX_MEDIA) return;
+    const dataURL = await compress(files[0]);
     draftMedia.push({ type: 'photo', dataURL });
     if (view !== 'add') view = 'add';
     render();
@@ -1415,9 +1400,9 @@ document.addEventListener('change', async function(event) {
 
   // COMMENT IMAGE INPUT
   if (target.id === 'commentImgIn') {
-    const f = target.files[0];
-    if (!f || !commentImgTarget) return;
-    const d = await compress(f, 600);
+    const files = [...target.files];
+    if (!files.length || !commentImgTarget) return;
+    const d = await compress(files[0], 600);
     target.value = '';
     if (!cmtDraft[commentImgTarget]) cmtDraft[commentImgTarget] = { text: '', photo: null, replyTo: null };
     cmtDraft[commentImgTarget].photo = d;
@@ -1426,9 +1411,9 @@ document.addEventListener('change', async function(event) {
 
   // PROFILE PICTURE INPUT
   if (target.id === 'profilePicIn') {
-    const f = target.files[0];
-    if (!f) return;
-    draftProfilePic = await compress(f, 400);
+    const files = [...target.files];
+    if (!files.length) return;
+    draftProfilePic = await compress(files[0], 400);
     target.value = '';
     render();
   }
@@ -1510,7 +1495,7 @@ function setupGate() {
     btn.classList.remove('loading');
 
     if (result.ok) {
-      // Session hooks pick this up natively
+      // Handled natively by auth stream hooks
     } else {
       errorEl.textContent = result.error;
       errorEl.classList.add('show');
@@ -1553,13 +1538,9 @@ function bootAppOnce() {
   init();
 }
 
-// Initial setup triggers
+// Global initialization sequence execution
 setupGate();
 bootAppOnce();
-
-
-
-
 
 
 
