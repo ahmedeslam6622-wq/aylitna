@@ -1464,10 +1464,18 @@ function createConfetti() {
   }, duration * 1000);
 }
 
-// 1. Start the generator and save its ID
-const confettiInterval = setInterval(createConfetti, 50);
+// 1. Wrap the logic to spawn multiple items at once
+function spawnBurst() {
+  const batchSize = 3; // 👈 Increase this number to drop more items simultaneously
+  for (let i = 0; i < batchSize; i++) {
+    createConfetti();
+  }
+}
 
-// 2. Stop generating new confetti after 5 seconds (5000 milliseconds)
+// 2. Spawn a burst every 50 milliseconds (down from 200ms)
+const confettiInterval = setInterval(spawnBurst, 50);
+
+// 3. Stop generating after 5 seconds
 setTimeout(() => {
   clearInterval(confettiInterval);
 }, 5000);
