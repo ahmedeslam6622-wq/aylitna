@@ -1437,6 +1437,27 @@ async function checkPasscode(password) {
   }
 }
 
+//Omar's Birthday Event
+function createEmojiRain(emoji = '🎂', duration = 3) {
+  const container = document.getElementById('emoji-container');
+  const el = document.createElement('div');
+  el.classList.add('omar-birthday');
+  el.innerText = emoji;
+  
+  el.style.left = Math.random() * window.innerWidth + 'px';
+  el.style.animationDuration = duration + 's';
+  
+  container.appendChild(el);
+  
+  setTimeout(() => {
+    el.remove();
+  }, duration * 1000);
+}
+
+// Spawn an emoji every 100ms
+setInterval(() => createEmojiRain('🎉', 3), 100);
+
+
 
 // ══════════════════════════════════════════════════════
 // PASSCODE GATE — robust boot (replaces the previous
