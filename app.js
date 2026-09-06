@@ -1077,24 +1077,110 @@ function buildNav(){
   const isFeed=view==='feed',isChat=view==='chat',isSt=view==='stats',isMem=view==='members';
   const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
   const rippleAttr=os==='android'?' onpointerdown="navRipple(event,this)"':'';
+  
   return`<div class="nav" id="navBar">
     ${os==='ios'?`<div class="nav-slide" id="navSlide"></div>`:''}
+    
+    <!-- Home Tab -->
     <button class="nav-btn" data-view="feed" onclick="goView('feed')"${rippleAttr}>
-      <div class="nav-ico${isFeed?' active':''}">🏠</div><div class="nav-lbl${isFeed?' active':''}">Home</div>
+      <div class="nav-ico${isFeed?' active':''}">
+        <svg viewBox="0 0 24 24" class="nav-svg">
+          <defs>
+            <linearGradient id="homeGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="homeAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--pri-dark)"/>
+              <stop offset="100%" stop-color="var(--pri)"/>
+            </linearGradient>
+          </defs>
+          <path d="M12 3L3 10.5V20.25C3 20.6642 3.33579 21 3.75 21H9.75V14.25H14.25V21H20.25C20.6642 21 21 20.6642 21 20.25V10.5L12 3Z" fill="url(#homeGlass)" stroke="var(--glass-border)" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M5.25 11.5L12 5.875L18.75 11.5V18.75H14.25V13.5H9.75V18.75H5.25V11.5Z" fill="rgba(255, 255, 255, 0.08)"/>
+          <rect x="10.5" y="15" width="3" height="4.5" rx="1" fill="url(#homeAccent)"/>
+        </svg>
+      </div>
+      <div class="nav-lbl${isFeed?' active':''}">Home</div>
     </button>
+    
+    <!-- Chat Tab -->
     <button class="nav-btn" data-view="chat" onclick="goView('chat');markSeen()" style="position:relative"${rippleAttr}>
-      <div class="nav-ico${isChat?' active':''}">💬</div><div class="nav-lbl${isChat?' active':''}">Chat</div>
+      <div class="nav-ico${isChat?' active':''}">
+        <svg viewBox="0 0 24 24" class="nav-svg">
+          <defs>
+            <linearGradient id="chatGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="chatAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--pri)"/>
+              <stop offset="100%" stop-color="var(--pri2)"/>
+            </linearGradient>
+          </defs>
+          <path d="M18 15.75C19.6569 15.75 21 14.4069 21 12.75C21 11.0931 19.6569 9.75 18 9.75C16.3431 9.75 15 11.0931 15 12.75C15 13.3769 15.1919 13.9589 15.5192 14.441L15 16.5L17.059 15.9808C17.3592 16.0598 17.6747 16.0962 18 15.75Z" fill="url(#chatAccent)" opacity="0.85"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4.5C6.75329 4.5 2.5 8.34289 2.5 13.1C2.5 15.0232 3.19014 16.8043 4.35711 18.23L3.5 21.5L6.96248 20.6344C8.44498 21.3175 10.16 21.7 12 21.7C17.2467 21.7 21.5 17.8571 21.5 13.1C21.5 8.34289 17.2467 4.5 12 4.5Z" fill="url(#chatGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
+          <circle cx="7.5" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
+          <circle cx="12" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
+          <circle cx="16.5" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
+        </svg>
+      </div>
+      <div class="nav-lbl${isChat?' active':''}">Chat</div>
       ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
     </button>
+    
+    <!-- Action FAB Button -->
     <button class="fab" onclick="goView('add')"${rippleAttr}>＋</button>
+    
+    <!-- Stats Tab -->
     <button class="nav-btn" data-view="stats" onclick="goView('stats')"${rippleAttr}>
-      <div class="nav-ico${isSt?' active':''}">📊</div><div class="nav-lbl${isSt?' active':''}">Stats</div>
+      <div class="nav-ico${isSt?' active':''}">
+        <svg viewBox="0 0 24 24" class="nav-svg">
+          <defs>
+            <linearGradient id="statsGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="statsAccent" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="var(--pri-dark)"/>
+              <stop offset="100%" stop-color="var(--pri)"/>
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="18" height="18" rx="4" fill="url(#statsGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
+          <rect x="5" y="5" width="14" height="14" rx="2.5" fill="rgba(255, 255, 255, 0.05)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="0.8"/>
+          <rect x="7" y="13" width="2.5" height="4" rx="0.75" fill="var(--txt3)" opacity="0.6"/>
+          <rect x="10.75" y="9" width="2.5" height="8" rx="0.75" fill="url(#statsAccent)"/>
+          <rect x="14.5" y="6" width="2.5" height="11" rx="0.75" fill="var(--pri2)" opacity="0.8"/>
+        </svg>
+      </div>
+      <div class="nav-lbl${isSt?' active':''}">Stats</div>
     </button>
+    
+    <!-- Family Tab -->
     <button class="nav-btn" data-view="members" onclick="goView('members')"${rippleAttr}>
-      <div class="nav-ico${isMem?' active':''}">👨‍👩‍👧‍👦</div><div class="nav-lbl${isMem?' active':''}">Family</div>
+      <div class="nav-ico${isMem?' active':''}">
+        <svg viewBox="0 0 24 24" class="nav-svg">
+          <defs>
+            <linearGradient id="familyGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="familyAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--pri)"/>
+              <stop offset="100%" stop-color="var(--pri-dark)"/>
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="9" r="2.5" fill="var(--pri2)" opacity="0.7"/>
+          <path d="M12.5 15.5C12.5 13.8431 14.067 12.5 16 12.5C17.933 12.5 19.5 13.8431 19.5 15.5V17.5H12.5V15.5Z" fill="var(--pri2)" opacity="0.7"/>
+          <circle cx="9" cy="8" r="3.5" fill="url(#familyGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
+          <path d="M3.5 16.5C3.5 14.0147 5.96243 12 9 12C12.0376 12 14.5 14.0147 14.5 16.5V19.5H3.5V16.5Z" fill="url(#familyGlass)" stroke="var(--glass-border)" stroke-width="1.2" stroke-linejoin="round"/>
+          <circle cx="9" cy="8" r="1.5" fill="url(#familyAccent)"/>
+        </svg>
+      </div>
+      <div class="nav-lbl${isMem?' active':''}">Family</div>
     </button>
   </div>`;
 }
+
 /* ── iOS: sliding tab indicator ────────────────────────────────────────
    Positions .nav-slide under whichever .nav-btn matches the current view.
    Uses offsetLeft/offsetWidth (relative to #navBar, the nearest positioned
