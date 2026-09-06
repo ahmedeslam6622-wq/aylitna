@@ -1444,41 +1444,6 @@ async function checkPasscode(password) {
   }
 }
 
-toast('Happy Birthday Omar🎉🎂❤️');
-
-function createConfetti() {
-  const items = ['🎉', '🎂', '🎈', '🎁', '✨', 'Omar'];
-  const confetti = document.createElement('div');
-  confetti.classList.add('omar-birthday');
-  
-  confetti.innerText = items[Math.floor(Math.random() * items.length)];
-  confetti.style.left = Math.random() * 100 + 'vw';
-  
-  const duration = Math.random() * 3 + 2;
-  confetti.style.animationDuration = duration + 's';
-  
-  document.body.appendChild(confetti);
-  
-  setTimeout(() => {
-    confetti.remove();
-  }, duration * 1000);
-}
-
-// 1. Wrap the logic to spawn multiple items at once
-function spawnBurst() {
-  const batchSize = 3; // 👈 Increase this number to drop more items simultaneously
-  for (let i = 0; i < batchSize; i++) {
-    createConfetti();
-  }
-}
-
-// 2. Spawn a burst every 50 milliseconds (down from 200ms)
-const confettiInterval = setInterval(spawnBurst, 50);
-
-// 3. Stop generating after 5 seconds
-setTimeout(() => {
-  clearInterval(confettiInterval);
-}, 5000);
 
 
 
