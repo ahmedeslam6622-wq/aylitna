@@ -57,10 +57,7 @@ function render(){
     :null;
   const newPosts=posts.filter(p=>new Date(p.created_at).getTime()>lastSeen).length;
   const th=ls('ayl_theme','default'),fs=ls('ayl_fs','md');
-  
-  // Track continuous online condition state directly
-  const isCurrentlyOffline = !isOnline;
-
+  const offline=!isOnline?`<div class="offline-banner"><span>📡</span> No internet — some features may not work</div>`:'';
   const greet=view==='feed'?buildGreeting():'';
   const pills=view==='feed'?buildPills():'';
   const rem=view==='feed'&&!reminderDismissed?buildReminder():'';
@@ -74,9 +71,7 @@ function render(){
   else if(view==='profile')body=buildProfilePage();
   else if(view==='profile-edit')body=buildProfileEdit();
   else if(view==='view-profile')body=buildViewProfile(viewingProfile);
-  
-  // Replaced separate banner string append layout step entirely
-  app.innerHTML=buildHeader(newPosts, isCurrentlyOffline)+search+greet+rem+pills+
+  app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
     `<div class="main">${body}</div>`+
     buildNav()+buildFullscreen()+buildThemeSheet(th,fs);
   if(view==='chat'){setupChatInput();scrollChat()}
@@ -98,22 +93,24 @@ function render(){
   }
 }
 
+/* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
+   small threshold. Re-attached every render() since .main is a fresh
+   element each time (see innerHTML above). Style .hdr.scrolled in app.css —
+   see the placeholder rule there. */
+
 /* ══════════════════════════════════════════════════════
    HEADER
    ══════════════════════════════════════════════════════ */
+
 let hdrMenuOpen=false;
-function buildHeader(newPosts, isOffline){
+function buildHeader(newPosts){
+
+   //MENU
   const prof=profiles[myName];
   const profImg=prof?.photo
     ?`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
     :ICO_USER;
-  return `<div class="hdr ${isOffline ? 'offline-mode' : ''}">
-    <div class="hdr-text-container">
-      <span class="hdr-title-text">عيلتنا</span>
-      <span class="hdr-offline-text">📡 Offline</span>
-    </div>
-  </div>
-  <div class="glass-menu-wrap${hdrMenuOpen?' open':''}" id="glassMenu">
+  return`<div class="glass-menu-wrap${hdrMenuOpen?' open':''}" id="glassMenu">
     <button class="glass-menu-btn" onclick="toggleHdrMenu()" aria-label="Menu">
       ${newPosts>0&&view==='feed'?`<span class="glass-menu-badge">${newPosts}</span>`:''}
       ${ICO_DOTS}
@@ -124,36 +121,13 @@ function buildHeader(newPosts, isOffline){
         <span class="glass-menu-item-av">${profImg}</span><span>Profile</span>
       </button>
       <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_THEME}<span>Theme</span></button>
-      <button class="glass-menu-item" onclick="toggleCategorySheet(); closeHdrMenu()">${ICO_FILTER} <span>Filter</span></button>
+      <button class="glass-menu-item" onclick="toggleCategorySheet(); closeHdrMenu()">
+  ${ICO_FILTER} <span>Filter</span>
+</button>
+
     </div>
   </div>`;
 }
-function toggleHdrMenu(){
-  hdrMenuOpen=!hdrMenuOpen;
-  document.getElementById('glassMenu')?.classList.toggle('open',hdrMenuOpen);
-}
-function closeHdrMenu(){
-  hdrMenuOpen=false;
-  document.getElementById('glassMenu')?.classList.remove('open');
-}
-document.addEventListener('click',(e)=>{
-  if(!hdrMenuOpen)return;
-  const wrap=document.getElementById('glassMenu');
-  if(wrap&&!wrap.contains(e.target))closeHdrMenu();
-});
-
-// Auto-trigger app interface adjustments immediately on system connectivity updates
-window.addEventListener('online', () => { isOnline = true; render(); });
-window.addEventListener('offline', () => { isOnline = false; render(); });
-
-
-
-/* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
-   small threshold. Re-attached every render() since .main is a fresh
-   element each time (see innerHTML above). Style .hdr.scrolled in app.css —
-   see the placeholder rule there. */
-
-
 function toggleHdrMenu(){
   hdrMenuOpen=!hdrMenuOpen;
   document.getElementById('glassMenu')?.classList.toggle('open',hdrMenuOpen);
