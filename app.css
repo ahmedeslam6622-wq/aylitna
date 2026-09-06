@@ -857,6 +857,18 @@ input,textarea,select{font-family:var(--font)}
 .nav-btn:active {
   transform: scale(.88);
 }
+/* Ensure new SVGs sit uniformly inside navigation layouts */
+.nav-svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Add a subtle interactive micro-scale pop when active or tapped */
+.nav-ico.active .nav-svg {
+  transform: scale(1.1);
+}
 
 .nav-ico {
   width: 36px;
