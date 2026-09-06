@@ -170,20 +170,8 @@ input,textarea,select{font-family:var(--font)}
 }
 .gate-card.shake{animation:gate-shake .4s ease}
 
-/*Omar's Birthday Event*/
-@keyframes fall {
-  0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-}
 
-.omar-birthday {
-  position: fixed;
-  top: -50px;
-  font-size: 24px;
-  user-select: none;
-  z-index: 9999;
-  animation: fall linear forwards;
-}
+
 
 
 /* ══════════════════════════════════════════════════════
