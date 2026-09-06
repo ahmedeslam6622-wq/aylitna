@@ -14,6 +14,7 @@
   --tr:0.18s cubic-bezier(0.4,0,0.2,1);--nav-h:68px;
    --glass-bg:rgba(255,255,255,0.18);
    --glass-border:rgba(255,255,255,0.35);
+   --glass-offline-bg: rgba
 }
 [data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;--glass-bg:rgba(20,17,24,0.55);
 --glass-border:rgba(255,255,255,0.12);}
@@ -499,7 +500,21 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
    OFFLINE BANNER
    ══════════════════════════════════════════════════════ */
-.offline-banner{background:#FEF3C7;border-bottom:1.5px solid #F59E0B;padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:var(--fs-xs);font-weight:700;color:#92400E;animation:slide-down .3s ease}
+.offline-banner {
+  background: rgba(253, 224, 71, 0.2); /* Soft yellow tint with 20% opacity */
+  backdrop-filter: blur(12px);         /* The frosted glass effect */
+  -webkit-backdrop-filter: blur(12px); /* Safari support */
+  border-bottom: 1.5px solid #F59E0B;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #92400E;
+  animation: slide-down .3s ease;
+}
 
 /* ══════════════════════════════════════════════════════
    SEARCH
