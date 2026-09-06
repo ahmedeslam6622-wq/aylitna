@@ -183,7 +183,9 @@ input,textarea,select{font-family:var(--font)}
           Unified Floating Navigation Row (Fixed)
    ══════════════════════════════════════════════════════ */
 
-/* 1. Left Title Widget */
+/* ══════════════════════════════════════════════════════
+   INTEGRATED SYSTEM HEADER (MORPHING NETWORK ENGINE)
+   ══════════════════════════════════════════════════════ */
 .hdr {
   position: fixed;            
   top: calc(12px + env(safe-area-inset-top));                  
@@ -192,13 +194,15 @@ input,textarea,select{font-family:var(--font)}
   
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;                   
+  justify-content: flex-start;
+  gap: 8px;                   
   
   border-radius: 999px;       
-  padding: 11px 17px;          
-  height: 44px;               /* Force explicit height matching menu button */
+  padding: 11px 16px;          
+  height: 44px;               
+  width: 96px; /* Uniform set width boundary framework */
   box-sizing: border-box;
+  overflow: hidden;
   
   background: var(--glass-bg); 
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
@@ -207,18 +211,39 @@ input,textarea,select{font-family:var(--font)}
   border: 1px solid var(--glass-border);
   font-family: var(--font);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
-  transition: transform .25s ease, opacity .25s ease;
+  
+  /* Animates geometric changes layout fluidly across states */
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              background-color 0.4s ease, 
+              border-color 0.4s ease;
 }
 
-.hdr small {
+/* Base Title settings adjustments */
+.hdr .hdr-title-text {
   font-size: 18px;            
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;   
+  letter-spacing: 0.02em;
   color: var(--txt);
   line-height: 1;              
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  white-space: nowrap;
 }
 
+/* Hidden offline label resting engine configuration setup */
+.hdr .hdr-offline-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: #92400E;
+  line-height: 1;
+  opacity: 0;
+  display: none;
+  white-space: nowrap;
+  transform: translateX(-10px);
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Status indicator engine */
 .hdr::after {
   content: '';
   width: 8px;                 
@@ -226,7 +251,32 @@ input,textarea,select{font-family:var(--font)}
   background-color: #22c55e;   
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4), 0 0 0 6px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  margin-left: auto; /* Locks dot always safely flush to the right boundary edge */
+}
+
+/* 🚀 TARGET STATE: Triggered Offline Class Overrides */
+.hdr.offline-mode {
+  width: 145px; /* Expands outwards cleanly to house the label updates */
+  background: rgba(253, 224, 71, 0.85); /* Warn color glass overlay integration */
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.hdr.offline-mode::after {
+  background-color: #F59E0B; /* Indicator morphs seamlessly from Green to Amber */
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4);
+}
+
+.hdr.offline-mode .hdr-title-text {
+  display: none;
+  opacity: 0;
+}
+
+.hdr.offline-mode .hdr-offline-text {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* 2. Right Menu Widget Button Container */
