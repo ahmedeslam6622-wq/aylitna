@@ -58,7 +58,27 @@ const ICO_SEARCH=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" st
 const ICO_THEME=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14 15 15 15h3a3 3 0 0 0 3-3 9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8" r="1" fill="currentColor" stroke="none"/></svg>`;
 const ICO_USER=`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>`;
 const ICO_FILTER=`<svg viewBox="0 0 32 32" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="fill: currentColor;"><path d="M30 6.749h-28c-0.69 0-1.25 0.56-1.25 1.25s0.56 1.25 1.25 1.25v0h28c0.69 0 1.25-0.56 1.25-1.25s-0.56-1.25-1.25-1.25v0zM24 14.75h-16c-0.69 0-1.25 0.56-1.25 1.25s0.56 1.25 1.25 1.25v0h16c0.69 0 1.25-0.56 1.25-1.25s-0.56-1.25-1.25-1.25v0zM19 22.75h-6.053c-0.69 0-1.25 0.56-1.25 1.25s0.56 1.25 1.25 1.25v0h6.053c0.69 0 1.25-0.56 1.25-1.25s-0.56-1.25-1.25-1.25v0z"></path></svg>`;
-
+const ICO_HOME=`<svg xmlns="http://w3.org" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <!-- Frosted glass background layer gradient -->
+    <linearGradient id="homeGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
+    </linearGradient>
+    <!-- High contrast primary brand glowing accent -->
+    <linearGradient id="homeAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="var(--pri-dark)"/>
+      <stop offset="100%" stop-color="var(--pri)"/>
+    </linearGradient>
+  </defs>
+  <!-- Specular outer stroke overlay -->
+  <path d="M12 3L3 10.5V20.25C3 20.6642 3.33579 21 3.75 21H9.75V14.25H14.25V21H20.25C20.6642 21 21 20.6642 21 20.25V10.5L12 3Z" fill="url(#homeGlass)" stroke="var(--glass-border)" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- Front glass-morphic cutout element -->
+  <path d="M5.25 11.5L12 5.875L18.75 11.5V18.75H14.25V13.5H9.75V18.75H5.25V11.5Z" fill="rgba(255, 255, 255, 0.08)"/>
+  <!-- Vibrant core accent (The door indicator) -->
+  <rect x="10.5" y="15" width="3" height="4.5" rx="1" fill="url(#homeAccent)"/>
+</svg>
+`;
 
 const THEMES  = [
   {id:'default', name:'Warm',   e:'🧡', bg:'#FAF8F3', p:'#C4622D'},
