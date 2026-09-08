@@ -1214,35 +1214,33 @@ function positionNavSlide(){
   if(!activeBtn){slide.style.opacity='0';return;}
   if(activeBtn.offsetWidth===0){requestAnimationFrame(positionNavSlide);return;}
   
-  // Calculate the target position
   const targetX = activeBtn.offsetLeft;
   const targetWidth = activeBtn.offsetWidth;
   
-  // Check where the slide currently is to measure speed/stretch
+  // Track continuous positioning variables
   const currentTransform = slide.style.transform;
   let currentX = targetX;
   if (currentTransform && currentTransform.includes('translateX')) {
     currentX = parseInt(currentTransform.replace(/[^0-9-]/g, '')) || targetX;
   }
   
-  // Physics simulation: If it's traveling far, stretch it out horizontally!
   const distance = Math.abs(targetX - currentX);
   let stretch = 1;
   if (distance > 40) {
-    stretch = 1.35; // The multiplier that forces the gooey 'melting bubble' look
+    stretch = 1.2; // Soft physical elasticity factor instead of broad scaling block
   }
 
   slide.style.opacity='1';
   slide.style.width=targetWidth+'px';
   
-  // Apply both the native positioning and the liquid stretch matrix scale simultaneously
+  // Apply linear transforms with gentle horizontal momentum scaling constraints
   slide.style.transform=`translateX(${targetX}px) scaleX(${stretch})`;
   
-  // Snap the stretch back to normal scale smoothly right at the end of the glide
   setTimeout(() => {
     slide.style.transform = `translateX(${targetX}px) scaleX(1)`;
-  }, 200);
+  }, 180);
 }
+
 
 /* ── Android: ripple touch feedback ──────────────────────────────────
    Spawns a short-lived expanding circle from the exact tap point,
