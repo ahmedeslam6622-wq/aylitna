@@ -822,19 +822,28 @@ input,textarea,select{font-family:var(--font)}
    offsets — not CSS-only, since button widths vary with content. Has an
    explicit default width so it's never a stray 0px or full-width box
    before JS finishes its first measurement. */
-.nav-slide{
-  position:absolute;
-  top:0;left:0;
-  height:100%;
-  width:56px;
-  background-color:rgba(0,0,0,0.05);
-  border-radius:999px;
-  opacity:0;
-  pointer-events:none;
-  will-change:transform,width;
-  transition:transform .35s cubic-bezier(0.16,1,0.3,1), width .35s cubic-bezier(0.16,1,0.3,1), opacity .4s ease;
-  z-index:1;
+/* Update your existing .nav-slide rule to include the filter link */
+.nav-slide {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 56px;
+  background-color: var(--pri); /* Use a solid vivid color like your primary color so the melt looks organic */
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, width;
+  
+  /* Link the SVG template we injected */
+  filter: url('#liquid-melt');
+  
+  /* Tie the transitions cleanly to handle physics */
+  transition: transform .38s cubic-bezier(0.16, 1, 0.3, 1), 
+              width .38s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity .4s ease;
+  z-index: 1;
 }
+
 [data-theme="midnight"] .nav-slide{background-color:rgba(255,255,255,0.08)}
 .nav-btn{position:relative;z-index:2}
 
