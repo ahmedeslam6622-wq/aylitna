@@ -71,9 +71,26 @@ function render(){
   else if(view==='profile')body=buildProfilePage();
   else if(view==='profile-edit')body=buildProfileEdit();
   else if(view==='view-profile')body=buildViewProfile(viewingProfile);
-  app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
-    `<div class="main">${body}</div>`+
-    buildNav()+buildFullscreen()+buildThemeSheet(th,fs);
+  
+function buildLiquidFilter() {
+  return `
+    <svg xmlns="http://w3.org" version="1.1" style="display:none;">
+      <defs>
+        <filter id="liquid-melt">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="gooey" />
+          <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
+        </filter>
+      </defs>
+    </svg>
+  `;
+}
+
+// Then update your innerHTML line to append it:
+app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
+  `<div class="main">${body}</div>`+
+  buildNav()+buildFullscreen()+buildThemeSheet(th,fs) + buildLiquidFilter();
+
   if(view==='chat'){setupChatInput();scrollChat()}
   if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
   setupSheet();
@@ -1196,10 +1213,37 @@ function positionNavSlide(){
   const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
   if(!activeBtn){slide.style.opacity='0';return;}
   if(activeBtn.offsetWidth===0){requestAnimationFrame(positionNavSlide);return;}
+  
+  // Calculate the target position
+  const targetX = activeBtn.offsetLeft;
+  const targetWidth = activeBtn.offsetWidth;
+  
+  // Check where the slide currently is to measure speed/stretch
+  const currentTransform = slide.style.transform;
+  let currentX = targetX;
+  if (currentTransform && currentTransform.includes('translateX')) {
+    currentX = parseInt(currentTransform.replace(/[^0-9-]/g, '')) || targetX;
+  }
+  
+  // Physics simulation: If it's traveling far, stretch it out horizontally!
+  const distance = Math.abs(targetX - currentX);
+  let stretch = 1;
+  if (distance > 40) {
+    stretch = 1.35; // The multiplier that forces the gooey 'melting bubble' look
+  }
+
   slide.style.opacity='1';
-  slide.style.width=activeBtn.offsetWidth+'px';
-  slide.style.transform=`translateX(${activeBtn.offsetLeft}px)`;
+  slide.style.width=targetWidth+'px';
+  
+  // Apply both the native positioning and the liquid stretch matrix scale simultaneously
+  slide.style.transform=`translateX(${targetX}px) scaleX(${stretch})`;
+  
+  // Snap the stretch back to normal scale smoothly right at the end of the glide
+  setTimeout(() => {
+    slide.style.transform = `translateX(${targetX}px) scaleX(1)`;
+  }, 200);
 }
+
 /* ── Android: ripple touch feedback ──────────────────────────────────
    Spawns a short-lived expanding circle from the exact tap point,
    matching Material Design's press feedback. Self-removing via
