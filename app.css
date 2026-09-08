@@ -828,40 +828,70 @@ input,textarea,select{font-family:var(--font)}
   top: 0; left: 0;
   height: 100%;
   width: 56px;
-  background-color: var(--pri); /* Use a solid vivid color like your primary color so the melt looks organic */
+  /* 🍏 Pure iOS styling restored: Translucent subtle background layer */
+  background-color: rgba(0, 0, 0, 0.05);
   border-radius: 999px;
   opacity: 0;
   pointer-events: none;
   will-change: transform, width;
-  
-  /* Link the SVG template we injected */
-  filter: url('#liquid-melt');
-  
-  /* Tie the transitions cleanly to handle physics */
-  transition: transform .38s cubic-bezier(0.16, 1, 0.3, 1), 
-              width .38s cubic-bezier(0.16, 1, 0.3, 1), 
-              opacity .4s ease;
   z-index: 1;
+  
+  /* Smooth native iOS tracking transition curve */
+  transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1), 
+              width .35s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity .4s ease;
 }
 
-[data-theme="midnight"] .nav-slide{background-color:rgba(255,255,255,0.08)}
-.nav-btn{position:relative;z-index:2}
+/* 🧪 The Invisible Physics Layer: This handles the melting shapes safely behind the scenes */
+.nav-slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--pri); 
+  border-radius: 999px;
+  opacity: 0.15; /* Keep it light and soft like stock iOS, not solid like Android */
+  
+  /* Link your SVG melting matrix here instead of the root selector */
+  filter: url('#liquid-melt');
+  pointer-events: none;
+}
+
+[data-theme="midnight"] .nav-slide {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="midnight"] .nav-slide::after {
+  background: #fff;
+  opacity: 0.1;
+}
+
+.nav-btn {
+  position: relative;
+  z-index: 2;
+}
 
 /* ── Android: Material-style ripple ─────────────────────────────────
    Spawned per-tap by navRipple() in app.js at the exact touch point,
    expands and fades, then removes itself from the DOM. */
-.nav-ripple{
-  position:absolute;
-  border-radius:50%;
-  background:rgba(0,0,0,0.12);
-  transform:scale(0);
-  pointer-events:none;
-  animation:nav-ripple-anim 550ms cubic-bezier(0.4,0,0.2,1) forwards;
+.nav-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.12);
+  transform: scale(0);
+  pointer-events: none;
+  animation: nav-ripple-anim 550ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
-[data-theme="midnight"] .nav-ripple{background:rgba(255,255,255,0.18)}
-@keyframes nav-ripple-anim{
-  to{transform:scale(2.5);opacity:0}
+
+[data-theme="midnight"] .nav-ripple {
+  background: rgba(255, 255, 255, 0.18);
 }
+
+@keyframes nav-ripple-anim {
+  to {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
 
 .nav-btn:active {
   transform: scale(.88);
