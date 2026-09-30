@@ -885,6 +885,13 @@ input,textarea,select{font-family:var(--font)}
   opacity:0;
   transition:transform .3s cubic-bezier(.2,0,0,1),opacity .2s ease;
 }
+.nav-ico.grow::before{
+  animation:nav-pill-grow .4s cubic-bezier(.2,0,0,1);
+}
+@keyframes nav-pill-grow{
+  from{transform:scaleX(0);opacity:.5}
+  to{transform:scaleX(1);opacity:1}
+}
 .nav-ico.active::before{
   transform:scaleX(1);
   opacity:1;
