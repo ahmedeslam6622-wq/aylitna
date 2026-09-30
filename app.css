@@ -198,7 +198,7 @@ input,textarea,select{font-family:var(--font)}
   border-radius: 999px;       
   padding: 11px 17px;          
   height: 44px;               /* Force explicit height matching menu button */
-  width: 95%
+  width: 95%;
   box-sizing: border-box;
   
   background: var(--glass-bg); 
