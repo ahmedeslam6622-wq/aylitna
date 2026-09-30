@@ -190,11 +190,10 @@ input,textarea,select{font-family:var(--font)}
   z-index: 150;               
   
   gap: 6px;                   
-  
-  border-radius: 999px;       
+      
   padding: 11px 17px;          
-  height: 44px;               /* Force explicit height matching menu button */
-  width: 95%;
+  height: 88px;               /* Force explicit height matching menu button */
+  width: 100%;
   box-sizing: border-box;
   
   background: var(--glass-bg); 
