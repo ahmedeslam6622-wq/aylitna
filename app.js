@@ -1242,28 +1242,25 @@ function positionNavSlide(){
 }
 
 
-/* ── Android: ripple touch feedback ──────────────────────────────────
-   Spawns a short-lived expanding circle from the exact tap point,
-   matching Material Design's press feedback. Self-removing via
-   animationend, so nothing accumulates in the DOM over time. */
 function navRipple(e,btn){
   if(os!=='android')return;
-  const rect=btn.getBoundingClientRect();
-  const diameter=Math.max(rect.width,rect.height);
-  const radius=diameter/2;
-  const clientX=e.clientX??(rect.left+rect.width/2);
-  const clientY=e.clientY??(rect.top+rect.height/2);
-  const x=clientX-rect.left-radius;
-  const y=clientY-rect.top-radius;
-  const ripple=document.createElement('span');
-  ripple.className='nav-ripple';
-  ripple.style.width=ripple.style.height=diameter+'px';
-  ripple.style.left=x+'px';
-  ripple.style.top=y+'px';
-  btn.appendChild(ripple);
-  ripple.addEventListener('animationend',()=>ripple.remove(),{once:true});
+  const host=btn.querySelector('.nav-ico')||btn;   // ripple lives in the pill (or the FAB itself)
+  const r=host.getBoundingClientRect();
+  const cx=e.clientX??(r.left+r.width/2);
+  const cy=e.clientY??(r.top+r.height/2);
+  // clamp so taps on the label still ripple from the pill's edge
+  const x=Math.min(Math.max(cx-r.left,0),r.width);
+  const y=Math.min(Math.max(cy-r.top,0),r.height);
+  // radius = distance to the farthest corner, so it always fills the pill exactly
+  const radius=Math.hypot(Math.max(x,r.width-x),Math.max(y,r.height-y));
+  const s=document.createElement('span');
+  s.className='nav-ripple';
+  s.style.width=s.style.height=radius*2+'px';
+  s.style.left=x-radius+'px';
+  s.style.top=y-radius+'px';
+  host.appendChild(s);
+  s.addEventListener('animationend',()=>s.remove(),{once:true});
 }
-
 /* ══════════════════════════════════════════════════════
    FULLSCREEN + THEME SHEET
    ══════════════════════════════════════════════════════ */
