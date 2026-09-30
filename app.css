@@ -186,8 +186,7 @@ input,textarea,select{font-family:var(--font)}
 /* 1. Left Title Widget */
 .hdr {
   position: fixed;            
-  top: 5px;                  
-  left: 16px;                 
+  top: 0px;                               
   z-index: 150;               
   
   gap: 6px;                   
@@ -248,8 +247,8 @@ input,textarea,select{font-family:var(--font)}
 /* 2. Right Menu Widget Button Container */
 .glass-menu-wrap {
   position: fixed;
-  top: 5px;
-  right: 20px;
+  top: 0px;
+  right: 0px;
   z-index: 200;
   transition: transform .25s ease, opacity .25s ease;
 }
