@@ -185,6 +185,8 @@ input,textarea,select{font-family:var(--font)}
 
 /* 1. Left Title Widget */
 .hdr {
+   display: flex;
+   align-items: center;
   position: fixed;            
   top: 0px;                               
   z-index: 150;               
@@ -192,7 +194,7 @@ input,textarea,select{font-family:var(--font)}
   gap: 6px;                   
       
   padding: 11px 17px;          
-  height: 55px;               /* Force explicit height matching menu button */
+  height: 50px;               /* Force explicit height matching menu button */
   width: 100%;
   box-sizing: border-box;
   
@@ -256,6 +258,7 @@ input,textarea,select{font-family:var(--font)}
   width: 44px; height: 44px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
+  background-color: transparent;
   color: var(--txt);
   cursor: pointer;
   position: relative;
