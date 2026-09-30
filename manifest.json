@@ -3,8 +3,7 @@
   "short_name": "عيلتنا",
   "start_url": "/aylitna/",
   "scope": "/aylitna/",
-  "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display": "fullscreen";
   "theme_color": "#000000",
   "background_color": "#ffffff",
   "orientation": "portrait",
