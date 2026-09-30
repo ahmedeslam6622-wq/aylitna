@@ -50,6 +50,15 @@
 <input type="file" id="videoIn" accept="video/*" style="display:none">
 <input type="file" id="commentImgIn" accept="image/*" style="display:none">
 <input type="file" id="profilePicIn" accept="image/*" style="display:none">
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.error('SW registration failed:', err));
+  });
+}
+</script>
 <script src="config.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
