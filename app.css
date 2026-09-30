@@ -186,7 +186,7 @@ input,textarea,select{font-family:var(--font)}
 /* 1. Left Title Widget */
 .hdr {
   position: fixed;            
-  top: calc(12px + env(safe-area-inset-top));                  
+  top: 5px;                  
   left: 16px;                 
   z-index: 150;               
   
