@@ -192,7 +192,7 @@ input,textarea,select{font-family:var(--font)}
   gap: 6px;                   
       
   padding: 11px 17px;          
-  height: 88px;               /* Force explicit height matching menu button */
+  height: 55px;               /* Force explicit height matching menu button */
   width: 100%;
   box-sizing: border-box;
   
@@ -255,11 +255,6 @@ input,textarea,select{font-family:var(--font)}
 .glass-menu-btn {
   width: 44px; height: 44px;
   border-radius: 50%;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  -webkit-backdrop-filter: blur(15px) saturate(1.7);
-  backdrop-filter: blur(15px) saturate(1.7);
-  box-shadow: 0 4px 18px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.3);
   display: flex; align-items: center; justify-content: center;
   color: var(--txt);
   cursor: pointer;
