@@ -249,7 +249,7 @@ input,textarea,select{font-family:var(--font)}
 .glass-menu-wrap {
   position: fixed;
   top: 5px;
-  right: 16px;
+  right: 20px;
   z-index: 200;
   transition: transform .25s ease, opacity .25s ease;
 }
