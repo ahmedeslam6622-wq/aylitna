@@ -890,28 +890,33 @@ body:has(
   background:transparent;
 }
 
-/* M3 active indicator: base rule for the .grow / .active states below */
+/* M3 active indicator: grows horizontally out of the centre.
+   14px matches .nav-ico's border-radius (28px tall capsule). */
 .nav-ico::before{
+  --ind-dur:.45s;                       /* the knob: grow time */
   content:'';
   position:absolute;
   inset:0;
   border-radius:inherit;
   background:var(--pri-light);
-  transform:scaleX(.3);
+  clip-path:inset(0 50% round 14px);    /* zero-width sliver in the middle */
   opacity:0;
-  transition:transform .3s cubic-bezier(.2,0,0,1),opacity .2s ease;
+  /* exit: shrinks back to the centre (M3 emphasized accelerate) */
+  transition:clip-path .25s cubic-bezier(.3,0,.8,.15), opacity .2s ease;
   z-index:0;
 }
+.nav-ico.active::before{
+  clip-path:inset(0 round 14px);        /* full pill */
+  opacity:1;
+}
+/* Entrance: plays on class toggle and on insertion. .grow is kept as a hook. */
+.nav-ico.active::before,
 .nav-ico.grow::before{
-  animation:nav-pill-grow .4s cubic-bezier(.2,0,0,1);
+  animation:nav-pill-grow var(--ind-dur) cubic-bezier(.05,.7,.1,1);  /* M3 emphasized decelerate */
 }
 @keyframes nav-pill-grow{
-  from{transform:scaleX(0);opacity:.5}
-  to{transform:scaleX(1);opacity:1}
-}
-.nav-ico.active::before{
-  transform:scaleX(1);
-  opacity:1;
+  from{clip-path:inset(0 50% round 14px);opacity:0}
+  to{clip-path:inset(0 round 14px);opacity:1}
 }
 
 .nav-lbl{
