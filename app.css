@@ -875,11 +875,75 @@ input,textarea,select{font-family:var(--font)}
   align-items:center;
   justify-content:center;
   background:transparent;
+/* ══════════════════════════════════════════════════════
+   BOTTOM NAV (FIXED)
+   ══════════════════════════════════════════════════════ */
+.nav {
+  /* Set exact width to 90% of the viewport */
+  width: 90%; 
+  max-width: 500px; /* Optional: prevents it from becoming too wide on desktops */
+  
+  /* Centers the floating element horizontally */
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  
+  /* Rounded capsule shape */
+  border-radius: 100px; 
+  padding: 6px 20px;
+  
+  /* Visual styling */
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  
+  /* Layout: Ensures items stretch equally */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; 
+  gap: 12px;
+  
+  flex-shrink: 0;
+  min-height: 56px;
+  
+  -webkit-backdrop-filter: blur(15px) saturate(1.7);
+  backdrop-filter: blur(15px) saturate(1.7);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.03),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  
+  z-index: 40;
+  transition: all .35s cubic-bezier(.4, 0, .2, 1);
 }
-.nav-ico::before{
-  content:'';
+
+/* Rest of your existing button and badge styles */
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  position: relative;
+  
+  /* Forces buttons to share the space equally */
+  flex: 1; 
+  /* Removed max-width restriction so they can expand to fill the 90% nav */
+  
+  transition: transform 0.15s;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+/* ── iOS: sliding tab indicator ───────────────────────────────────── */
+.nav-slide{
   position:absolute;
-  inset:0;
+  top:0;left:0;
+  height:100%;
+  width:56px;  
   border-radius:inherit;
   background:var(--pri-light);
   transform:scaleX(.3);
@@ -905,6 +969,7 @@ input,textarea,select{font-family:var(--font)}
   transition:color .2s;
 }
 .nav-lbl.active{color:var(--pri)}
+   
 
 .fab{
   position:relative;
