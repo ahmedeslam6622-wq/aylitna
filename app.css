@@ -780,6 +780,7 @@ input,textarea,select{font-family:var(--font)}
   gap: 12px;
   flex-shrink: 0;
   min-height: 56px;
+  width: 80%;
   -webkit-backdrop-filter:blur(15px) saturate(1.7);
   backdrop-filter:blur(15px) saturate(1.7);
   box-shadow: 
