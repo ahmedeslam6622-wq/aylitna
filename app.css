@@ -843,19 +843,26 @@ body:has(
    which clips it with overflow:hidden. It expands from the touch point
    until it fills the pill, fades, then removes itself. */
 .nav-ripple{
+  --ripple-dur:.8s;                      /* the one knob: total ripple time */
   position:absolute;
   border-radius:50%;
   pointer-events:none;
   background:color-mix(in srgb,var(--pri) 35%,transparent);
   transform:scale(0);
   opacity:1;
-  animation:nav-ripple-anim .5s cubic-bezier(.2,0,0,1) forwards;
+  will-change:transform,opacity;
+  animation:
+    nav-ripple-grow var(--ripple-dur) cubic-bezier(.2,0,0,1) forwards,
+    nav-ripple-fade calc(var(--ripple-dur) * .6) ease-out calc(var(--ripple-dur) * .4) forwards;
   z-index:0;
 }
-@keyframes nav-ripple-anim{
-  0%{transform:scale(0);opacity:1}
-  70%{opacity:1}
-  100%{transform:scale(1);opacity:0}
+@keyframes nav-ripple-grow{
+  from{transform:scale(0)}
+  to{transform:scale(1)}
+}
+@keyframes nav-ripple-fade{
+  from{opacity:1}
+  to{opacity:0}
 }
 
 .nav-btn{overflow:visible;padding:4px 8px}
