@@ -477,7 +477,27 @@ input,textarea,select{font-family:var(--font)}
 .pill.on { background: var(--pri); border-color: var(--pri); color: #fff; }
 .pill:active { transform: scale(.95); }
 
+/* ══════════════════════════════════════════════════════
+   TOP BANNERS: slide the floating header widgets out of the way
+   To cover another banner, add its selector to the :has() list.
+   ══════════════════════════════════════════════════════ */
 
+/* One shared timing so the three widgets move as a unit */
+.hdr,
+.pills-wrap,
+.glass-menu-wrap{
+  transition-duration:.35s;
+  transition-timing-function:cubic-bezier(.16,1,.3,1);
+}
+
+body:has(
+  .greeting-bar:not(.fade-out, [hidden], [style*="display: none"], [style*="display:none"]),
+  .reminder:not([hidden], [style*="display: none"], [style*="display:none"]),
+  .offline-banner:not([hidden], [style*="display: none"], [style*="display:none"])
+) :is(.hdr, .pills-wrap, .glass-menu-wrap){
+  transform:translateY(calc(-96px - env(safe-area-inset-top, 0px)));
+  pointer-events:none;
+}
 /* ══════════════════════════════════════════════════════
    MULTI-MEDIA: draft strip (add-post screen) + feed carousel
    Paste these as NEW rules anywhere in app.css — nothing here
