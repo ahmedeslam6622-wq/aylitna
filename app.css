@@ -756,58 +756,45 @@ input,textarea,select{font-family:var(--font)}
 /* ══════════════════════════════════════════════════════
    BOTTOM NAV
    ══════════════════════════════════════════════════════ */
-.nav {
-  /* Dynamic width based on contents */
-  width: max-content; 
-  min-width: 280px;
-  
-  /* Centers the floating element horizontally */
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  
-  /* Rounded capsule shape */
-  border-radius: 100px; 
-  padding: 6px 20px;
-  
-  /* Visual styling */
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 12px;
-  flex-shrink: 0;
-  min-height: 56px;
-  width: 80%;
+.nav{
+  position:fixed;
+  bottom:calc(24px + env(safe-area-inset-bottom, 0px));
+  left:0;
+  right:0;
+  margin-inline:auto;          /* centers via auto margins, so no transform is needed */
+  width:min(90%, 486px);       /* 90% of the screen, capped at 90% of #app's 540px */
+  box-sizing:border-box;
+  min-height:56px;
+  padding:6px;                 /* the old 20px side padding ate into the usable width */
+  display:flex;
+  align-items:center;
+  gap:0;                       /* with equal tracks, a gap just makes the slide offsets uneven */
+  border-radius:100px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
   -webkit-backdrop-filter:blur(15px) saturate(1.7);
   backdrop-filter:blur(15px) saturate(1.7);
-  box-shadow: 
-    0 4px 30px rgba(0, 0, 0, 0.03),
-    inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  
-  z-index: 40;
-  .nav{width:max-content;min-width:280px;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);border-radius:100px;padding:6px 20px;background:var(--glass-bg);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-around;gap:12px;flex-shrink:0;min-height:56px;backdrop-filter:blur(15px) saturate(1.7);box-shadow:rgba(0,0,0,.03) 0px 4px 30px,rgba(255,255,255,.3) 0px 1px 1px inset;overflow:hidden;-webkit-tap-highlight-color:transparent;z-index:40;transition:all .35s cubic-bezier(.4,0,.2,1)}
+  box-shadow:0 4px 30px rgba(0,0,0,.03), inset 0 1px 1px rgba(255,255,255,.3);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  z-index:40;
+  transition:transform .35s cubic-bezier(.4,0,.2,1), opacity .35s cubic-bezier(.4,0,.2,1);
 }
 
-/* Rest of your existing button and badge styles remain the same */
-.nav-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  position: relative;
-  flex: 1;
-  max-width: 64px;
-  transition: transform 0.15s;
-  overflow: hidden;
-  border-radius: 999px;
+.nav-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  background:none;
+  border:none;
+  padding:4px 8px;
+  position:relative;
+  flex:1 1 0;                  /* basis 0: every button gets an identical share */
+  min-width:0;                 /* otherwise a long label can stretch its own tab */
+  transition:transform .15s;
+  overflow:hidden;
+  border-radius:999px;
 }
 
 /* ── iOS: sliding tab indicator ─────────────────────────────────────
