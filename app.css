@@ -286,7 +286,7 @@ input,textarea,select{font-family:var(--font)}
   border: 1px solid var(--glass-border);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
-  border-radius: 18px;
+  border-radius: 45px;
   box-shadow: 0 8px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.3);
   padding: 6px;
   display: flex; flex-direction: column; gap: 2px;
