@@ -1562,3 +1562,337 @@ body.chat-active .nav .fab {
    ══════════════════════════════════════════════════════ */
 @media(max-width:360px){:root{--fs:14px;--fs-sm:12px;--fs-xs:10px;--fs-lg:16px;--fs-xl:20px}.fab{width:48px;height:48px;font-size:22px}.nav-btn{padding:4px 6px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+
+/* ═══════════════════════════════════════════════════════
+   CHAT · PLATFORM STYLES
+   iOS = Liquid Glass · Android = WhatsApp-style
+   Needs <html data-platform="ios|android">. Paste at the END of app.css.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 1. SHARED · layout, sizing, bubble width ───────────
+   `body` is in these selectors so they win over any earlier platform rules. */
+
+/* Every ancestor of the chat fills the space above it instead of growing
+   past it. Only .chat-msgs-wrap scrolls; the composer stays at the bottom. */
+html:is([data-platform="ios"],[data-platform="android"]) body.chat-active #app :has(.chat-wrap){
+  flex:1 1 0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-wrap{
+  flex:1 1 0;
+  min-height:0;
+}
+
+/* Composer: flexible width, taller, grows with the text */
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-input-wrap > :has(> .chat-input){
+  flex:1 1 0;
+  min-width:0;
+}
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-input{
+  flex:1 1 0;
+  min-width:0;
+  width:100%;
+  min-height:56px;
+  max-height:140px;
+  padding:17px 20px;
+  line-height:1.4;
+  border-radius:28px;
+}
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-send{
+  flex:0 0 auto;
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  font-size:22px;
+}
+
+/* Bubbles hug their text: one letter = a small bubble */
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-body-wrap{
+  flex:0 1 auto;
+  width:fit-content;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row:not(.own) .msg-body-wrap{align-items:flex-start}
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row.own .msg-body-wrap{align-items:flex-end}
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-bubble{
+  width:fit-content;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+
+
+/* ── 2. iOS · LIQUID GLASS ───────────────────────────── */
+
+/* Soft colour behind the glass so there is something to refract */
+html[data-platform="ios"] .chat-wrap{
+  background:
+    radial-gradient(120% 55% at 10% 0%,color-mix(in srgb,var(--pri) 16%,transparent),transparent 65%),
+    radial-gradient(100% 50% at 100% 100%,color-mix(in srgb,var(--pri2) 20%,transparent),transparent 65%);
+}
+
+/* Blurred glass surfaces */
+html[data-platform="ios"] :is(.chat-hdr,.chat-call-btn,.chat-input,.chat-tabs){
+  border:1px solid var(--bd);
+  border:1px solid color-mix(in srgb,var(--txt) 10%,transparent);
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 50%,transparent);
+  -webkit-backdrop-filter:blur(22px) saturate(1.9);
+  backdrop-filter:blur(22px) saturate(1.9);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.04);
+}
+
+/* Header: floating glass bar */
+html[data-platform="ios"] .chat-hdr{
+  margin:8px 10px 6px;
+  border-radius:28px;
+  box-shadow:0 8px 28px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* Bubbles: tinted glass, no blur (hundreds of blur layers make iOS scrolling stutter) */
+html[data-platform="ios"] .msg-bubble{border-radius:22px}
+html[data-platform="ios"] .msg-row:not(.own) .msg-bubble{
+  border:1px solid var(--bd);
+  border:1px solid color-mix(in srgb,var(--txt) 10%,transparent);
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 50%,transparent);
+  border-bottom-left-radius:6px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+}
+html[data-platform="ios"] .msg-row.own .msg-bubble{
+  background:var(--pri);
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri));
+  border-bottom-right-radius:6px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 3px 10px rgba(0,0,0,.12);
+}
+
+/* Date label + typing: glass pills */
+html[data-platform="ios"] .day-divider{
+  width:fit-content;
+  margin:10px auto 14px;
+  padding:4px 12px;
+  border:1px solid var(--bd);
+  border-radius:999px;
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 50%,transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+}
+html[data-platform="ios"] .day-divider::before,
+html[data-platform="ios"] .day-divider::after{display:none}
+html[data-platform="ios"] .typing-indicator{
+  width:fit-content;
+  margin:0 12px 4px;
+  padding:7px 14px;
+  border:1px solid var(--bd);
+  border-radius:999px;
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 50%,transparent);
+}
+
+/* Composer: floating glass capsule + gradient send */
+html[data-platform="ios"] .chat-input-wrap{
+  background:transparent;
+  border-top:0;
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+}
+html[data-platform="ios"] .chat-input{font-size:16px}   /* Safari zooms the page on focus below 16px */
+html[data-platform="ios"] .chat-input:focus{
+  border-color:var(--pri);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 0 0 3px var(--pri-light);
+}
+html[data-platform="ios"] .chat-send{
+  background:var(--pri);
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri));
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 14px rgba(0,0,0,.18);
+}
+
+/* Tabs: glass segmented control */
+html[data-platform="ios"] .chat-tabs{
+  margin:8px 12px 0;
+  padding:3px;
+  border-radius:999px;
+}
+html[data-platform="ios"] .chat-tab{border-bottom:0;border-radius:999px;padding:8px}
+html[data-platform="ios"] .chat-tab.active{
+  color:var(--pri);
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 88%,transparent);
+  box-shadow:0 2px 8px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* Chat list: glass rows */
+html[data-platform="ios"] .chat-list{padding:8px 12px}
+html[data-platform="ios"] .chat-list-item{
+  margin-bottom:8px;
+  border:1px solid var(--bd);
+  border-radius:24px;
+  background-color:var(--card);
+  background-color:color-mix(in srgb,var(--card) 50%,transparent);
+  background-image:linear-gradient(to bottom,rgba(255,255,255,.28),transparent 60%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+}
+html[data-platform="ios"] .chat-list-item+.chat-list-item{border-top:1px solid var(--bd)}
+html[data-platform="ios"] .chat-list-item:active{
+  background-color:var(--pri-light);
+  background-color:color-mix(in srgb,var(--pri-light) 85%,transparent);
+}
+
+
+/* ── 3. ANDROID · WHATSAPP-STYLE ─────────────────────── */
+
+/* Wallpaper */
+html[data-platform="android"] .chat-wrap{
+  background-color:var(--bg2);
+  background-color:color-mix(in srgb,var(--pri) 8%,var(--bg));
+  background-image:radial-gradient(color-mix(in srgb,var(--txt) 6%,transparent) 1px,transparent 1.5px);
+  background-size:22px 22px;
+}
+
+/* App bar */
+html[data-platform="android"] .chat-hdr{
+  min-height:0;
+  gap:10px;
+  padding:10px 8px 10px 12px;
+  background:var(--pri-dark);
+  color:#fff;
+  border-bottom:0;
+  box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+html[data-platform="android"] .chat-hdr-name{color:#fff;font-size:var(--fs-lg);font-weight:600}
+html[data-platform="android"] .chat-hdr-status{color:rgba(255,255,255,.82)}
+html[data-platform="android"] .chat-hdr :is(button,a){color:#fff}
+html[data-platform="android"] .chat-call-btn{
+  width:36px;
+  height:36px;
+  background:rgba(255,255,255,.16);
+  transition:transform .15s;
+}
+html[data-platform="android"] .chat-call-btn:active{border-radius:50%}
+
+/* Date chip */
+html[data-platform="android"] .day-divider{
+  width:fit-content;
+  margin:10px auto 14px;
+  padding:4px 12px;
+  border-radius:8px;
+  color:var(--txt2);
+  background:var(--card);
+  box-shadow:0 1px 1px rgba(0,0,0,.12);
+}
+html[data-platform="android"] .day-divider::before,
+html[data-platform="android"] .day-divider::after{display:none}
+
+/* Bubbles with tails */
+html[data-platform="android"] .msg-bubble{
+  position:relative;
+  padding:9px 13px;
+  border-radius:12px;
+  color:var(--txt);
+  box-shadow:0 1px 1px rgba(0,0,0,.14);
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
+  background:var(--card);
+  border:0;
+  border-bottom-left-radius:0;
+}
+html[data-platform="android"] .msg-row.own .msg-bubble{
+  background:var(--pri-light);
+  background:color-mix(in srgb,var(--pri) 20%,var(--card));
+  border-bottom-right-radius:0;
+}
+html[data-platform="android"] .msg-bubble::before{
+  content:'';
+  position:absolute;
+  bottom:0;
+  width:8px;
+  height:12px;
+  background:inherit;                    /* the tail always matches its bubble */
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble::before{
+  left:-7px;
+  clip-path:polygon(100% 0,100% 100%,0 100%);
+}
+html[data-platform="android"] .msg-row.own .msg-bubble::before{
+  right:-7px;
+  clip-path:polygon(0 0,0 100%,100% 100%);
+}
+html[data-platform="android"] .msg-sender,
+html[data-platform="android"] .msg-time{color:var(--txt2)}
+
+/* Typing (display is still controlled by your .show class) */
+html[data-platform="android"] .typing-indicator{
+  align-self:flex-start;
+  width:fit-content;
+  margin:0 12px 6px;
+  padding:7px 12px;
+  border-radius:12px;
+  background:var(--card);
+  color:var(--txt2);
+  box-shadow:0 1px 1px rgba(0,0,0,.14);
+}
+html[data-platform="android"] .typing-dot{background:var(--pri)}
+
+/* Floating composer: transparent strip, pill field, round send */
+html[data-platform="android"] .chat-input-wrap{
+  gap:8px;
+  background:transparent;
+  border-top:0;
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+}
+html[data-platform="android"] .chat-input{
+  background:var(--card);
+  color:var(--txt);
+  caret-color:var(--pri);
+  border:0;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+html[data-platform="android"] .chat-input::placeholder{color:var(--txt2);opacity:1}
+html[data-platform="android"] .chat-input:focus{
+  box-shadow:0 1px 3px rgba(0,0,0,.2),0 0 0 2px var(--pri);
+  box-shadow:0 1px 3px rgba(0,0,0,.2),0 0 0 2px color-mix(in srgb,var(--pri) 55%,transparent);
+}
+html[data-platform="android"] .chat-send{
+  background:var(--pri-dark);
+  color:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+
+/* Tabs */
+html[data-platform="android"] .chat-tabs{background:var(--pri-dark);border-bottom:0}
+html[data-platform="android"] .chat-tab{
+  color:rgba(255,255,255,.78);
+  font-weight:700;
+  padding:12px 8px;
+  border-bottom:3px solid transparent;
+}
+html[data-platform="android"] .chat-tab::after{content:none}
+html[data-platform="android"] .chat-tab:active{background:rgba(255,255,255,.12)}
+html[data-platform="android"] .chat-tab.active{color:#fff;border-bottom-color:#fff}
+
+/* Chat list: flat rows, readable secondary text, round badge */
+html[data-platform="android"] .chat-list{padding:8px 0}
+html[data-platform="android"] .chat-list-item{border-radius:0}
+html[data-platform="android"] .chat-list-item+.chat-list-item{border-top:1px solid var(--bd)}
+html[data-platform="android"] .chat-list-item:active{
+  background:var(--bg2);
+  background:color-mix(in srgb,var(--pri) 10%,transparent);
+}
+html[data-platform="android"] .chat-list-name{font-weight:700}
+html[data-platform="android"] .chat-list-preview,
+html[data-platform="android"] .chat-list-time{color:var(--txt2)}
+html[data-platform="android"] .chat-list-unread{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  border-radius:10px;
+  font-size:11px;
+  background:var(--pri-dark);
+}
