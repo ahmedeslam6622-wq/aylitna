@@ -775,6 +775,7 @@ body:has(
 /* ══════════════════════════════════════════════════════
    BOTTOM NAV
    ══════════════════════════════════════════════════════ */
+html[data-platform="ios"] .nav-ico::before{display:none}
 .nav{
   position:fixed;
   bottom:calc(24px + env(safe-area-inset-bottom, 0px));
@@ -1132,6 +1133,23 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 .stat{text-align:center}
 .stat-n{font-size:var(--fs-lg);font-weight:800;color:var(--pri)}
 .stat-l{font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+html[data-platform="ios"] .member-card{
+  border-radius:100px;
+  padding-inline:22px;                       /* keeps content off the curved ends; drop it if you don't want it */
+  border:1px solid var(--bd);                /* visible in every theme (--glass-border is white on cream) */
+
+  background-color:var(--card);              /* fallback if color-mix is unsupported */
+  background-color:color-mix(in srgb,var(--card) 55%,transparent);
+  background-image:linear-gradient(to bottom,rgba(255,255,255,.28),transparent 60%);  /* glass sheen */
+
+  -webkit-backdrop-filter:blur(15px) saturate(1.7);
+  backdrop-filter:blur(15px) saturate(1.7);
+  box-shadow:0 4px 30px rgba(0,0,0,.03), inset 0 1px 1px rgba(255,255,255,.3);
+}
+
+html[data-platform="ios"] .member-card:active{
+  background-color:color-mix(in srgb,var(--pri-light) 85%,transparent);
+}
 
 /* ══════════════════════════════════════════════════════
    STATS
