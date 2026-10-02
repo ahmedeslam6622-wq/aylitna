@@ -15,6 +15,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+  <script>
+(function () {
+  var ua = navigator.userAgent;
+  var platform =
+    /Android/i.test(ua) ? 'android' :
+    (/iPhone|iPad|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? 'ios' :
+    'web';
+
+  // Testing on desktop: open the page with ?platform=ios or ?platform=android
+  var override = new URLSearchParams(location.search).get('platform');
+  if (override === 'ios' || override === 'android' || override === 'web') platform = override;
+
+  document.documentElement.dataset.platform = platform;
+})();
+  </script>
 </head>
 <body>
 <div id="app"></div>
