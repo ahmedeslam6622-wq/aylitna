@@ -1189,41 +1189,108 @@ html[data-platform="android"] .typing-indicator{
 html[data-platform="android"] .typing-dot{background:var(--pri)}
 
 /* Composer: pill field + squircle send that morphs to a circle */
+/* ══ CHAT · Android · WhatsApp-style ══ */
+
+/* Wallpaper: behind the header, messages and the floating composer */
+html[data-platform="android"] .chat-wrap{
+  background-color:var(--bg);
+  background-color:color-mix(in srgb,var(--pri) 8%,var(--bg));
+  background-image:radial-gradient(color-mix(in srgb,var(--txt) 6%,transparent) 1px,transparent 1.5px);
+  background-size:22px 22px;
+}
+
+/* App bar: --pri-dark gives white text enough contrast in every theme */
+html[data-platform="android"] .chat-hdr{
+  padding:10px 8px 10px 12px;
+  background:var(--pri-dark);color:#fff;
+  border-bottom:0;box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+html[data-platform="android"] .chat-hdr-name{color:#fff;font-weight:600}
+html[data-platform="android"] .chat-hdr-status{color:rgba(255,255,255,.82)}
+html[data-platform="android"] .chat-hdr :is(button,a){color:#fff}
+html[data-platform="android"] .chat-call-btn{background:rgba(255,255,255,.16)}
+
+/* Date chip */
+html[data-platform="android"] .day-divider{
+  width:fit-content;margin:10px auto 14px;padding:4px 12px;
+  border-radius:8px;color:var(--txt2);
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 92%,transparent);
+  box-shadow:0 1px 1px rgba(0,0,0,.12);
+}
+html[data-platform="android"] .day-divider::before,
+html[data-platform="android"] .day-divider::after{display:none}
+
+/* Bubbles with tails. --bub is declared on the bubble itself, so the tail always matches. */
+html[data-platform="android"] .msg-bubble{
+  position:relative;padding:8px 12px;border-radius:12px;border:0;color:var(--txt);
+  box-shadow:0 1px 1px rgba(0,0,0,.14),0 0 0 1px color-mix(in srgb,var(--txt) 6%,transparent);
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
+  --bub:var(--card);
+  background:var(--bub);
+  border-bottom-left-radius:0;
+}
+html[data-platform="android"] .msg-row.own .msg-bubble{
+  --bub:var(--pri-light);
+  --bub:color-mix(in srgb,var(--pri) 20%,var(--card));
+  background:var(--bub);
+  border-bottom-right-radius:0;
+}
+html[data-platform="android"] .msg-bubble::before{
+  content:'';position:absolute;bottom:0;width:8px;height:12px;background:var(--bub);
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble::before{
+  left:-7px;clip-path:polygon(100% 0,100% 100%,0 100%);
+}
+html[data-platform="android"] .msg-row.own .msg-bubble::before{
+  right:-7px;clip-path:polygon(0 0,0 100%,100% 100%);
+}
+html[data-platform="android"] .msg-sender,
+html[data-platform="android"] .msg-time{color:var(--txt2)}
+
+/* Typing: plain pill, display is still controlled by your .show class */
+html[data-platform="android"] .typing-indicator{
+  width:fit-content;margin:0 12px 6px;padding:7px 12px;
+  border-radius:12px;background:var(--card);color:var(--txt2);
+  box-shadow:0 1px 1px rgba(0,0,0,.14);
+}
+html[data-platform="android"] .typing-dot{background:var(--pri)}
+
+/* Floating composer: transparent strip, pill field, separate round send */
 html[data-platform="android"] .chat-input-wrap{
-  gap:10px;background:var(--bg);border-top:0;
-  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  background:transparent;border-top:0;gap:8px;
+  padding:6px 8px calc(8px + env(safe-area-inset-bottom));
 }
 html[data-platform="android"] .chat-input{
-  background:var(--md-container-hi);border:2px solid transparent;border-radius:28px;padding:11px 18px;
+  background:var(--card);color:var(--txt);
+  border:0;border-radius:24px;padding:12px 18px;min-height:48px;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
 }
-html[data-platform="android"] .chat-input:focus{border-color:var(--pri)}
+html[data-platform="android"] .chat-input::placeholder{color:var(--txt2);opacity:1}
+html[data-platform="android"] .chat-input:focus{
+  box-shadow:0 1px 3px rgba(0,0,0,.2),0 0 0 2px color-mix(in srgb,var(--pri) 55%,transparent);
+}
 html[data-platform="android"] .chat-send{
-  width:48px;height:48px;border-radius:16px;
-  transition:transform .15s,opacity .2s,border-radius .25s var(--md-ease);
+  width:48px;height:48px;background:var(--pri-dark);color:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
 }
-html[data-platform="android"] .chat-send:active{border-radius:50%}
 
-/* Primary tabs: rounded indicator grows from the centre */
-html[data-platform="android"] .chat-tabs{background:var(--md-container);border-bottom:1px solid var(--bd)}
-html[data-platform="android"] .chat-tab{position:relative;border-bottom:0;padding:14px 8px}
-html[data-platform="android"] .chat-tab:active{background:var(--md-state)}
-html[data-platform="android"] .chat-tab::after{
-  content:'';position:absolute;left:50%;bottom:0;width:32px;height:3px;
-  border-radius:3px 3px 0 0;background:var(--pri);
-  transform:translateX(-50%) scaleX(0);transition:transform .3s var(--md-ease);
-}
-html[data-platform="android"] .chat-tab.active::after{transform:translateX(-50%) scaleX(1)}
+/* Tabs */
+html[data-platform="android"] .chat-tabs{background:var(--pri-dark);border-bottom:0}
+html[data-platform="android"] .chat-tab{color:rgba(255,255,255,.78);font-weight:600;padding:12px 8px}
+html[data-platform="android"] .chat-tab:active{background:rgba(255,255,255,.12)}
+html[data-platform="android"] .chat-tab.active{color:#fff;border-bottom-color:#fff}
 
-/* Chat list: tonal rows, state layer, M3 badge */
-html[data-platform="android"] .chat-list{padding:8px}
-html[data-platform="android"] .chat-list-item{border-radius:20px}
-html[data-platform="android"] .chat-list-item+.chat-list-item{border-top:0}
-html[data-platform="android"] .chat-list-item:active{background:var(--md-state)}
-html[data-platform="android"] .chat-list-name{font-weight:600}
-html[data-platform="android"] .chat-list-preview{color:var(--txt2)}
+/* Chat list: keeps your flat rows, fixes pale text, round badge */
+html[data-platform="android"] .chat-list{padding:0}
+html[data-platform="android"] .chat-list-item:active{background:color-mix(in srgb,var(--pri) 10%,transparent)}
+html[data-platform="android"] .chat-list-preview,
+html[data-platform="android"] .chat-list-time{color:var(--txt2)}
 html[data-platform="android"] .chat-list-unread{
   display:flex;align-items:center;justify-content:center;
   min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;
+  background:var(--pri-dark);
 }
 /* ══════════════════════════════════════════════════════
    CALL OVERLAY
