@@ -1702,23 +1702,27 @@ html[data-platform="ios"] .chat-call-btn {
 
 /* iOS Bubbles Configuration */
 html[data-platform="ios"] .msg-row {
-  animation: ios-spring-bounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
+  animation: ios-spring-bounce 1s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
 }
 
 html[data-platform="ios"] .msg-bubble {
   border-radius: 22px;
   letter-spacing: -0.1px;
+   padding: 9px 13px;
 }
 
 html[data-platform="ios"] .msg-row:not(.own) .msg-bubble {
   border-bottom-left-radius: 6px;
+   
 }
 
 html[data-platform="ios"] .msg-row.own .msg-bubble {
   background: linear-gradient(to bottom, color-mix(in srgb, var(--pri) 86%, #fff), var(--pri));
   border-bottom-right-radius: 6px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 10px color-mix(in srgb, var(--pri) 28%, transparent);
+   padding: 6px;
 }
+
 
 /* Divider & Composer Layout Elements */
 html[data-platform="ios"] .day-divider {
@@ -1732,6 +1736,9 @@ html[data-platform="ios"] .day-divider {
 }
 
 html[data-platform="ios"] .chat-input-wrap {
+   position: absolute;
+   bottom;
+   bottom: calc(10px + env(safe-area-inset-bottom));
   padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
 }
 
@@ -1825,7 +1832,7 @@ html[data-platform="android"] .day-divider {
 
 /* Android Speech Bubble Framework & Geometry Tails */
 html[data-platform="android"] .msg-row {
-  animation: android-slate-up 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+  animation: android-slate-up 0.22s cubic-bezier(0.5, 0, 0, 1) both;
 }
 
 html[data-platform="android"] .msg-bubble {
