@@ -1910,6 +1910,20 @@ padding: 8px 0;
 }
 html[data-platform="android"] .chat-list-item {
 border-radius: 0;
+   /* Combine your padding with the layout rules so they don't overwrite each other */
+html[data-platform="android"] .chat-list {
+  padding: 8px 0;
+  
+  /* ── RE-INJECT THE FLEX LAYOUT HERE ── */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 12px;
+
+   
 }
 html[data-platform="android"] .chat-list-item:active {
 background: color-mix(in srgb, var(--pri) 10%, transparent);
