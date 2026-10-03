@@ -1618,7 +1618,7 @@ html:is([data-platform="ios"],[data-platform="android"]) body .msg-body-wrap{
   flex-direction:column;
 }
 html:is([data-platform="ios"],[data-platform="android"]) body .msg-row:not(.own) .msg-body-wrap{align-items:flex-start}
-html:is([data-platform="ios"],[data-platform="android"]) body .msg-row.own .msg-body-wrap{align-items:flex-end}
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row.own .msg-body-wrap{   align-items:flex-end;   margin-left:auto; }
 html:is([data-platform="ios"],[data-platform="android"]) body .msg-bubble{
   width:fit-content;
   max-width:100%;
@@ -1802,9 +1802,6 @@ html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
   border-bottom-left-radius:0;
 }
 html[data-platform="android"] .msg-row.own .msg-bubble{
-   /* Apply this directly to the child element */
-  margin-left: auto;
-   
   background:var(--pri-light);
   background:color-mix(in srgb,var(--pri) 20%,var(--card));
   border-bottom-right-radius:0;
