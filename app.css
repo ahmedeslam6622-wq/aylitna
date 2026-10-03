@@ -1586,7 +1586,7 @@ html:is([data-platform="ios"],[data-platform="android"]) body .chat-wrap {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Turn your chat list track into an isolated, fluid scrolling container */
