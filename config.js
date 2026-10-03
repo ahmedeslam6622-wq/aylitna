@@ -140,7 +140,7 @@ function detectPlatform(){
   const ua = navigator.userAgent || navigator.vendor || window.opera;
   if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
   if (/android/i.test(ua)) return 'android';
-  return 'other';
+  return 'ios';
 }
 
 const os = detectPlatform();
