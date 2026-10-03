@@ -1471,7 +1471,14 @@ html[data-platform="ios"] .member-card:active{
 
 /* ══════════════════════════════════════════════════════
    STATS
+   Replace the old STATS block (.stats-wrap … .nudge-meta) with this file.
+   Same class names as before, no markup changes.
+   · no data-platform  → your original look (section 1)
+   · ios               → bouncy liquid glass (section 2)
+   · android           → Material You / M3 tonal (section 3)
    ══════════════════════════════════════════════════════ */
+
+/* ── 1. BASE (your original rules, unchanged) ─────────── */
 .stats-wrap{padding:16px 16px calc(30px + var(--nav-h))}
 .stats-hero{background:linear-gradient(135deg,var(--pri),var(--pri-dark));border-radius:var(--r);padding:20px;margin-bottom:16px;color:#fff;text-align:center}
 .stats-hero-n{font-family:var(--font);font-size:48px;font-weight:700;line-height:1}
@@ -1496,6 +1503,376 @@ html[data-platform="ios"] .member-card:active{
 .reminder-nudge{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;box-shadow:0 2px 8px var(--shadow2)}
 .nudge-name{font-size:var(--fs-sm);font-weight:800;color:var(--txt)}
 .nudge-meta{font-size:var(--fs-xs);color:var(--txt3);margin-top:2px}
+
+/* ── shared keyframes ─────────────────────────────────── */
+@keyframes stats-spring-in{
+  from{opacity:0;transform:translateY(26px) scale(.86)}
+  to{opacity:1;transform:none}
+}
+@keyframes stats-rise{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:none}
+}
+@keyframes stats-bar-grow{
+  from{transform:scaleX(0)}
+  to{transform:scaleX(1)}
+}
+@keyframes stats-blob{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-26px,-18px) scale(1.18)}
+}
+@keyframes stats-bob{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-2px) scale(1.06)}
+}
+
+
+/* ── 2. iOS · BOUNCY LIQUID GLASS ─────────────────────── */
+
+/* Tokens live on the container so they resolve against the active [data-theme] */
+html[data-platform="ios"] .stats-wrap{
+  --g-fill:color-mix(in srgb,var(--card) 58%,transparent);
+  --g-edge:color-mix(in srgb,var(--txt) 9%,transparent);
+  --g-lit:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(0,0,0,.04);
+  --g-blur:blur(20px) saturate(1.8);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+
+  /* soft colour behind the glass, so there is something to refract */
+  background:
+    radial-gradient(60% 28% at 12% 0%,color-mix(in srgb,var(--pri) 22%,transparent),transparent 70%),
+    radial-gradient(50% 24% at 100% 34%,color-mix(in srgb,var(--pri2) 28%,transparent),transparent 70%),
+    radial-gradient(60% 28% at 0% 78%,color-mix(in srgb,var(--pri) 14%,transparent),transparent 70%);
+}
+
+/* Hero: glossy liquid slab */
+html[data-platform="ios"] .stats-hero{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  padding:28px 20px 26px;
+  margin-bottom:14px;
+  border-radius:34px;
+  border:1px solid rgba(255,255,255,.38);
+  background:linear-gradient(150deg,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri) 52%,var(--pri-dark));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -12px 26px rgba(0,0,0,.14),
+    0 16px 36px color-mix(in srgb,var(--pri) 38%,transparent);
+  animation:stats-spring-in .75s var(--spring) both;
+  transition:transform .4s var(--spring);
+}
+html[data-platform="ios"] .stats-hero:active{transform:scale(.965)}
+html[data-platform="ios"] .stats-hero::before{      /* specular sheen */
+  content:'';
+  position:absolute;inset:0 0 auto 0;height:52%;
+  border-radius:inherit;
+  background:linear-gradient(to bottom,rgba(255,255,255,.30),rgba(255,255,255,0));
+  pointer-events:none;
+  z-index:-1;
+}
+html[data-platform="ios"] .stats-hero::after{       /* drifting liquid blob */
+  content:'';
+  position:absolute;right:-54px;bottom:-78px;
+  width:190px;height:190px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.34),rgba(255,255,255,0) 70%);
+  animation:stats-blob 8s ease-in-out infinite;
+  pointer-events:none;
+  z-index:-1;
+}
+html[data-platform="ios"] .stats-hero-n{
+  font-size:58px;
+  font-weight:800;
+  letter-spacing:-.025em;
+  text-shadow:0 2px 14px rgba(0,0,0,.18);
+}
+html[data-platform="ios"] .stats-hero-l{opacity:.88;font-weight:600;margin-top:6px}
+
+/* Stat tiles: glass, spring in, squish on press */
+html[data-platform="ios"] .stats-grid{gap:12px;margin-bottom:14px}
+html[data-platform="ios"] .stat-card{
+  padding:20px 14px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:28px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 10px 26px var(--shadow2);
+  animation:stats-spring-in .65s var(--spring) both;
+  transition:transform .35s var(--spring);
+}
+html[data-platform="ios"] .stat-card:active{transform:scale(.93)}
+html[data-platform="ios"] .stat-card-n{font-weight:800;letter-spacing:-.02em}
+html[data-platform="ios"] .stat-card-l{color:var(--txt2);letter-spacing:.3px}
+
+html[data-platform="ios"] .stat-card:nth-child(1){animation-delay:.08s}
+html[data-platform="ios"] .stat-card:nth-child(2){animation-delay:.14s}
+html[data-platform="ios"] .stat-card:nth-child(3){animation-delay:.20s}
+html[data-platform="ios"] .stat-card:nth-child(4){animation-delay:.26s}
+html[data-platform="ios"] .stat-card:nth-child(5){animation-delay:.32s}
+html[data-platform="ios"] .stat-card:nth-child(n+6){animation-delay:.38s}
+
+/* Leaderboard: one glass sheet */
+html[data-platform="ios"] .leaderboard{
+  margin-bottom:14px;
+  border:1px solid var(--g-edge);
+  border-radius:30px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 10px 26px var(--shadow2);
+  animation:stats-spring-in .7s var(--spring) .22s both;
+}
+html[data-platform="ios"] .lb-title{
+  padding:18px 20px 12px;
+  font-size:var(--fs-lg);
+  font-weight:800;
+  letter-spacing:-.01em;
+  border-bottom:1px solid var(--g-edge);
+}
+html[data-platform="ios"] .lb-row{
+  padding:12px 20px;
+  border-bottom:1px solid var(--g-edge);
+  animation:stats-spring-in .55s var(--spring) both;
+  transition:background .2s;
+}
+html[data-platform="ios"] .lb-row:active{background:color-mix(in srgb,var(--pri) 10%,transparent)}
+html[data-platform="ios"] .lb-row:nth-child(2){animation-delay:.34s}
+html[data-platform="ios"] .lb-row:nth-child(3){animation-delay:.39s}
+html[data-platform="ios"] .lb-row:nth-child(4){animation-delay:.44s}
+html[data-platform="ios"] .lb-row:nth-child(5){animation-delay:.49s}
+html[data-platform="ios"] .lb-row:nth-child(6){animation-delay:.54s}
+html[data-platform="ios"] .lb-row:nth-child(7){animation-delay:.59s}
+html[data-platform="ios"] .lb-row:nth-child(n+8){animation-delay:.64s}
+
+/* Ranks: glossy medals */
+html[data-platform="ios"] .lb-rank{
+  width:30px;height:30px;
+  font-size:var(--fs-sm);
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--card) 70%,#fff),var(--bg2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 6px var(--shadow2);
+}
+html[data-platform="ios"] .lb-rank.gold{
+  background:linear-gradient(to bottom,#FFF0A8,#F5B21A);color:#7A4503;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 3px 10px rgba(245,158,11,.4);
+  animation:stats-bob 2.6s ease-in-out infinite;
+}
+html[data-platform="ios"] .lb-rank.silver{
+  background:linear-gradient(to bottom,#FFFFFF,#CBD5E1);color:#475569;
+}
+html[data-platform="ios"] .lb-rank.bronze{
+  background:linear-gradient(to bottom,#FDBA74,#C2570C);color:#fff;
+}
+html[data-platform="ios"] .lb-val{font-weight:800}
+
+/* Bars: glossy pill that springs out from the left */
+html[data-platform="ios"] .lb-bar-wrap{
+  height:9px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--txt) 8%,transparent);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.12);
+}
+html[data-platform="ios"] .lb-bar{
+  position:relative;
+  border-radius:999px;
+  background:linear-gradient(to right,var(--pri2),var(--pri));
+  box-shadow:0 0 10px color-mix(in srgb,var(--pri) 45%,transparent);
+  transform-origin:left center;
+  animation:stats-bar-grow 1s var(--spring) .5s both;
+  transition:width .7s var(--spring);
+}
+html[data-platform="ios"] .lb-bar::after{
+  content:'';
+  position:absolute;inset:0 0 50% 0;
+  border-radius:inherit;
+  background:linear-gradient(to bottom,rgba(255,255,255,.5),rgba(255,255,255,0));
+}
+
+html[data-platform="ios"] .top-post-label{
+  background:linear-gradient(to bottom,#FFF3B8,#FCD34D);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+  font-weight:800;
+}
+
+html[data-platform="ios"] .reminder-nudge{
+  padding:16px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:26px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 8px 22px var(--shadow2);
+  animation:stats-spring-in .6s var(--spring) both;
+  transition:transform .35s var(--spring);
+}
+html[data-platform="ios"] .reminder-nudge:active{transform:scale(.96)}
+html[data-platform="ios"] .nudge-meta{color:var(--txt2)}
+
+
+/* ── 3. ANDROID · MATERIAL YOU (M3) ───────────────────── */
+
+/* Tonal palette derived from the active theme's --pri */
+html[data-platform="android"] .stats-wrap{
+  --m-c1:color-mix(in srgb,var(--pri) 12%,var(--card));
+  --m-c2:color-mix(in srgb,var(--pri2) 30%,var(--card));
+  --m-c3:color-mix(in srgb,var(--blue) 14%,var(--card));
+  --m-c4:color-mix(in srgb,var(--pri) 22%,var(--card));
+  --m-state:color-mix(in srgb,var(--txt) 8%,transparent);       /* pressed state layer */
+  --m-ease:cubic-bezier(.05,.7,.1,1);                            /* emphasized decelerate */
+}
+
+/* Hero: tonal container, expressive asymmetric shape */
+html[data-platform="android"] .stats-hero{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  padding:30px 24px 28px;
+  margin-bottom:12px;
+  border-radius:44px 44px 44px 14px;
+  background:var(--m-c4);
+  color:var(--txt);
+  text-align:left;
+  animation:stats-rise .6s var(--m-ease) both;
+  transition:border-radius .3s var(--m-ease);
+}
+html[data-platform="android"] .stats-hero:active{border-radius:28px}
+html[data-platform="android"] .stats-hero::before{     /* big tonal circle, the M3 shape accent */
+  content:'';
+  position:absolute;right:-48px;top:-52px;
+  width:190px;height:190px;border-radius:50%;
+  background:color-mix(in srgb,var(--pri) 20%,transparent);
+  z-index:-1;
+}
+html[data-platform="android"] .stats-hero::after{
+  content:'';
+  position:absolute;right:34px;bottom:-30px;
+  width:84px;height:84px;border-radius:28px;
+  background:color-mix(in srgb,var(--pri2) 34%,transparent);
+  transform:rotate(18deg);
+  z-index:-1;
+}
+html[data-platform="android"] .stats-hero-n{
+  font-size:60px;
+  font-weight:600;
+  letter-spacing:-.03em;
+  color:var(--pri);
+}
+html[data-platform="android"] .stats-hero-l{
+  opacity:1;
+  font-size:var(--fs);
+  font-weight:600;
+  color:var(--txt2);
+  margin-top:6px;
+}
+
+/* Stat tiles: tonal, no border or shadow, shape morphs on press */
+html[data-platform="android"] .stats-grid{gap:8px;margin-bottom:12px}
+html[data-platform="android"] .stat-card{
+  padding:20px 16px;
+  border:0;
+  border-radius:28px;
+  background:var(--m-c1);
+  box-shadow:none;
+  text-align:left;
+  animation:stats-rise .55s var(--m-ease) both;
+  transition:border-radius .25s var(--m-ease),box-shadow .2s;
+}
+html[data-platform="android"] .stat-card:nth-child(4n+2){background:var(--m-c2)}
+html[data-platform="android"] .stat-card:nth-child(4n+3){background:var(--m-c3)}
+html[data-platform="android"] .stat-card:nth-child(4n+4){background:var(--m-c4)}
+html[data-platform="android"] .stat-card:active{
+  border-radius:14px;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .stat-card-n{font-size:34px;font-weight:600;letter-spacing:-.02em}
+html[data-platform="android"] .stat-card-l{
+  color:var(--txt2);
+  text-transform:none;
+  letter-spacing:.1px;
+  font-size:var(--fs-sm);
+  font-weight:600;
+  margin-top:6px;
+}
+html[data-platform="android"] .stat-card:nth-child(1){animation-delay:.06s}
+html[data-platform="android"] .stat-card:nth-child(2){animation-delay:.10s}
+html[data-platform="android"] .stat-card:nth-child(3){animation-delay:.14s}
+html[data-platform="android"] .stat-card:nth-child(4){animation-delay:.18s}
+html[data-platform="android"] .stat-card:nth-child(5){animation-delay:.22s}
+html[data-platform="android"] .stat-card:nth-child(n+6){animation-delay:.26s}
+
+/* Leaderboard: surface container */
+html[data-platform="android"] .leaderboard{
+  margin-bottom:12px;
+  border:0;
+  border-radius:28px;
+  background:color-mix(in srgb,var(--pri) 6%,var(--card));
+  box-shadow:none;
+  animation:stats-rise .6s var(--m-ease) .16s both;
+}
+html[data-platform="android"] .lb-title{
+  padding:20px 24px 10px;
+  font-size:var(--fs-lg);
+  font-weight:600;
+  border-bottom:0;
+}
+html[data-platform="android"] .lb-row{
+  padding:12px 24px;
+  border-bottom:0;
+  animation:stats-rise .5s var(--m-ease) both;
+  transition:background .2s;
+}
+html[data-platform="android"] .lb-row:active{background:var(--m-state)}
+html[data-platform="android"] .lb-row:nth-child(2){animation-delay:.24s}
+html[data-platform="android"] .lb-row:nth-child(3){animation-delay:.28s}
+html[data-platform="android"] .lb-row:nth-child(4){animation-delay:.32s}
+html[data-platform="android"] .lb-row:nth-child(5){animation-delay:.36s}
+html[data-platform="android"] .lb-row:nth-child(6){animation-delay:.40s}
+html[data-platform="android"] .lb-row:nth-child(7){animation-delay:.44s}
+html[data-platform="android"] .lb-row:nth-child(n+8){animation-delay:.48s}
+
+html[data-platform="android"] .lb-rank{
+  width:32px;height:32px;
+  font-size:var(--fs-sm);
+  background:var(--m-c4);
+  color:var(--pri);
+}
+html[data-platform="android"] .lb-rank.gold{background:#FEF3C7;color:#92400E}
+html[data-platform="android"] .lb-rank.silver{background:#E8EDF3;color:#475569}
+html[data-platform="android"] .lb-rank.bronze{background:#FFEDD5;color:#B45309}
+html[data-platform="android"] .lb-name{font-weight:600}
+html[data-platform="android"] .lb-val{font-weight:700}
+
+/* Bars: M3 linear indicator, thick and fully rounded */
+html[data-platform="android"] .lb-bar-wrap{
+  height:8px;
+  border-radius:4px;
+  background:var(--m-c4);
+}
+html[data-platform="android"] .lb-bar{
+  border-radius:4px;
+  background:var(--pri);
+  transform-origin:left center;
+  animation:stats-bar-grow .8s var(--m-ease) .35s both;
+  transition:width .5s var(--m-ease);
+}
+
+html[data-platform="android"] .top-post-label{
+  background:color-mix(in srgb,var(--yellow) 28%,var(--card));
+  color:#7A4503;
+  font-weight:700;
+}
+
+html[data-platform="android"] .reminder-nudge{
+  padding:16px 20px;
+  border:0;
+  border-radius:24px;
+  background:var(--m-c1);
+  box-shadow:none;
+  animation:stats-rise .5s var(--m-ease) both;
+  transition:border-radius .25s var(--m-ease),box-shadow .2s;
+}
+html[data-platform="android"] .reminder-nudge:active{
+  border-radius:12px;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .nudge-name{font-weight:700}
+html[data-platform="android"] .nudge-meta{color:var(--txt2)}
 
 /* ══════════════════════════════════════════════════════
    THEME SHEET
