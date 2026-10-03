@@ -1863,6 +1863,8 @@ html[data-platform="android"] .msg-time { color: var(--txt2); }
 
 /* Composer Component Sets */
 html[data-platform="android"] .chat-input-wrap {
+ position: absolute; 
+  bottom: calc(10px + env(safe-area-inset-bottom));
   gap: 8px;
   padding: 6px 8px calc(10px + env(safe-area-inset-bottom));
 }
