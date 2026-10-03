@@ -1684,6 +1684,7 @@ html[data-platform="ios"] .day-divider{
 html[data-platform="ios"] .day-divider::before,
 html[data-platform="ios"] .day-divider::after{display:none}
 html[data-platform="ios"] .typing-indicator{
+   display: none;
   width:fit-content;
   margin:0 12px 4px;
   padding:7px 14px;
@@ -1801,6 +1802,9 @@ html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
   border-bottom-left-radius:0;
 }
 html[data-platform="android"] .msg-row.own .msg-bubble{
+   /* Apply this directly to the child element */
+  margin-left: auto;
+   
   background:var(--pri-light);
   background:color-mix(in srgb,var(--pri) 20%,var(--card));
   border-bottom-right-radius:0;
@@ -1826,6 +1830,7 @@ html[data-platform="android"] .msg-time{color:var(--txt2)}
 
 /* Typing (display is still controlled by your .show class) */
 html[data-platform="android"] .typing-indicator{
+   display: none;
   align-self:flex-start;
   width:fit-content;
   margin:0 12px 6px;
