@@ -1169,6 +1169,23 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 /* ══════════════════════════════════════════════════════
    DM / CHAT
    ══════════════════════════════════════════════════════ */
+/* 1. Tell your scrolling area to keep track of time */
+.chat-list{
+  scroll-timeline: --hide-input block;
+}
+
+/* 2. Tell your input to fade out based on that scroll timeline */
+.chat-input-wrap {
+  animation: fadeOut linear both;
+  animation-timeline: --hide-input;
+  animation-range: entry 0px entry 40px; /* Adjust 40px to change how fast it fades */
+}
+
+/* 3. The standard fade effect */
+@keyframes fadeOut {
+  to { opacity: 0; visibility: hidden; }
+}
+
 /* ══ CHAT · iOS · Liquid Glass ══ */
 /* Tokens live on the chat containers, not on html: var() inside a custom property
    is resolved where it is declared, so on html they would ignore [data-theme] set below it. */
