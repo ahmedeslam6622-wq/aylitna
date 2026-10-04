@@ -1,0 +1,2959 @@
+/* ══════════════════════════════════════════════════════
+   THEME SYSTEM
+   ══════════════════════════════════════════════════════ */
+:root {
+  --bg:#FAF8F3;--bg2:#F3EFE7;--card:#FFF;--card2:#FDF9F5;
+  --pri:#C4622D;--pri2:#E8A87C;--pri-light:#FAECE7;--pri-dark:#A04E22;
+  --txt:#1A1208;--txt2:#7A6A5A;--txt3:#B8A898;
+  --bd:#EAE2D6;--bd2:#DDD4C4;
+  --shadow:rgba(196,98,45,.12);--shadow2:rgba(26,18,8,.08);
+  --green:#22C55E;--red:#EF4444;--blue:#3B82F6;--yellow:#F59E0B;
+  --r:18px;--r2:12px;--r3:8px;
+  --font:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --fs:15px;--fs-sm:13px;--fs-xs:11px;--fs-lg:17px;--fs-xl:22px;
+  --tr:0.18s cubic-bezier(0.4,0,0.2,1);--nav-h:68px;
+   --glass-bg:rgba(255,255,255,0.18);
+   --glass-border:rgba(255,255,255,0.35);
+   --duration-ios-spring: 0.45s;
+  --duration-m3-standard: 0.2s;
+  --duration-m3-emphasized: 0.35s;
+
+  /* Material Design 3 Elevation Tokens (Tonal Overlays) */
+  --m3-surface-1: linear-gradient(0deg, rgba(var(--pri-rgb, 103, 80, 164), 0.05), rgba(var(--pri-rgb, 103, 80, 164), 0.05)), var(--card);
+  --m3-surface-2: linear-gradient(0deg, rgba(var(--pri-rgb, 103, 80, 164), 0.08), rgba(var(--pri-rgb, 103, 80, 164), 0.08)), var(--card);
+  --m3-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --m3-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+}
+[data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;--glass-bg:rgba(20,17,24,0.55);
+--glass-border:rgba(255,255,255,0.12);}
+[data-theme="rose"]{--bg:#FFF5F7;--bg2:#FFE8ED;--card:#FFF;--card2:#FFF0F3;--pri:#E11D6A;--pri2:#F9A8C9;--pri-light:#FFE4EE;--pri-dark:#BE185D;--txt:#1A0A10;--txt2:#7A4055;--txt3:#C49AAA;--bd:#F5CEDD;--bd2:#EDADC3;--shadow:rgba(225,29,106,.12);--shadow2:rgba(26,10,16,.08);}
+[data-theme="forest"]{--bg:#F4F7F2;--bg2:#E8F0E4;--card:#FFF;--card2:#F0F5EE;--pri:#2D7A3A;--pri2:#6BAE75;--pri-light:#E0F2E3;--pri-dark:#1F5C2A;--txt:#0D1A10;--txt2:#4A6B50;--txt3:#9AB8A0;--bd:#C8DEC9;--bd2:#B0CEB4;--shadow:rgba(45,122,58,.12);--shadow2:rgba(13,26,16,.08);}
+[data-theme="ocean"]{--bg:#F0F6FF;--bg2:#E0EEFF;--card:#FFF;--card2:#EBF3FF;--pri:#1A6FC4;--pri2:#60A5FA;--pri-light:#DCEEFF;--pri-dark:#135BA0;--txt:#071525;--txt2:#3A5A7A;--txt3:#8AAAC5;--bd:#C2D8EF;--bd2:#A8C4E0;--shadow:rgba(26,111,196,.12);--shadow2:rgba(7,21,37,.08);}
+[data-theme="sand"]{--bg:#FBF7EE;--bg2:#F2EAD8;--card:#FFF;--card2:#FDF8F0;--pri:#8B6914;--pri2:#C9A84C;--pri-light:#FDF1D0;--pri-dark:#6B500F;--txt:#1A1408;--txt2:#6B5A3A;--txt3:#B8A878;--bd:#E2D5B8;--bd2:#CFC0A0;--shadow:rgba(139,105,20,.12);--shadow2:rgba(26,20,8,.08);}
+[data-theme="custom"]{
+  --pri:var(--custom-pri,#C4622D);
+  --pri2:var(--custom-pri2,#E8A87C);
+  --pri-light:var(--custom-pri-light,#FAECE7);
+  --pri-dark:var(--custom-pri-dark,#A04E22);
+}
+
+/* ══════════════════════════════════════════════════════
+   RESET & BASE
+   ══════════════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--txt);font-size:var(--fs)}
+#app{height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative;max-width:540px;margin:0 auto;background:var(--bg);transition:background var(--tr),color var(--tr);padding:0 3px}
+img{display:block;max-width:100%}
+button{cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+input,textarea,select{font-family:var(--font)}
+.scrollx{overflow-x:auto;scrollbar-width:none}.scrollx::-webkit-scrollbar{display:none}
+
+/* ══════════════════════════════════════════════════════
+   PASSCODE GATE — styling
+   Paste this into app.css, anywhere (e.g. right after the
+   THEME SYSTEM block at the top, since it uses those vars).
+   Uses your existing --glass-bg, --pri, --bg, --card, --r, --font
+   etc — same glassmorphism language as .nav / .header-branding, so it
+   reads as part of the app rather than a separate screen.
+   ══════════════════════════════════════════════════════ */
+
+.gate-overlay{
+  position:fixed;
+  inset:0;
+  z-index:500;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:var(--bg);
+  /* subtle depth behind the card, consistent with the app's warm/
+     midnight themes rather than a flat generic overlay */
+  background:radial-gradient(circle at 50% 20%, var(--pri-light) 0%, var(--bg) 65%);
+}
+.gate-overlay.hidden{display:none}
+
+.gate-card{
+  width:100%;
+  max-width:340px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(20px) saturate(1.7);
+  backdrop-filter:blur(20px) saturate(1.7);
+  border-radius:var(--r);
+  padding:32px 26px 26px;
+  box-shadow:0 8px 32px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.25);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  animation:card-in .4s cubic-bezier(.34,1.1,.64,1) both;
+}
+
+.gate-icon{
+  width:56px;height:56px;
+  border-radius:50%;
+  background:var(--pri-light);
+  color:var(--pri);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;
+}
+
+.gate-title{
+  font-family:var(--font);
+  font-size:24px;
+  font-weight:700;
+  color:var(--txt);
+  margin-bottom:4px;
+}
+.gate-sub{
+  font-size:var(--fs-sm);
+  color:var(--txt2);
+  margin-bottom:22px;
+}
+
+.gate-input{
+  width:100%;
+  background:var(--card);
+  border:1.5px solid var(--bd);
+  border-radius:var(--r2);
+  padding:14px 16px;
+  font-size:var(--fs-lg);
+  color:var(--txt);
+  outline:none;
+  text-align:center;
+  letter-spacing:2px;
+  -webkit-appearance:none;appearance:none;
+  transition:border-color .2s;
+  margin-bottom:8px;
+}
+.gate-input:focus{border-color:var(--pri)}
+.gate-input::placeholder{letter-spacing:normal;color:var(--txt3)}
+
+.gate-error{
+  min-height:18px;
+  font-size:var(--fs-xs);
+  color:var(--red);
+  font-weight:700;
+  margin-bottom:12px;
+  opacity:0;
+  transition:opacity .15s;
+}
+.gate-error.show{opacity:1}
+
+.gate-btn{
+  width:100%;
+  background:var(--pri);
+  border:none;
+  border-radius:var(--r);
+  padding:15px;
+  font-size:var(--fs-lg);
+  font-weight:800;
+  color:#fff;
+  font-family:var(--font);
+  box-shadow:0 4px 16px var(--shadow);
+  transition:transform .15s,opacity .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.gate-btn:active{transform:scale(.98)}
+.gate-btn:disabled{opacity:.6;pointer-events:none}
+
+.gate-btn-spinner{
+  display:none;
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+.gate-btn.loading .gate-btn-label{display:none}
+.gate-btn.loading .gate-btn-spinner{display:block}
+
+/* shake on wrong password — reuses the app's existing @keyframes
+   naming convention */
+@keyframes gate-shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+.gate-card.shake{animation:gate-shake .4s ease}
+
+
+
+
+
+/* ══════════════════════════════════════════════════════
+                          Top UI
+   ══════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════
+          Unified Floating Navigation Row (Fixed)
+   ══════════════════════════════════════════════════════ */
+
+/* 1. Left Title Widget */
+.hdr {
+   display: flex;
+   align-items: center;
+  position: fixed;            
+  top: 0px;                               
+  z-index: 150;               
+  
+  gap: 6px;                   
+      
+  padding: 11px 17px;          
+  height: 50px;               /* Force explicit height matching menu button */
+  width: 100%;
+  box-sizing: border-box;
+  
+  background: var(--glass-bg); 
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);  
+  
+  border: 1px solid var(--glass-border);
+  font-family: var(--font);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
+  transition: transform .25s ease, opacity .25s ease;
+}
+
+.hdr small {
+  font-size: 18px;            
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;   
+  color: var(--txt);
+  line-height: 1;              
+}
+
+.hdr::after {
+  content: '';
+  width: 8px;                 
+  height: 8px;                
+  background-color: #22c55e;   
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4), 0 0 0 6px rgba(34, 197, 94, 0.15);
+   animation: online-dot-pulse 2s infinite ease-in-out;
+}
+
+/* ══════════════════════════════════════════════════════
+   NORMAL HEADER GREEN DOT PULSE
+   ══════════════════════════════════════════════════════ */
+
+@keyframes online-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+
+/* 2. Right Menu Widget Button Container */
+.glass-menu-wrap {
+  position: fixed;
+  top: 5px;
+  right: 5px;
+  z-index: 200;
+  transition: transform .25s ease, opacity .25s ease;
+}
+
+.glass-menu-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background-color: transparent;
+  color: var(--txt);
+  cursor: pointer;
+  position: relative;
+  transition: transform .2s cubic-bezier(.34,1.4,.64,1), border-radius .3s ease;
+}
+.glass-menu-btn:active { transform: scale(.9) }
+.glass-menu-wrap.open .glass-menu-btn { border-radius: 20px 20px 4px 20px }
+
+.glass-menu-badge {
+  position: absolute; top: -2px; right: -2px;
+  background: var(--pri); color: #fff;
+  border-radius: 50%;
+  min-width: 16px; height: 16px;
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px;
+}
+
+.glass-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 168px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-radius: 45px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.3);
+  padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  opacity: 0;
+  transform: translateY(-8px) scale(.96);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s cubic-bezier(.34,1.4,.64,1);
+}
+.glass-menu-wrap.open .glass-menu-panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.glass-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: none; border: none;
+  color: var(--txt);
+  font-size: var(--fs-sm); font-weight: 700;
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.glass-menu-item:active { background: var(--pri-light) }
+
+.glass-menu-item-av {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.glass-menu-item-av img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ══════════════════════════════════════════════════════
+   FIXED CATEGORY FILTER PANEL
+   ══════════════════════════════════════════════════════ */
+.category-dropdown-panel {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  right: 16px;
+  width: 240px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-radius: var(--r2);
+  box-shadow: 0 8px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.3);
+  z-index: 160;
+  padding: 12px;
+  animation: ctx-in .15s ease;
+}
+
+.category-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: var(--fs-sm);
+  color: var(--txt);
+}
+
+.category-close-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--txt3);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.pills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+/* ══════════════════════════════════════════════════════
+          The Center-Fitting Floating Pills (Fixed Row)
+   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+         The Self-Contained Morphing Filter Row
+   ══════════════════════════════════════════════════════ */
+.pills-wrap {
+  position: fixed;            
+  top: calc(12px + env(safe-area-inset-top)); 
+  
+  /* Stays completely locked between your outer widgets at all times */
+  left: 170px;                
+  right: 76px;                
+  z-index: 140;               
+  height: 44px;               
+  box-sizing: border-box;
+  
+  background: var(--glass-bg); 
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);  
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); 
+  border-radius: 999px;       
+  padding: 0 16px;            
+  
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  
+  /* Smoothly interpolates the width content transition internal elements */
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 🏷️ State 1: Default Text Label Appearance */
+.filter-label-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--txt2);
+  white-space: nowrap;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.2s ease, transform 0.25s ease, margin 0.3s ease;
+  margin-right: 0;
+}
+
+/* Hidden chips rest engine setup */
+.pills-wrap .pills {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.pills-wrap .pills::-webkit-scrollbar { display: none; }
+
+/* 🚀 State 2: Triggered Internal Expansion Rule */
+.pills-wrap.expanded {
+  /* Box padding adapts natively to maximize horizontal track scroll limits */
+  padding: 0 10px; 
+}
+
+.pills-wrap.expanded .filter-label-text {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-20px);
+  /* Pulls element entirely out of layout stream calculations */
+  margin-right: -55px; 
+}
+
+.pills-wrap.expanded .pills {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Standard native scroll behavior auto-hiding fallback logic */
+.hdr.scrolled ~ .pills-wrap {
+  max-height: 0;
+  opacity: 0;
+  top: calc(0px + env(safe-area-inset-top)); 
+  pointer-events: none; 
+}
+
+/* Your clean default capsule buttons layout tracking variables */
+.pill {
+  padding: 5px 12px;          
+  border-radius: 30px;
+  border: 1.5px solid var(--bd);     
+  font-size: var(--fs-sm);
+  color: var(--txt2);
+  white-space: nowrap;
+  background: transparent;
+  font-weight: 600;
+  transition: all .18s;
+  flex-shrink: 0;
+}
+.pill.on { background: var(--pri); border-color: var(--pri); color: #fff; }
+.pill:active { transform: scale(.95); }
+
+/* ══════════════════════════════════════════════════════
+   TOP BANNERS: slide the floating header widgets out of the way
+   To cover another banner, add its selector to the :has() list.
+   ══════════════════════════════════════════════════════ */
+
+/* One shared timing so the three widgets move as a unit */
+.hdr,
+.pills-wrap,
+.glass-menu-wrap{
+  transition-duration:.35s;
+  transition-timing-function:cubic-bezier(.16,1,.3,1);
+}
+
+body:has(
+  .greeting-bar:not(.fade-out, [hidden], [style*="display: none"], [style*="display:none"]),
+  .reminder:not([hidden], [style*="display: none"], [style*="display:none"]),
+  .offline-banner:not([hidden], [style*="display: none"], [style*="display:none"])
+) :is(.hdr, .pills-wrap, .glass-menu-wrap){
+  transform:translateY(calc(-96px - env(safe-area-inset-top, 0px)));
+  pointer-events:none;
+}
+/* ══════════════════════════════════════════════════════
+   MULTI-MEDIA: draft strip (add-post screen) + feed carousel
+   Paste these as NEW rules anywhere in app.css — nothing here
+   replaces or conflicts with existing rules.
+   ══════════════════════════════════════════════════════ */
+
+/* Draft media strip — horizontal row of queued photo/video thumbnails
+   on the "Share a moment" screen, each with its own remove button. */
+.draft-media-strip{display:flex;gap:8px;padding:4px 0 14px;align-items:center}
+.draft-media-item{position:relative;flex-shrink:0;width:76px;height:76px;border-radius:var(--r2);overflow:hidden;border:1.5px solid var(--bd);background:var(--bg2)}
+.draft-media-item img,.draft-media-item video{width:100%;height:100%;object-fit:cover}
+.draft-media-badge{position:absolute;bottom:3px;left:3px;font-size:11px;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 4px;color:#fff}
+.draft-media-rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;display:flex;align-items:center;justify-content:center}
+.draft-media-count{flex-shrink:0;font-size:var(--fs-xs);color:var(--txt3);font-weight:700;padding:0 6px}
+.photo-btn:disabled{opacity:.4;pointer-events:none}
+
+/* Feed carousel — swipeable via native CSS scroll-snap, no JS drag lib.
+   Same visual footprint as the old single .post-img so cards don't jump
+   in size between single-media and multi-media posts. */
+.post-carousel{position:relative;background:var(--bg2);height:380px}
+.carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;height:100%}
+.carousel-track::-webkit-scrollbar{display:none}
+.carousel-slide{flex:0 0 100%;scroll-snap-align:start;position:relative;height:100%}
+.carousel-slide .post-img,.carousel-slide .post-video{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
+.carousel-count{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;backdrop-filter:blur(4px)}
+.carousel-img{opacity:1!important}
+.carousel-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:5px;pointer-events:none}
+.carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);transition:background .2s,transform .2s}
+.carousel-dot.active{background:#fff;transform:scale(1.3)}
+/* ══════════════════════════════════════════════════════
+   OFFLINE FLOATING TOAST (MORPHING GLASSMUI)
+   ══════════════════════════════════════════════════════ */
+.offline-banner {
+  /* Positioning - Set to float anywhere on your screen */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+
+  /* Premium Glassmorphic Styling */
+  background: rgba(253, 224, 71, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1.5px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(146, 64, 14, 0.15); /* Soft amber-tinted shadow */
+
+  /* Layout */
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #92400E;
+  
+  /* Morphing Animation Control */
+  overflow: hidden;
+  white-space: nowrap;
+  transform-origin: bottom right; /* Changes expansion starting direction */
+  animation: toast-morph 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Inner Text Staggered Reveal */
+.offline-banner span, 
+.offline-banner p {
+  animation: text-fade-in 0.4s ease 0.5s both;
+}
+
+/* ══════════════════════════════════════════════════════
+   ANIMATIONS
+   ══════════════════════════════════════════════════════ */
+@keyframes toast-morph {
+  0% {
+    transform: translateY(60px) scale(0.5); /* Drops up from below the screen */
+    width: 44px;  /* Square icon shape */
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    justify-content: center; /* Centers icon initially */
+  }
+  40% {
+    transform: translateY(0) scale(1); /* Hits resting position as a circle */
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    justify-content: center;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    width: 240px; /* Adjust to match the width of your desired text */
+    height: auto;
+    border-radius: 30px; /* Keeps perfectly rounded pill shape */
+    justify-content: flex-start;
+  }
+}
+
+@keyframes text-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+
+/* ══════════════════════════════════════════════════════
+   SEARCH
+   ══════════════════════════════════════════════════════ */
+.search-bar{padding:8px 14px;background:var(--card);border-bottom:1px solid var(--bd);flex-shrink:0;display:none}
+.search-bar.show{display:block}
+.search-inner{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:30px;padding:8px 14px}
+.search-inner input{flex:1;background:none;border:none;outline:none;font-size:var(--fs-sm);color:var(--txt)}
+.search-inner input::placeholder{color:var(--txt3)}
+.search-clear{background:none;border:none;font-size:16px;color:var(--txt3);padding:0}
+.search-tag-row{padding:8px 10px 0;display:flex;gap:6px;flex-wrap:wrap}
+.search-tag{padding:5px 12px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);font-size:var(--fs-xs);font-weight:700;color:var(--txt2);transition:all .15s}
+.search-tag:active{background:var(--pri-light);border-color:var(--pri);color:var(--pri)}
+
+/* ══════════════════════════════════════════════════════
+   GREETING
+   ══════════════════════════════════════════════════════ */
+.greeting-bar{background:linear-gradient(135deg,var(--pri-light),var(--bg2));border-bottom:1.5px solid var(--bd2);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;animation:card-in .4s ease;transition:opacity .6s ease,max-height .6s ease,padding .6s ease}
+.greeting-bar.fade-out{opacity:0;max-height:0;padding:0;overflow:hidden}
+.greeting-emoji{font-size:24px;flex-shrink:0}
+.greeting-txt{flex:1}
+.greeting-title{font-family:var(--font);font-size:var(--fs);font-weight:700;color:var(--txt)}
+.greeting-sub{font-size:var(--fs-xs);color:var(--txt2);margin-top:1px}
+
+
+
+/* ══════════════════════════════════════════════════════
+   REMINDER BANNER
+   ══════════════════════════════════════════════════════ */
+.reminder{background:linear-gradient(135deg,var(--pri-light),var(--bg2));border-bottom:1.5px solid var(--bd2);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.reminder-txt{flex:1;font-size:var(--fs-sm);color:var(--pri-dark);line-height:1.45;font-weight:600}
+.reminder-share{background:var(--pri);border:none;border-radius:20px;padding:7px 14px;font-size:var(--fs-xs);font-weight:800;color:#fff;white-space:nowrap}
+.reminder-share:active{transform:scale(.95)}
+.reminder-close{background:none;border:none;font-size:18px;color:var(--txt3);padding:4px}
+
+/* ══════════════════════════════════════════════════════
+   MAIN CONTENT
+   ══════════════════════════════════════════════════════ */
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;position:relative;scrollbar-width:thin;scrollbar-color:var(--bd2) transparent}
+.main::-webkit-scrollbar{width:3px}
+.main::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.content{padding:14px 10px 20px;display:flex;flex-direction:column;gap:14px}
+
+/* ══════════════════════════════════════════════════════
+   POST CARD
+   ══════════════════════════════════════════════════════ */
+.card{background:var(--card);border-radius:var(--r);border:1.5px solid var(--bd);overflow:visible;transition:border-color .3s;box-shadow:0 2px 10px var(--shadow2);animation:card-in .38s cubic-bezier(.34,1.1,.64,1) both;position:relative}
+.card.is-new{border-color:var(--pri2)}
+.card.pinned{border-color:var(--yellow);box-shadow:0 2px 16px rgba(245,158,11,.2)}
+.pin-banner{background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-bottom:1px solid #F59E0B;padding:5px 14px;font-size:var(--fs-xs);font-weight:800;color:#92400E;display:flex;align-items:center;gap:5px;border-radius:var(--r) var(--r) 0 0}
+.card-hdr{display:flex;align-items:center;gap:8px;padding:12px 14px 10px}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;border-width:2px;border-style:solid;flex-shrink:0;font-family:var(--font);overflow:hidden}
+.av-sm{width:28px;height:28px;font-size:11px;border-width:1.5px}
+.av-xs{width:22px;height:22px;font-size:10px;border-width:1.5px}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.cname{font-size:var(--fs);font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.ctime{font-size:var(--fs-xs);color:var(--txt3);margin-top:1px;cursor:pointer}
+.oct-tag{padding:4px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.more-btn{width:32px;height:32px;border-radius:50%;background:none;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--txt3);transition:background .2s;margin-left:auto;flex-shrink:0}
+.more-btn:active{background:var(--bg2)}
+
+/* POST VIDEO */
+.post-video-wrap{position:relative;background:#000;overflow:hidden;max-height:400px}
+.post-video{width:100%;max-height:400px;object-fit:cover;display:block;cursor:pointer}
+.video-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);font-size:52px;cursor:pointer;transition:opacity .2s}
+.video-play-btn:active{opacity:.7}
+
+/* POST IMAGE */
+.post-img-wrap{position:relative;overflow:hidden;background:var(--bg2);border-radius:0;min-height:80px}
+.post-img{width:100%;max-height:380px;object-fit:cover;cursor:pointer;display:block;opacity:0;transition:opacity .4s ease}
+.post-img.loaded{opacity:1}
+.img-blur{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .3s;background:var(--bg2)}
+.img-blur.hidden{opacity:0;pointer-events:none}
+.img-spinner{width:24px;height:24px;border:2px solid var(--bd);border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite}
+.img-overlay-btns{position:absolute;bottom:10px;right:10px;display:flex;gap:6px;opacity:0;transition:opacity .2s}
+.post-img-wrap:hover .img-overlay-btns,.post-img-wrap:focus-within .img-overlay-btns{opacity:1}
+.img-overlay-btn{background:rgba(0,0,0,.55);border:none;border-radius:var(--r2);padding:7px 12px;color:#fff;font-size:var(--fs-xs);font-weight:700;backdrop-filter:blur(4px)}
+.no-img{height:52px;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid;border-bottom:1px solid}
+.no-img-txt{font-size:var(--fs-sm);font-weight:700}
+.caption{padding:10px 14px 6px;font-size:var(--fs);line-height:1.65;color:var(--txt);font-family:var(--font)}
+.caption strong{font-weight:700}.caption em{font-style:italic}
+.mention{color:var(--pri);font-weight:700;cursor:pointer}
+
+/* AI tags */
+.ai-tags{display:flex;flex-wrap:wrap;gap:4px;padding:4px 14px 6px}
+.ai-tag{padding:3px 9px;border-radius:20px;background:var(--bg2);border:1px solid var(--bd);font-size:10px;color:var(--txt3);font-weight:600;cursor:pointer;transition:all .15s}
+.ai-tag:active{background:var(--pri-light);color:var(--pri);border-color:var(--pri)}
+.ai-tagging{padding:4px 14px 6px;font-size:10px;color:var(--txt3);display:flex;align-items:center;gap:6px}
+
+/* Seen by */
+.seen-by{padding:4px 14px 6px;font-size:10px;color:var(--txt3);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.seen-av{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--card);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:-3px;overflow:hidden}
+.seen-av img{width:100%;height:100%;object-fit:cover}
+
+/* ══════════════════════════════════════════════════════
+   REACTIONS
+   ══════════════════════════════════════════════════════ */
+.rxn-wrap{padding:8px 14px 4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rxn-pill{display:flex;align-items:center;gap:4px;padding:5px 11px;border-radius:30px;border:1.5px solid var(--bd);background:var(--bg2);font-size:var(--fs-sm);font-weight:700;color:var(--txt2);transition:transform .15s cubic-bezier(.34,1.56,.64,1),background .15s,border-color .15s;position:relative;user-select:none;will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;transform:translateZ(0)}
+.rxn-pill.mine{background:var(--pri-light);border-color:var(--pri);color:var(--pri)}
+.rxn-pill:active{transform:scale(.88) translateZ(0)}
+.rxn-pill.pop{animation:rxn-pop .3s cubic-bezier(.34,1.56,.64,1)}
+.rxn-emoji{font-size:17px;line-height:1}
+.rxn-count{font-size:var(--fs-xs);font-weight:800;min-width:12px;text-align:center}
+.rxn-who{position:fixed;bottom:auto;transform:translateX(-50%) scale(.85);background:#1A1208;color:#fff;border-radius:var(--r3);padding:6px 11px;font-size:var(--fs-xs);white-space:normal;word-break:break-word;text-align:center;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;z-index:99;box-shadow:0 4px 16px rgba(0,0,0,.4);width:max-content;max-width:200px;line-height:1.4}
+.rxn-pill:hover .rxn-who,.rxn-pill.show-who .rxn-who{opacity:1;transform:translateX(-50%) scale(1)}
+.rxn-add-row{display:flex;gap:2px;padding:0 10px 8px;flex-wrap:wrap}
+.rxn-add-btn{padding:5px 7px;font-size:20px;line-height:1;background:none;border:none;border-radius:var(--r3);transition:transform .12s,background .12s;will-change:transform;transform:translateZ(0)}
+.rxn-add-btn:active{transform:scale(.8) translateZ(0);background:var(--bg2)}
+@keyframes rxn-pop{0%{transform:scale(1) translateZ(0)}50%{transform:scale(1.3) translateZ(0)}100%{transform:scale(1) translateZ(0)}}
+
+/* ══════════════════════════════════════════════════════
+   COMMENTS
+   ══════════════════════════════════════════════════════ */
+.comments-section{border-top:1px solid var(--bd)}
+.comments-toggle{display:flex;align-items:center;gap:6px;padding:10px 14px;background:none;border:none;width:100%;text-align:left;font-size:var(--fs-sm);font-weight:700;color:var(--txt2);transition:color .15s}
+.comments-toggle:active{color:var(--pri)}
+.comments-toggle-ico{font-size:13px;transition:transform .2s}
+.comments-toggle.open .comments-toggle-ico{transform:rotate(90deg)}
+.cmt-badge{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:1px 7px;font-size:var(--fs-xs);font-weight:800;color:var(--txt2)}
+.cmt-new-dot{width:7px;height:7px;border-radius:50%;background:var(--pri);margin-left:2px;animation:pop .3s ease}
+.comments-body{display:none;padding:0 0 4px}
+.comments-body.open{display:block}
+.comment{display:flex;gap:8px;padding:8px 12px 4px;animation:cmt-in .2s ease both}
+.comment.reply{padding-left:40px}
+.comment.reply-l2{padding-left:64px}
+.comment-body{flex:1;min-width:0}
+.comment-bubble{background:var(--bg2);border-radius:0 var(--r) var(--r) var(--r);padding:9px 12px;font-size:var(--fs-sm);line-height:1.6;border:1px solid var(--bd)}
+.comment-name{font-size:var(--fs-xs);font-weight:800;color:var(--pri);margin-bottom:3px}
+.comment-txt{color:var(--txt);word-break:break-word}
+.comment-img{margin-top:7px;border-radius:var(--r2);max-height:160px;object-fit:cover;cursor:pointer}
+.comment-meta{display:flex;align-items:center;gap:8px;padding:4px 2px;flex-wrap:wrap}
+.comment-time{font-size:var(--fs-xs);color:var(--txt3)}
+.comment-action{font-size:var(--fs-xs);font-weight:700;color:var(--txt3);background:none;border:none;padding:2px 4px;border-radius:4px;transition:color .15s}
+.comment-action:active{color:var(--pri)}
+.comment-rxn-row{display:flex;gap:2px;align-items:center;margin-left:auto}
+.comment-rxn{font-size:13px;padding:2px 3px;background:none;border:none;border-radius:4px;transition:transform .12s;will-change:transform;transform:translateZ(0)}
+.comment-rxn:active{transform:scale(.75) translateZ(0)}
+.cmt-img-preview{position:relative;display:inline-block;margin:4px 12px}
+.cmt-img-preview img{width:80px;height:80px;object-fit:cover;border-radius:var(--r2);border:2px solid var(--bd)}
+.cmt-img-rm{position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:11px;display:flex;align-items:center;justify-content:center}
+.load-more-cmt{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:none;border:none;width:100%;font-size:var(--fs-sm);font-weight:700;color:var(--pri);border-top:1px solid var(--bd);transition:background .15s}
+.load-more-cmt:active{background:var(--pri-light)}
+.comment-input-wrap{display:flex;gap:8px;align-items:flex-end;padding:8px 10px 10px;border-top:1px solid var(--bd);background:var(--card)}
+.comment-input-inner{flex:1;position:relative}
+.comment-input{width:100%;background:var(--bg2);border:1.5px solid var(--bd);border-radius:22px;padding:9px 40px 9px 14px;font-size:var(--fs-sm);color:var(--txt);outline:none;resize:none;max-height:80px;line-height:1.4;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.comment-input:focus{border-color:var(--pri)}
+.comment-img-btn{position:absolute;right:8px;bottom:8px;background:none;border:none;font-size:18px;padding:2px;opacity:.5}
+.comment-img-btn:active{opacity:1}
+.comment-send{width:38px;height:38px;border-radius:50%;background:var(--pri);border:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0;transition:transform .15s,opacity .2s;opacity:.4}
+.comment-send.active{opacity:1}
+.comment-send:active{transform:scale(.9)}
+.replying-to{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--pri-light);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);font-size:var(--fs-xs);color:var(--pri);font-weight:700}
+.replying-to button{background:none;border:none;font-size:14px;color:var(--pri);padding:0;margin-left:auto}
+
+/* ══════════════════════════════════════════════════════
+   CONTEXT MENU
+   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   CONTEXT MENU (Base / Default Android Theme)
+   ══════════════════════════════════════════════════════ */
+.ctx-menu {
+  position: absolute;
+  right: 10px;
+  top: 48px;
+  background: var(--card);
+  border: 1.5px solid var(--bd);
+  border-radius: var(--r2);
+  box-shadow: 0 8px 28px var(--shadow);
+  z-index: 30;
+  min-width: 175px;
+  overflow: hidden;
+  animation: ctx-in .15s ease;
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--txt);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background .15s;
+}
+
+.ctx-item:active {
+  background: var(--bg2);
+}
+
+.ctx-item.danger {
+  color: var(--red);
+}
+
+.ctx-item-ico {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   LIQUID GLASS THEME (iOS Exclusive Overrides)
+   ══════════════════════════════════════════════════════ */
+html[data-platform="ios"] .ctx-menu {
+  /* Liquid Glass Translucency & Saturation Boost */
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(20px) saturate(210%);
+  backdrop-filter: blur(20px) saturate(210%);
+  
+  /* Premium Apple Sheet Geometry */
+  border-radius: 14px; 
+  border: 0.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08), 
+              0 1px 1px rgba(0, 0, 0, 0.04);
+  
+  /* Scale-Fade Presentation Curve & Reset */
+  animation: ios-ctx-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+  padding: 4px;
+}
+
+/* iOS Dark Mode Liquid Glass Overrides */
+@media (prefers-color-scheme: dark) {
+  html[data-platform="ios"] .ctx-menu {
+    background: rgba(25, 25, 27, 0.55);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  }
+}
+
+html[data-platform="ios"] .ctx-item {
+  padding: 10px 14px;
+  font-size: 16px; /* Native Apple typography human interface guidelines */
+  font-weight: 400; 
+  letter-spacing: -0.3px;
+  border-radius: 10px; /* Internal nesting layout curvature */
+  margin-bottom: 1px;
+  transition: background 0.1s ease;
+}
+
+html[data-platform="ios"] .ctx-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Apple System Dynamic Highlight States */
+html[data-platform="ios"] .ctx-item:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-platform="ios"] .ctx-item:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Native iOS Destructive Action Red */
+html[data-platform="ios"] .ctx-item.danger {
+  color: #ff3b30; 
+}
+
+html[data-platform="ios"] .ctx-item-ico {
+  font-size: 17px;
+  opacity: 0.85;
+}
+
+/* iOS Spring-Like Micro Animation */
+@keyframes ios-ctx-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════
+   BOTTOM NAV
+   ══════════════════════════════════════════════════════ */
+html[data-platform="ios"] .nav-ico::before{display:none}
+.nav{
+  position:fixed;
+  bottom:calc(24px + env(safe-area-inset-bottom, 0px));
+  left:0;
+  right:0;
+  margin-inline:auto;          /* centers via auto margins, so no transform is needed */
+  width:min(90%, 486px);       /* 90% of the screen, capped at 90% of #app's 540px */
+  box-sizing:border-box;
+  min-height:56px;
+  padding:6px;                 /* the old 20px side padding ate into the usable width */
+  display:flex;
+  align-items:center;
+  gap:0;                       /* with equal tracks, a gap just makes the slide offsets uneven */
+  border-radius:100px;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(15px) saturate(1.7);
+  backdrop-filter:blur(15px) saturate(1.7);
+  box-shadow:0 4px 30px rgba(0,0,0,.03), inset 0 1px 1px rgba(255,255,255,.3);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  z-index:40;
+  transition:all .35s cubic-bezier(.4,0,.2,1);
+}
+
+.nav-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  background:none;
+  border:none;
+  padding:4px 8px;
+  position:relative;
+  flex:1 1 0;                  /* basis 0: every button gets an identical share */
+  min-width:0;                 /* otherwise a long label can stretch its own tab */
+  transition:transform .15s;
+  overflow:hidden;
+  border-radius:999px;
+}
+
+/* ── iOS: sliding tab indicator ─────────────────────────────────────
+   A single pill that moves under whichever nav button is active,
+   positioned via JS (positionNavSlide in app.js) using measured pixel
+   offsets — not CSS-only, since button widths vary with content. Has an
+   explicit default width so it's never a stray 0px or full-width box
+   before JS finishes its first measurement. */
+.nav-slide{
+  position:absolute;
+  top:0;left:0;
+  height:100%;
+  width:56px;
+  background-color:rgba(0,0,0,0.05);
+  border-radius:999px;
+  opacity:0;
+  pointer-events:none;
+  will-change:transform,width;
+  transition:transform .35s cubic-bezier(0.16,1,0.3,1), width .35s cubic-bezier(0.16,1,0.3,1), opacity .4s ease;
+  z-index:1;
+}
+[data-theme="midnight"] .nav-slide{background-color:rgba(255,255,255,0.08)}
+.nav-btn{position:relative;z-index:2}
+
+/* ── Android: Material 3 nav ripple ─────────────────────────────────
+   navRipple() in app.js spawns the ripple inside .nav-ico (the pill),
+   which clips it with overflow:hidden. It expands from the touch point
+   until it fills the pill, fades, then removes itself. */
+.nav-ripple{
+  --ripple-dur:.8s;                      /* the one knob: total ripple time */
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  background:color-mix(in srgb,var(--pri) 35%,transparent);
+  transform:scale(0);
+  opacity:1;
+  will-change:transform,opacity;
+  animation:
+    nav-ripple-grow var(--ripple-dur) cubic-bezier(.2,0,0,1) forwards,
+    nav-ripple-fade calc(var(--ripple-dur) * .6) ease-out calc(var(--ripple-dur) * .4) forwards;
+  z-index:0;
+}
+@keyframes nav-ripple-grow{
+  from{transform:scale(0)}
+  to{transform:scale(1)}
+}
+@keyframes nav-ripple-fade{
+  from{opacity:1}
+  to{opacity:0}
+}
+
+.nav-btn{overflow:visible;padding:4px 8px}
+
+.nav-svg{
+  position:relative;
+  z-index:1;
+  width:24px;
+  height:24px;
+  display:block;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.nav-ico.active .nav-svg{transform:scale(1.1)}
+
+/* The pill: bounds the ripple and hosts the M3 active indicator */
+.nav-ico{
+  position:relative;
+  width:48px;
+  height:28px;
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+}
+
+/* M3 active indicator: grows horizontally out of the centre.
+   14px matches .nav-ico's border-radius (28px tall capsule). */
+.nav-ico::before{
+  --ind-dur:.45s;                       /* the knob: grow time */
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:var(--pri-light);
+  clip-path:inset(0 50% round 14px);    /* zero-width sliver in the middle */
+  opacity:0;
+  /* exit: shrinks back to the centre (M3 emphasized accelerate) */
+  transition:clip-path .25s cubic-bezier(.3,0,.8,.15), opacity .2s ease;
+  z-index:0;
+}
+.nav-ico.active::before{
+  clip-path:inset(0 round 14px);        /* full pill */
+  opacity:1;
+}
+/* Entrance: plays on class toggle and on insertion. .grow is kept as a hook. */
+.nav-ico.active::before,
+.nav-ico.grow::before{
+  animation:nav-pill-grow var(--ind-dur) cubic-bezier(.05,.7,.1,1);  /* M3 emphasized decelerate */
+}
+@keyframes nav-pill-grow{
+  from{clip-path:inset(0 50% round 14px);opacity:0}
+  to{clip-path:inset(0 round 14px);opacity:1}
+}
+
+.nav-lbl{
+  font-size:10px;
+  color:var(--txt3);
+  font-weight:700;
+  transition:color .2s;
+}
+.nav-lbl.active{color:var(--pri)}
+   
+
+.fab{
+  position:relative;
+  overflow:hidden;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  background:var(--pri);
+  border:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:26px;
+  color:#fff;
+  box-shadow:0 4px 18px var(--shadow),0 0 0 4px var(--pri-light);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+  flex-shrink:0;
+}
+.fab .nav-ripple{background:rgba(255,255,255,.4)}
+.fab:active{transform:scale(.92)}
+
+.unread-badge{
+  position:absolute;
+  top:0;
+  right:2px;
+  background:var(--red);
+  color:#fff;
+  border-radius:10px;
+  padding:1px 5px;
+  font-size:9px;
+  font-weight:800;
+  border:2px solid var(--card);
+  animation:pop .3s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* ══════════════════════════════════════════════════════
+   FULLSCREEN IMAGE
+   ══════════════════════════════════════════════════════ */
+.fullscreen{position:absolute;inset:0;background:rgba(0,0,0,.97);z-index:80;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.fullscreen.show{display:flex}
+.fs-top{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:16px}
+.fs-close{background:rgba(255,255,255,.15);border:none;border-radius:var(--r2);padding:8px 16px;color:#fff;font-size:var(--fs-sm);font-weight:700}
+.fs-save{background:var(--pri);border:none;border-radius:var(--r2);padding:8px 16px;color:#fff;font-size:var(--fs-sm);font-weight:700}
+.fs-img{max-width:100%;max-height:72vh;border-radius:var(--r);object-fit:contain}
+.fs-meta{color:rgba(255,255,255,.85);font-family:var(--font);font-size:var(--fs-lg);font-weight:700;margin-top:16px;text-align:center}
+.fs-cap{color:rgba(255,255,255,.55);font-size:var(--fs-sm);margin-top:6px;text-align:center;line-height:1.6;max-width:340px}
+
+/* ══════════════════════════════════════════════════════
+   ADD POST
+   Replace the whole ADD POST block (.add-wrap … .submit-btn:disabled),
+   including any nested "&:active" M3 version, with this file.
+   Same class names as before, no markup changes. No dependency on
+   --pri-rgb or --m3-* variables: everything derives from your theme vars.
+   · no data-platform → your original look (section 1)
+   · ios              → bouncy liquid glass (section 2)
+   · android          → Material You / M3 (section 3)
+   Keep the .draft-media-* base rules from the MULTI-MEDIA block; the
+   platform sections below only restyle them.
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. BASE (original rules, unchanged) ──────────────── */
+.add-wrap{padding:16px 16px calc(30px + var(--nav-h))}
+.page-ttl{font-family:var(--font);font-size:var(--fs-xl);font-weight:700;margin-bottom:18px;color:var(--txt)}
+.posting-as{background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);padding:13px 15px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.pa-lbl{font-size:var(--fs-xs);color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.pa-name{font-size:var(--fs-lg);font-weight:800;color:var(--txt);margin-top:2px}
+.change-btn{border:1.5px solid var(--bd2);border-radius:var(--r2);padding:7px 13px;font-size:var(--fs-sm);color:var(--txt2);background:var(--card);font-weight:700}
+.change-btn:active{border-color:var(--pri)}
+.photo-row{display:flex;gap:10px;margin-bottom:16px}
+.photo-btn{flex:1;background:var(--bg2);border:1.5px dashed var(--bd2);border-radius:var(--r);padding:22px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;transition:border-color .2s,background .2s}
+.photo-btn:active{border-color:var(--pri);background:var(--pri-light)}
+.photo-btn-ico{font-size:28px}
+.photo-btn-txt{font-size:var(--fs-sm);font-weight:800;color:var(--txt2)}
+.draft-wrap{margin-bottom:14px;border-radius:var(--r);overflow:hidden;position:relative}
+.draft-img{width:100%;max-height:240px;object-fit:cover}
+.remove-img{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;border-radius:var(--r2);padding:6px 12px;color:#fff;font-size:var(--fs-xs);font-weight:700}
+.oct-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none}.oct-row::-webkit-scrollbar{display:none}
+.oct-btn{padding:8px 14px;border-radius:30px;border:1.5px solid var(--bd);background:transparent;font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;font-weight:700;transition:all .15s}
+.oct-btn.on{border-color:var(--pri);background:var(--pri-light);color:var(--pri)}
+.oct-btn:active{transform:scale(.95)}
+.field-lbl{font-size:var(--fs-xs);font-weight:800;color:var(--txt2);display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
+.field{width:100%;background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:14px;font-size:var(--fs);color:var(--txt);outline:none;margin-bottom:16px;-webkit-appearance:none;appearance:none;transition:border-color .2s}
+.field:focus{border-color:var(--pri)}
+textarea.field{resize:none;min-height:90px;line-height:1.6}
+.rich-toolbar{display:flex;gap:6px;padding:0 0 8px;flex-wrap:wrap}
+.rich-btn{padding:6px 11px;border-radius:var(--r3);border:1.5px solid var(--bd);background:var(--bg2);font-size:var(--fs-sm);color:var(--txt2);font-weight:700;transition:all .15s}
+.rich-btn:active{background:var(--pri-light);border-color:var(--pri);color:var(--pri)}
+.char-count{font-size:var(--fs-xs);color:var(--txt3);text-align:right;margin-top:-12px;margin-bottom:10px}
+.char-count.warn{color:var(--yellow)}.char-count.over{color:var(--red)}
+.submit-btn{background:var(--pri);border:none;border-radius:var(--r);padding:16px;font-size:var(--fs-lg);font-weight:800;color:#fff;width:100%;transition:transform .15s,opacity .2s;box-shadow:0 4px 16px var(--shadow);font-family:var(--font)}
+.submit-btn:not(:disabled):active{transform:scale(.98)}
+.submit-btn:disabled{opacity:.35}
+
+/* ── shared keyframes ─────────────────────────────────── */
+@keyframes add-spring-in{
+  from{opacity:0;transform:translateY(22px) scale(.92)}
+  to{opacity:1;transform:none}
+}
+@keyframes add-rise{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:none}
+}
+@keyframes add-pop{
+  0%{transform:scale(.82)}
+  55%{transform:scale(1.08)}
+  100%{transform:scale(1)}
+}
+
+
+/* ── 2. iOS · BOUNCY LIQUID GLASS ─────────────────────── */
+
+/* Tokens live on the container so they resolve against the active [data-theme].
+   --on-tone mixes the accent toward the text colour, so tinted-chip text stays
+   readable in light and dark themes alike. */
+html[data-platform="ios"] .add-wrap{
+  --g-fill:color-mix(in srgb,var(--card) 62%,transparent);
+  --g-edge:color-mix(in srgb,var(--txt) 13%,transparent);
+  --g-lit:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(0,0,0,.04);
+  --g-blur:blur(20px) saturate(1.8);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --on-tone:color-mix(in srgb,var(--pri) 55%,var(--txt));
+  --btn-fill:linear-gradient(to bottom,color-mix(in srgb,var(--pri) 70%,var(--pri-dark)),var(--pri-dark));
+
+  background:
+    radial-gradient(60% 24% at 10% 0%,color-mix(in srgb,var(--pri) 20%,transparent),transparent 70%),
+    radial-gradient(50% 22% at 100% 40%,color-mix(in srgb,var(--pri2) 26%,transparent),transparent 70%),
+    radial-gradient(60% 26% at 0% 85%,color-mix(in srgb,var(--pri) 12%,transparent),transparent 70%);
+}
+
+/* Staggered spring-in. Replays only if JS re-creates the node. */
+html[data-platform="ios"] .add-wrap > *{animation:add-spring-in .6s var(--spring) both}
+html[data-platform="ios"] .add-wrap > :nth-child(1){animation-delay:.03s}
+html[data-platform="ios"] .add-wrap > :nth-child(2){animation-delay:.08s}
+html[data-platform="ios"] .add-wrap > :nth-child(3){animation-delay:.13s}
+html[data-platform="ios"] .add-wrap > :nth-child(4){animation-delay:.18s}
+html[data-platform="ios"] .add-wrap > :nth-child(5){animation-delay:.23s}
+html[data-platform="ios"] .add-wrap > :nth-child(6){animation-delay:.28s}
+html[data-platform="ios"] .add-wrap > :nth-child(7){animation-delay:.33s}
+html[data-platform="ios"] .add-wrap > :nth-child(n+8){animation-delay:.38s}
+
+html[data-platform="ios"] .page-ttl{
+  font-size:32px;
+  font-weight:800;
+  letter-spacing:-.025em;
+  margin-bottom:20px;
+}
+
+/* Posting as */
+html[data-platform="ios"] .posting-as{
+  padding:14px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:28px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 8px 22px var(--shadow2);
+}
+html[data-platform="ios"] .pa-lbl{color:var(--txt2);font-weight:700}
+html[data-platform="ios"] .pa-name{font-weight:800;letter-spacing:-.01em}
+html[data-platform="ios"] .change-btn{
+  padding:9px 16px;
+  border:1px solid var(--g-edge);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--card) 80%,transparent);
+  color:var(--on-tone);
+  font-weight:800;
+  box-shadow:var(--g-lit);
+  transition:transform .35s var(--spring),background .2s;
+}
+html[data-platform="ios"] .change-btn:active{transform:scale(.9);border-color:var(--g-edge);background:var(--pri-light)}
+
+/* Photo / video buttons */
+html[data-platform="ios"] .photo-row{gap:12px}
+html[data-platform="ios"] .photo-btn{
+  padding:24px 10px;
+  border:1.5px dashed color-mix(in srgb,var(--pri) 55%,transparent);
+  border-radius:28px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit);
+  transition:transform .4s var(--spring),background .2s,border-color .2s;
+}
+html[data-platform="ios"] .photo-btn:active{
+  transform:scale(.92);
+  border-color:var(--pri);
+  background:color-mix(in srgb,var(--pri) 12%,var(--card));
+}
+html[data-platform="ios"] .photo-btn-ico{font-size:30px;transition:transform .4s var(--spring)}
+html[data-platform="ios"] .photo-btn:active .photo-btn-ico{transform:scale(1.25) rotate(-8deg)}
+html[data-platform="ios"] .photo-btn-txt{color:var(--txt)}
+
+/* Draft preview (single image) */
+html[data-platform="ios"] .draft-wrap{
+  border:1px solid var(--g-edge);
+  border-radius:30px;
+  box-shadow:0 14px 32px var(--shadow2);
+}
+html[data-platform="ios"] .remove-img{
+  top:10px;right:10px;
+  padding:8px 14px;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:999px;
+  background:rgba(14,12,20,.62);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  color:#fff;
+  font-weight:800;
+  transition:transform .3s var(--spring);
+}
+html[data-platform="ios"] .remove-img:active{transform:scale(.88)}
+
+/* Draft strip (multi-media) */
+html[data-platform="ios"] .draft-media-item{
+  border:1px solid var(--g-edge);
+  border-radius:20px;
+  box-shadow:0 6px 16px var(--shadow2);
+  animation:add-pop .45s var(--spring) both;
+}
+html[data-platform="ios"] .draft-media-rm{
+  width:24px;height:24px;
+  background:rgba(14,12,20,.7);
+  border:1px solid rgba(255,255,255,.3);
+  transition:transform .3s var(--spring);
+}
+html[data-platform="ios"] .draft-media-rm:active{transform:scale(.8)}
+html[data-platform="ios"] .draft-media-badge{background:rgba(14,12,20,.7);font-weight:700}
+html[data-platform="ios"] .draft-media-count{color:var(--txt2)}
+
+/* Category chips */
+html[data-platform="ios"] .oct-row{gap:8px;padding:2px 2px 8px}
+html[data-platform="ios"] .oct-btn{
+  padding:9px 16px;
+  border:1px solid var(--g-edge);
+  background:var(--g-fill);
+  color:var(--txt2);
+  font-weight:700;
+  box-shadow:var(--g-lit);
+  transition:transform .35s var(--spring),background .2s,color .2s,box-shadow .25s;
+}
+html[data-platform="ios"] .oct-btn:active{transform:scale(.88)}
+html[data-platform="ios"] .oct-btn.on{
+  border-color:transparent;
+  background:var(--btn-fill);
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px color-mix(in srgb,var(--pri) 40%,transparent);
+  animation:add-pop .5s var(--spring);
+}
+
+/* Fields */
+html[data-platform="ios"] .field-lbl{color:var(--txt2);font-weight:800;margin-left:4px}
+html[data-platform="ios"] .field{
+  font-size:16px;                       /* Safari zooms the page on focus below 16px */
+  padding:15px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:22px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 0 0 0 transparent;
+  transition:border-color .2s,box-shadow .45s var(--spring);
+}
+html[data-platform="ios"] .field::placeholder{color:var(--txt2);opacity:.8}
+html[data-platform="ios"] .field:focus{
+  border-color:var(--pri);
+  box-shadow:var(--g-lit),0 0 0 4px color-mix(in srgb,var(--pri) 24%,transparent);
+}
+
+/* Rich-text toolbar */
+html[data-platform="ios"] .rich-toolbar{gap:8px;padding-bottom:10px}
+html[data-platform="ios"] .rich-btn{
+  min-width:42px;
+  padding:8px 13px;
+  border:1px solid var(--g-edge);
+  border-radius:14px;
+  background:var(--g-fill);
+  color:var(--txt);
+  font-weight:800;
+  box-shadow:var(--g-lit);
+  transition:transform .3s var(--spring),background .2s,color .2s;
+}
+html[data-platform="ios"] .rich-btn:active{
+  transform:scale(.85);
+  background:color-mix(in srgb,var(--pri) 16%,var(--card));
+  border-color:var(--g-edge);
+  color:var(--on-tone);
+}
+
+/* Counter: readable at every state */
+html[data-platform="ios"] .char-count{color:var(--txt2);font-weight:700}
+html[data-platform="ios"] .char-count.warn{color:color-mix(in srgb,var(--yellow) 55%,var(--txt))}
+html[data-platform="ios"] .char-count.over{color:color-mix(in srgb,var(--red) 75%,var(--txt))}
+
+/* Submit: glossy capsule that springs on press */
+html[data-platform="ios"] .submit-btn{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:30px;
+  background:var(--btn-fill);
+  color:#fff;
+  letter-spacing:.2px;
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    inset 0 -8px 18px rgba(0,0,0,.14),
+    0 14px 30px color-mix(in srgb,var(--pri) 38%,transparent);
+  transition:transform .4s var(--spring),box-shadow .3s;
+}
+html[data-platform="ios"] .submit-btn::before{     /* specular sheen */
+  content:'';
+  position:absolute;inset:0 0 50% 0;
+  border-radius:inherit;
+  background:linear-gradient(to bottom,rgba(255,255,255,.3),rgba(255,255,255,0));
+  pointer-events:none;
+  z-index:-1;
+}
+html[data-platform="ios"] .submit-btn:not(:disabled):active{transform:scale(.94)}
+html[data-platform="ios"] .submit-btn:disabled{
+  opacity:1;
+  border-color:var(--g-edge);
+  background:color-mix(in srgb,var(--txt) 9%,var(--card));
+  color:var(--txt2);
+  text-shadow:none;
+  box-shadow:var(--g-lit);
+}
+html[data-platform="ios"] .submit-btn:disabled::before{display:none}
+
+
+/* ── 3. ANDROID · MATERIAL YOU (M3) ───────────────────── */
+
+html[data-platform="android"] .add-wrap{
+  --m-c1:color-mix(in srgb,var(--pri) 8%,var(--card));
+  --m-c2:color-mix(in srgb,var(--pri) 14%,var(--card));
+  --m-c3:color-mix(in srgb,var(--pri) 24%,var(--card));
+  --m-state:color-mix(in srgb,var(--txt) 8%,transparent);       /* pressed state layer */
+  --m-outline:color-mix(in srgb,var(--txt) 42%,transparent);    /* ≈3:1 against the surface */
+  --on-tone:color-mix(in srgb,var(--pri) 55%,var(--txt));       /* readable text on tonal fills */
+  --m-ease:cubic-bezier(.05,.7,.1,1);                            /* emphasized decelerate */
+  --m-std:cubic-bezier(.2,0,0,1);                                /* emphasized */
+}
+
+html[data-platform="android"] .add-wrap > *{animation:add-rise .5s var(--m-ease) both}
+html[data-platform="android"] .add-wrap > :nth-child(1){animation-delay:.02s}
+html[data-platform="android"] .add-wrap > :nth-child(2){animation-delay:.06s}
+html[data-platform="android"] .add-wrap > :nth-child(3){animation-delay:.10s}
+html[data-platform="android"] .add-wrap > :nth-child(4){animation-delay:.14s}
+html[data-platform="android"] .add-wrap > :nth-child(5){animation-delay:.18s}
+html[data-platform="android"] .add-wrap > :nth-child(6){animation-delay:.22s}
+html[data-platform="android"] .add-wrap > :nth-child(7){animation-delay:.26s}
+html[data-platform="android"] .add-wrap > :nth-child(n+8){animation-delay:.30s}
+
+html[data-platform="android"] .page-ttl{
+  font-size:30px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  margin-bottom:20px;
+}
+
+/* Posting as: tonal container */
+html[data-platform="android"] .posting-as{
+  padding:16px 20px;
+  border:0;
+  border-radius:28px;
+  background:var(--m-c2);
+}
+html[data-platform="android"] .pa-lbl{
+  color:var(--txt2);
+  font-weight:600;
+  text-transform:none;
+  letter-spacing:.1px;
+  font-size:var(--fs-sm);
+}
+html[data-platform="android"] .pa-name{font-weight:600;margin-top:2px}
+html[data-platform="android"] .change-btn{
+  padding:9px 18px;
+  border:1px solid var(--m-outline);
+  border-radius:999px;
+  background:transparent;
+  color:var(--on-tone);
+  font-weight:600;
+  transition:background .2s,box-shadow .2s;
+}
+html[data-platform="android"] .change-btn:active{
+  border-color:var(--m-outline);
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+
+/* Photo / video buttons */
+html[data-platform="android"] .photo-row{gap:8px}
+html[data-platform="android"] .photo-btn{
+  padding:24px 12px;
+  border:1.5px dashed var(--m-outline);
+  border-radius:24px;
+  background:var(--m-c1);
+  transition:border-radius .25s var(--m-std),box-shadow .2s;
+}
+html[data-platform="android"] .photo-btn:active{
+  border-color:var(--pri);
+  background:var(--m-c1);
+  border-radius:12px;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .photo-btn-ico{font-size:26px}
+html[data-platform="android"] .photo-btn-txt{color:var(--txt);font-weight:600}
+
+/* Draft preview */
+html[data-platform="android"] .draft-wrap{border-radius:24px}
+html[data-platform="android"] .remove-img{
+  top:12px;right:12px;
+  padding:8px 16px;
+  border-radius:999px;
+  background:rgba(20,18,24,.72);
+  color:#fff;
+  font-weight:600;
+  transition:box-shadow .2s;
+}
+html[data-platform="android"] .remove-img:active{box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.16)}
+
+/* Draft strip (multi-media) */
+html[data-platform="android"] .draft-media-item{
+  border:1px solid var(--m-outline);
+  border-radius:16px;
+  animation:add-rise .35s var(--m-ease) both;
+}
+html[data-platform="android"] .draft-media-rm{
+  width:24px;height:24px;
+  background:rgba(20,18,24,.78);
+}
+html[data-platform="android"] .draft-media-badge{background:rgba(20,18,24,.78);font-weight:600}
+html[data-platform="android"] .draft-media-count{color:var(--txt2)}
+
+/* Category chips: M3 filter chips with a check when selected */
+html[data-platform="android"] .oct-row{gap:8px;padding:2px 2px 8px}
+html[data-platform="android"] .oct-btn{
+  display:inline-flex;
+  align-items:center;
+  padding:8px 16px;
+  border:1px solid var(--m-outline);
+  border-radius:10px;
+  background:transparent;
+  color:var(--txt);
+  font-weight:600;
+  transition:background .2s,box-shadow .2s,border-radius .25s var(--m-std);
+}
+html[data-platform="android"] .oct-btn:active{
+  transform:none;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .oct-btn.on{
+  border-color:transparent;
+  background:var(--m-c3);
+  color:var(--on-tone);
+}
+html[data-platform="android"] .oct-btn.on::before{
+  content:'✓';
+  margin-right:6px;
+  font-weight:800;
+}
+
+/* Fields: outlined, 2px accent on focus without shifting layout */
+html[data-platform="android"] .field-lbl{
+  color:var(--txt2);
+  font-weight:600;
+  text-transform:none;
+  letter-spacing:.1px;
+  font-size:var(--fs-sm);
+}
+html[data-platform="android"] .field{
+  padding:16px 18px;
+  border:1px solid var(--m-outline);
+  border-radius:16px;
+  background:var(--card);
+  transition:border-color .2s,box-shadow .2s;
+}
+html[data-platform="android"] .field::placeholder{color:var(--txt2);opacity:.85}
+html[data-platform="android"] .field:focus{
+  border-color:var(--pri);
+  box-shadow:inset 0 0 0 1px var(--pri);
+}
+
+/* Rich-text toolbar: tonal icon buttons that morph on press */
+html[data-platform="android"] .rich-toolbar{gap:8px;padding-bottom:10px}
+html[data-platform="android"] .rich-btn{
+  min-width:42px;
+  padding:9px 14px;
+  border:0;
+  border-radius:14px;
+  background:var(--m-c2);
+  color:var(--on-tone);
+  font-weight:700;
+  transition:border-radius .25s var(--m-std),box-shadow .2s;
+}
+html[data-platform="android"] .rich-btn:active{
+  border-radius:21px;
+  background:var(--m-c2);
+  color:var(--on-tone);
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+
+html[data-platform="android"] .char-count{color:var(--txt2);font-weight:600}
+html[data-platform="android"] .char-count.warn{color:color-mix(in srgb,var(--yellow) 55%,var(--txt))}
+html[data-platform="android"] .char-count.over{color:color-mix(in srgb,var(--red) 75%,var(--txt))}
+
+/* Submit: M3 filled button on the darker accent for AA contrast with white text */
+html[data-platform="android"] .submit-btn{
+  padding:18px;
+  border-radius:28px;
+  background:var(--pri-dark);
+  color:#fff;
+  font-weight:600;
+  letter-spacing:.1px;
+  box-shadow:0 1px 3px 1px rgba(0,0,0,.15),0 1px 2px rgba(0,0,0,.3);
+  transition:transform .3s var(--m-std),border-radius .3s var(--m-std),box-shadow .3s var(--m-std);
+}
+@media (hover:hover){
+  html[data-platform="android"] .submit-btn:not(:disabled):hover{
+    box-shadow:0 2px 6px 2px rgba(0,0,0,.15),0 1px 2px rgba(0,0,0,.3);
+  }
+}
+html[data-platform="android"] .submit-btn:not(:disabled):active{
+  transform:scale(.97);
+  border-radius:18px;
+  background-image:linear-gradient(rgba(255,255,255,.14),rgba(255,255,255,.14));
+  box-shadow:0 1px 2px rgba(0,0,0,.3);
+}
+html[data-platform="android"] .submit-btn:disabled{
+  opacity:1;
+  background:color-mix(in srgb,var(--txt) 10%,var(--card));
+  color:var(--txt2);
+  box-shadow:none;
+}
+
+/* ══════════════════════════════════════════════════════
+   PROFILE PAGE
+   ══════════════════════════════════════════════════════ */
+.profile-wrap{padding:0 0 calc(20px + var(--nav-h))}
+.profile-hero{position:relative;background:linear-gradient(160deg,var(--pri),var(--pri-dark));padding:40px 20px 60px;text-align:center}
+.profile-hero-bg{position:absolute;inset:0;opacity:.08;background:radial-gradient(circle at 70% 30%,#fff 0%,transparent 60%)}
+.profile-av-wrap{position:relative;display:inline-block;margin-bottom:12px;cursor:pointer}
+.profile-av{width:88px;height:88px;border-radius:50%;border:3px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;font-family:var(--font);overflow:hidden;margin:0 auto}
+.profile-av img{width:100%;height:100%;object-fit:cover}
+.profile-av-edit{position:absolute;bottom:2px;right:2px;width:26px;height:26px;background:var(--card);border-radius:50%;border:2px solid var(--pri);display:flex;align-items:center;justify-content:center;font-size:12px}
+.profile-name{font-family:var(--font);font-size:22px;font-weight:700;color:#fff;margin-bottom:3px}
+.profile-bio{font-size:var(--fs-sm);color:rgba(255,255,255,.7);margin-bottom:8px}
+.profile-badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.profile-badge{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:var(--fs-xs);font-weight:700;color:#fff}
+.profile-stats-bar{display:flex;background:var(--card);border-bottom:1.5px solid var(--bd);margin-top:-24px;border-radius:var(--r) var(--r) 0 0;position:relative;z-index:1;box-shadow:0 -4px 20px rgba(0,0,0,.1)}
+.profile-stat{flex:1;text-align:center;padding:16px 8px}
+.profile-stat-n{font-family:var(--font);font-size:20px;font-weight:700;color:var(--pri)}
+.profile-stat-l{font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.profile-stat+.profile-stat{border-left:1px solid var(--bd)}
+.profile-action-row{display:flex;gap:10px;padding:14px 16px}
+.profile-action-btn{flex:1;padding:12px;border-radius:var(--r2);border:1.5px solid var(--bd);background:var(--card);font-size:var(--fs-sm);font-weight:800;color:var(--txt);display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 2px 8px var(--shadow2)}
+.profile-action-btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;box-shadow:0 4px 14px var(--shadow)}
+.profile-action-btn:active{transform:scale(.96)}
+.profile-section{padding:0 16px 12px}
+.profile-section-title{font-family:var(--font);font-size:var(--fs);font-weight:700;color:var(--txt);margin-bottom:12px;padding-top:16px}
+.profile-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.profile-gallery-img{aspect-ratio:1;object-fit:cover;cursor:pointer;border-radius:4px;transition:opacity .2s}
+.profile-gallery-img:active{opacity:.8}
+.profile-gallery-empty{aspect-ratio:1;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.profile-edit-wrap{padding:16px 16px calc(30px + var(--nav-h))}
+.color-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;padding:12px 0;margin-bottom:8px}
+.color-swatch{width:100%;aspect-ratio:1;border-radius:50%;cursor:pointer;transition:transform .2s;border:3px solid transparent}
+.color-swatch.active{border-color:var(--pri);transform:scale(1.18)}
+.color-swatch:active{transform:scale(.9)}
+.profile-warn{background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:var(--r2);padding:10px 14px;font-size:var(--fs-sm);color:#92400E;margin-bottom:14px;line-height:1.5}
+
+/* ══════════════════════════════════════════════════════
+   DM / CHAT
+   ══════════════════════════════════════════════════════ */
+
+
+/* ══ CHAT · iOS · Liquid Glass ══ */
+/* Tokens live on the chat containers, not on html: var() inside a custom property
+   is resolved where it is declared, so on html they would ignore [data-theme] set below it. */
+html[data-platform="ios"] :is(.chat-list,.chat-wrap,.chat-tabs){
+  --lg-fill:color-mix(in srgb,var(--card) 50%,transparent);
+  --lg-edge:color-mix(in srgb,var(--txt) 10%,transparent);
+  --lg-lit:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.04);
+  --lg-blur:blur(22px) saturate(1.9);
+}
+
+/* Something soft behind the glass to refract */
+html[data-platform="ios"] .chat-wrap{
+  background:
+    radial-gradient(120% 55% at 10% 0%,color-mix(in srgb,var(--pri) 16%,transparent),transparent 65%),
+    radial-gradient(100% 50% at 100% 100%,color-mix(in srgb,var(--pri2) 20%,transparent),transparent 65%);
+}
+
+/* Header: floating glass bar */
+html[data-platform="ios"] .chat-hdr{
+  margin:8px 10px 6px;
+  border:1px solid var(--lg-edge);border-radius:28px;
+  background:var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+  box-shadow:0 8px 28px rgba(0,0,0,.08),var(--lg-lit);
+}
+html[data-platform="ios"] .chat-call-btn{
+  background:var(--lg-fill);border:1px solid var(--lg-edge);box-shadow:var(--lg-lit);
+  -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);
+}
+
+/* Bubbles: tinted glass, no blur (see notes) */
+html[data-platform="ios"] .msg-bubble{border-radius:22px}
+html[data-platform="ios"] .msg-row:not(.own) .msg-bubble{
+  background:var(--lg-fill);border:1px solid var(--lg-edge);
+  border-bottom-left-radius:6px;box-shadow:var(--lg-lit);
+}
+html[data-platform="ios"] .msg-row.own .msg-bubble{
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri));
+  border-bottom-right-radius:6px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 3px 10px color-mix(in srgb,var(--pri) 28%,transparent);
+}
+
+/* Date label + typing: glass pills */
+html[data-platform="ios"] .day-divider{
+  width:fit-content;margin:10px auto 14px;padding:4px 12px;
+  border:1px solid var(--lg-edge);border-radius:999px;
+  background:var(--lg-fill);box-shadow:var(--lg-lit);
+}
+html[data-platform="ios"] .day-divider::before,
+html[data-platform="ios"] .day-divider::after{display:none}
+html[data-platform="ios"] .typing-indicator{
+  align-self:flex-start;margin:0 12px 4px;padding:7px 14px;
+  border:1px solid var(--lg-edge);border-radius:999px;background:var(--lg-fill);
+}
+
+/* Composer: floating capsule */
+html[data-platform="ios"] .chat-input-wrap{
+  background:transparent;border-top:0;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+}
+html[data-platform="ios"] .chat-input{
+  background:var(--lg-fill);border:1px solid var(--lg-edge);border-radius:24px;padding:11px 18px;
+  -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-lit);
+}
+html[data-platform="ios"] .chat-input:focus{
+  border-color:color-mix(in srgb,var(--pri) 60%,transparent);
+  box-shadow:var(--lg-lit),0 0 0 3px color-mix(in srgb,var(--pri) 18%,transparent);
+}
+html[data-platform="ios"] .chat-send{
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 14px color-mix(in srgb,var(--pri) 35%,transparent);
+}
+
+/* Tabs: glass segmented control */
+html[data-platform="ios"] .chat-tabs{
+  margin:8px 12px 0;padding:3px;
+  border:1px solid var(--lg-edge);border-radius:999px;background:var(--lg-fill);
+  -webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);box-shadow:var(--lg-lit);
+}
+html[data-platform="ios"] .chat-tab{border-bottom:0;border-radius:999px;padding:8px}
+html[data-platform="ios"] .chat-tab.active{
+  color:var(--pri);background:color-mix(in srgb,var(--card) 88%,transparent);
+  box-shadow:0 2px 8px rgba(0,0,0,.12),var(--lg-lit);
+}
+
+/* Chat list: glass rows */
+html[data-platform="ios"] .chat-list{padding:8px 12px}
+html[data-platform="ios"] .chat-list-item{
+  margin-bottom:8px;border:1px solid var(--lg-edge);border-radius:24px;
+  background-color:var(--card);                                   /* fallback */
+  background-color:color-mix(in srgb,var(--card) 50%,transparent);
+  background-image:linear-gradient(to bottom,rgba(255,255,255,.28),transparent 60%);
+  box-shadow:var(--lg-lit);
+}
+html[data-platform="ios"] .chat-list-item+.chat-list-item{border-top:1px solid var(--lg-edge)}
+html[data-platform="ios"] .chat-list-item:active{
+  background-color:color-mix(in srgb,var(--pri-light) 85%,transparent);
+}
+
+/* ══ CHAT · Android · Material You ══ */
+html[data-platform="android"] :is(.chat-list,.chat-wrap,.chat-tabs){
+  --md-container:color-mix(in srgb,var(--pri) 7%,var(--card));
+  --md-container-hi:color-mix(in srgb,var(--pri) 11%,var(--bg2));
+  --md-state:color-mix(in srgb,var(--pri) 12%,transparent);   /* pressed state layer */
+  --md-ease:cubic-bezier(.2,0,0,1);
+}
+
+/* Top app bar */
+html[data-platform="android"] .chat-hdr{
+  min-height:64px;padding:8px 12px 8px 16px;gap:12px;
+  border-bottom:0;background:var(--md-container);
+}
+html[data-platform="android"] .chat-hdr-name{font-size:var(--fs-lg);font-weight:600}
+html[data-platform="android"] .chat-call-btn{
+  width:40px;height:40px;background:var(--pri-light);
+  transition:transform .15s,border-radius .25s var(--md-ease);
+}
+html[data-platform="android"] .chat-call-btn:active{border-radius:12px}   /* shape morph on press */
+
+/* Bubbles: sent keeps your --pri fill */
+html[data-platform="android"] .msg-bubble{border-radius:22px}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
+  background:var(--md-container-hi);border:0;border-bottom-left-radius:6px;
+}
+html[data-platform="android"] .msg-row.own .msg-bubble{border-bottom-right-radius:6px}
+
+/* Date label (assist-chip style) + typing */
+html[data-platform="android"] .day-divider{
+  width:fit-content;margin:10px auto 14px;padding:4px 12px;
+  border-radius:8px;background:var(--pri-light);color:var(--pri);
+}
+html[data-platform="android"] .day-divider::before,
+html[data-platform="android"] .day-divider::after{display:none}
+html[data-platform="android"] .typing-indicator{
+  align-self:flex-start;margin:0 12px 4px;padding:8px 14px;
+  border-radius:18px 18px 18px 6px;background:var(--md-container-hi);
+}
+html[data-platform="android"] .typing-dot{background:var(--pri)}
+
+/* Composer: pill field + squircle send that morphs to a circle */
+/* ══ CHAT · Android · WhatsApp-style ══ */
+
+/* Wallpaper: behind the header, messages and the floating composer */
+html[data-platform="android"] .chat-wrap{
+  background-color:var(--bg);
+  background-color:color-mix(in srgb,var(--pri) 8%,var(--bg));
+  background-image:radial-gradient(color-mix(in srgb,var(--txt) 6%,transparent) 1px,transparent 1.5px);
+  background-size:22px 22px;
+}
+
+/* App bar: --pri-dark gives white text enough contrast in every theme */
+html[data-platform="android"] .chat-hdr{
+  padding:10px 8px 10px 12px;
+  background:var(--pri-dark);color:#fff;
+  border-bottom:0;box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+html[data-platform="android"] .chat-hdr-name{color:#fff;font-weight:600}
+html[data-platform="android"] .chat-hdr-status{color:rgba(255,255,255,.82)}
+html[data-platform="android"] .chat-hdr :is(button,a){color:#fff}
+html[data-platform="android"] .chat-call-btn{background:rgba(255,255,255,.16)}
+
+/* Date chip */
+html[data-platform="android"] .day-divider{
+  width:fit-content;margin:10px auto 14px;padding:4px 12px;
+  border-radius:8px;color:var(--txt2);
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 92%,transparent);
+  box-shadow:0 1px 1px rgba(0,0,0,.12);
+}
+html[data-platform="android"] .day-divider::before,
+html[data-platform="android"] .day-divider::after{display:none}
+
+/* Bubbles with tails. --bub is declared on the bubble itself, so the tail always matches. */
+html[data-platform="android"] .msg-bubble{
+  position:relative;padding:8px 12px;border-radius:12px;border:0;color:var(--txt);
+  box-shadow:0 1px 1px rgba(0,0,0,.14),0 0 0 1px color-mix(in srgb,var(--txt) 6%,transparent);
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble{
+  --bub:var(--card);
+  background:var(--bub);
+  border-bottom-left-radius:0;
+}
+html[data-platform="android"] .msg-row.own .msg-bubble{
+  --bub:var(--pri-light);
+  --bub:color-mix(in srgb,var(--pri) 20%,var(--card));
+  background:var(--bub);
+  border-bottom-right-radius:0;
+}
+html[data-platform="android"] .msg-bubble::before{
+  content:'';position:absolute;bottom:0;width:8px;height:12px;background:var(--bub);
+}
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble::before{
+  left:-7px;clip-path:polygon(100% 0,100% 100%,0 100%);
+}
+html[data-platform="android"] .msg-row.own .msg-bubble::before{
+  right:-7px;clip-path:polygon(0 0,0 100%,100% 100%);
+}
+html[data-platform="android"] .msg-sender,
+html[data-platform="android"] .msg-time{color:var(--txt2)}
+
+/* Typing: plain pill, display is still controlled by your .show class */
+html[data-platform="android"] .typing-indicator{
+  width:fit-content;margin:0 12px 6px;padding:7px 12px;
+  border-radius:12px;background:var(--card);color:var(--txt2);
+  box-shadow:0 1px 1px rgba(0,0,0,.14);
+}
+html[data-platform="android"] .typing-dot{background:var(--pri)}
+
+/* Floating composer: transparent strip, pill field, separate round send */
+html[data-platform="android"] .chat-input-wrap{
+  background:transparent;border-top:0;gap:8px;
+  padding:6px 8px calc(8px + env(safe-area-inset-bottom));
+}
+html[data-platform="android"] .chat-input{
+  background:var(--card);color:var(--txt);
+  border:0;border-radius:24px;padding:12px 18px;min-height:48px;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+html[data-platform="android"] .chat-input::placeholder{color:var(--txt2);opacity:1}
+html[data-platform="android"] .chat-input:focus{
+  box-shadow:0 1px 3px rgba(0,0,0,.2),0 0 0 2px color-mix(in srgb,var(--pri) 55%,transparent);
+}
+html[data-platform="android"] .chat-send{
+  width:48px;height:48px;background:var(--pri-dark);color:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+
+/* Tabs */
+html[data-platform="android"] .chat-tabs{background:var(--pri-dark);border-bottom:0}
+html[data-platform="android"] .chat-tab{color:rgba(255,255,255,.78);font-weight:600;padding:12px 8px}
+html[data-platform="android"] .chat-tab:active{background:rgba(255,255,255,.12)}
+html[data-platform="android"] .chat-tab.active{color:#fff;border-bottom-color:#fff}
+
+/* Chat list: keeps your flat rows, fixes pale text, round badge */
+html[data-platform="android"] .chat-list{padding:0}
+html[data-platform="android"] .chat-list-item:active{background:color-mix(in srgb,var(--pri) 10%,transparent)}
+html[data-platform="android"] .chat-list-preview,
+html[data-platform="android"] .chat-list-time{color:var(--txt2)}
+html[data-platform="android"] .chat-list-unread{
+  display:flex;align-items:center;justify-content:center;
+  min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;
+  background:var(--pri-dark);
+}
+/* ══════════════════════════════════════════════════════
+   CALL OVERLAY
+   ══════════════════════════════════════════════════════ */
+.call-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center}
+.call-overlay.show{display:flex}
+.call-bg{position:absolute;inset:0;background:linear-gradient(160deg,#1A1208,#2D1A08);opacity:.97}
+.call-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;padding:40px 24px;padding-top:calc(60px + env(safe-area-inset-top));padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.call-av{width:100px;height:100px;border-radius:50%;border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:800;font-family:var(--font);margin-bottom:16px;overflow:hidden;animation:call-pulse 2s infinite ease-in-out}
+.call-av img{width:100%;height:100%;object-fit:cover}
+@keyframes call-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.2)}50%{box-shadow:0 0 0 20px rgba(255,255,255,0)}}
+.call-name{font-family:var(--font);font-size:26px;font-weight:700;color:#fff;margin-bottom:6px}
+.call-status{font-size:var(--fs-sm);color:rgba(255,255,255,.6);margin-bottom:auto}
+.call-video-remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;display:none;border-radius:0}
+.call-video-remote.show{display:block}
+.call-video-local{position:absolute;top:calc(80px + env(safe-area-inset-top));right:16px;width:90px;height:130px;object-fit:cover;border-radius:var(--r2);border:2px solid rgba(255,255,255,.3);display:none;z-index:2}
+.call-video-local.show{display:block}
+.call-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:auto;padding-top:30px}
+.call-btn{width:60px;height:60px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:24px;transition:transform .2s,opacity .2s;flex-shrink:0}
+.call-btn:active{transform:scale(.88)}
+.call-btn-end{background:#EF4444;color:#fff}
+.call-btn-mute,.call-btn-speaker,.call-btn-video{background:rgba(255,255,255,.15);color:#fff}
+.call-btn-mute.active,.call-btn-speaker.active,.call-btn-video.active{background:rgba(255,255,255,.35)}
+.call-btn-accept{background:#22C55E;color:#fff}
+.call-incoming-btns{display:flex;gap:32px;align-items:center;margin-top:auto;padding-top:30px}
+.call-incoming-btns .call-btn{width:70px;height:70px;font-size:28px}
+.call-incoming-label{text-align:center;color:rgba(255,255,255,.7);font-size:var(--fs-sm);margin-top:8px}
+
+/* ══════════════════════════════════════════════════════
+   MEMBERS
+   ══════════════════════════════════════════════════════ */
+.member-card{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:15px;display:flex;align-items:center;gap:13px;box-shadow:0 2px 8px var(--shadow2);animation:card-in .3s ease both;margin-bottom:10px;cursor:pointer;transition:background .15s}
+.member-card:active{background:var(--bg2)}
+.member-name{font-size:var(--fs);font-weight:800;color:var(--txt)}
+.member-meta{font-size:var(--fs-xs);color:var(--txt3);margin-top:3px}
+.streak-badge{background:#FEF3C7;color:#92400E;border-radius:20px;padding:3px 9px;font-size:var(--fs-xs);font-weight:800;margin-left:6px}
+.member-stats{display:flex;gap:14px;margin-top:9px}
+.stat{text-align:center}
+.stat-n{font-size:var(--fs-lg);font-weight:800;color:var(--pri)}
+.stat-l{font-size:10px;color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+html[data-platform="ios"] .member-card{
+  border-radius:100px;
+  padding-inline:22px;                       /* keeps content off the curved ends; drop it if you don't want it */
+  border:1px solid var(--bd);                /* visible in every theme (--glass-border is white on cream) */
+
+  background-color:var(--card);              /* fallback if color-mix is unsupported */
+  background-color:color-mix(in srgb,var(--card) 55%,transparent);
+  background-image:linear-gradient(to bottom,rgba(255,255,255,.28),transparent 60%);  /* glass sheen */
+
+  -webkit-backdrop-filter:blur(15px) saturate(1.7);
+  backdrop-filter:blur(15px) saturate(1.7);
+  box-shadow:0 4px 30px rgba(0,0,0,.03), inset 0 1px 1px rgba(255,255,255,.3);
+}
+
+html[data-platform="ios"] .member-card:active{
+  background-color:color-mix(in srgb,var(--pri-light) 85%,transparent);
+}
+
+/* ══════════════════════════════════════════════════════
+   STATS
+   Replace the old STATS block (.stats-wrap … .nudge-meta) with this file.
+   Same class names as before, no markup changes.
+   · no data-platform  → your original look (section 1)
+   · ios               → bouncy liquid glass (section 2)
+   · android           → Material You / M3 tonal (section 3)
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. BASE (your original rules, unchanged) ─────────── */
+.stats-wrap{padding:16px 16px calc(30px + var(--nav-h))}
+.stats-hero{background:linear-gradient(135deg,var(--pri),var(--pri-dark));border-radius:var(--r);padding:20px;margin-bottom:16px;color:#fff;text-align:center}
+.stats-hero-n{font-family:var(--font);font-size:48px;font-weight:700;line-height:1}
+.stats-hero-l{font-size:var(--fs-sm);opacity:.8;margin-top:4px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;text-align:center;box-shadow:0 2px 8px var(--shadow2);animation:card-in .3s ease both}
+.stat-card-n{font-family:var(--font);font-size:32px;font-weight:700;color:var(--pri);line-height:1}
+.stat-card-l{font-size:var(--fs-xs);color:var(--txt3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:4px}
+.leaderboard{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:16px;box-shadow:0 2px 8px var(--shadow2)}
+.lb-title{padding:14px 16px 10px;font-family:var(--font);font-size:var(--fs);font-weight:700;color:var(--txt);border-bottom:1px solid var(--bd)}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--bd);animation:card-in .25s ease both}
+.lb-row:last-child{border-bottom:none}
+.lb-rank{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:800;flex-shrink:0;background:var(--bg2);color:var(--txt2)}
+.lb-rank.gold{background:#FEF3C7;color:#92400E}
+.lb-rank.silver{background:#F1F5F9;color:#475569}
+.lb-rank.bronze{background:#FFEDD5;color:#B45309}
+.lb-name{flex:1;font-size:var(--fs-sm);font-weight:700;color:var(--txt)}
+.lb-val{font-size:var(--fs-sm);font-weight:800;color:var(--pri);white-space:nowrap}
+.lb-bar-wrap{flex:1;background:var(--bg2);border-radius:4px;height:6px;overflow:hidden}
+.lb-bar{height:100%;background:var(--pri);border-radius:4px;transition:width .6s cubic-bezier(.34,1.2,.64,1)}
+.top-post-label{background:linear-gradient(135deg,#FEF3C7,#FDE68A);padding:6px 14px;font-size:var(--fs-xs);font-weight:800;color:#92400E}
+.reminder-nudge{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;box-shadow:0 2px 8px var(--shadow2)}
+.nudge-name{font-size:var(--fs-sm);font-weight:800;color:var(--txt)}
+.nudge-meta{font-size:var(--fs-xs);color:var(--txt3);margin-top:2px}
+
+/* ── shared keyframes ─────────────────────────────────── */
+@keyframes stats-spring-in{
+  from{opacity:0;transform:translateY(26px) scale(.86)}
+  to{opacity:1;transform:none}
+}
+@keyframes stats-rise{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:none}
+}
+@keyframes stats-bar-grow{
+  from{transform:scaleX(0)}
+  to{transform:scaleX(1)}
+}
+@keyframes stats-blob{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-26px,-18px) scale(1.18)}
+}
+@keyframes stats-bob{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-2px) scale(1.06)}
+}
+
+
+/* ── 2. iOS · BOUNCY LIQUID GLASS ─────────────────────── */
+
+/* Tokens live on the container so they resolve against the active [data-theme] */
+html[data-platform="ios"] .stats-wrap{
+  --g-fill:color-mix(in srgb,var(--card) 58%,transparent);
+  --g-edge:color-mix(in srgb,var(--txt) 9%,transparent);
+  --g-lit:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(0,0,0,.04);
+  --g-blur:blur(20px) saturate(1.8);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+
+  /* soft colour behind the glass, so there is something to refract */
+  background:
+    radial-gradient(60% 28% at 12% 0%,color-mix(in srgb,var(--pri) 22%,transparent),transparent 70%),
+    radial-gradient(50% 24% at 100% 34%,color-mix(in srgb,var(--pri2) 28%,transparent),transparent 70%),
+    radial-gradient(60% 28% at 0% 78%,color-mix(in srgb,var(--pri) 14%,transparent),transparent 70%);
+}
+
+/* Hero: glossy liquid slab */
+html[data-platform="ios"] .stats-hero{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  padding:28px 20px 26px;
+  margin-bottom:14px;
+  border-radius:34px;
+  border:1px solid rgba(255,255,255,.38);
+  background:linear-gradient(150deg,color-mix(in srgb,var(--pri) 86%,#fff),var(--pri) 52%,var(--pri-dark));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -12px 26px rgba(0,0,0,.14),
+    0 16px 36px color-mix(in srgb,var(--pri) 38%,transparent);
+  animation:stats-spring-in .75s var(--spring) both;
+  transition:transform .4s var(--spring);
+}
+html[data-platform="ios"] .stats-hero:active{transform:scale(.965)}
+html[data-platform="ios"] .stats-hero::before{      /* specular sheen */
+  content:'';
+  position:absolute;inset:0 0 auto 0;height:52%;
+  border-radius:inherit;
+  background:linear-gradient(to bottom,rgba(255,255,255,.30),rgba(255,255,255,0));
+  pointer-events:none;
+  z-index:-1;
+}
+html[data-platform="ios"] .stats-hero::after{       /* drifting liquid blob */
+  content:'';
+  position:absolute;right:-54px;bottom:-78px;
+  width:190px;height:190px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.34),rgba(255,255,255,0) 70%);
+  animation:stats-blob 8s ease-in-out infinite;
+  pointer-events:none;
+  z-index:-1;
+}
+html[data-platform="ios"] .stats-hero-n{
+  font-size:58px;
+  font-weight:800;
+  letter-spacing:-.025em;
+  text-shadow:0 2px 14px rgba(0,0,0,.18);
+}
+html[data-platform="ios"] .stats-hero-l{opacity:.88;font-weight:600;margin-top:6px}
+
+/* Stat tiles: glass, spring in, squish on press */
+html[data-platform="ios"] .stats-grid{gap:12px;margin-bottom:14px}
+html[data-platform="ios"] .stat-card{
+  padding:20px 14px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:28px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 10px 26px var(--shadow2);
+  animation:stats-spring-in .65s var(--spring) both;
+  transition:transform .35s var(--spring);
+}
+html[data-platform="ios"] .stat-card:active{transform:scale(.93)}
+html[data-platform="ios"] .stat-card-n{font-weight:800;letter-spacing:-.02em}
+html[data-platform="ios"] .stat-card-l{color:var(--txt2);letter-spacing:.3px}
+
+html[data-platform="ios"] .stat-card:nth-child(1){animation-delay:.08s}
+html[data-platform="ios"] .stat-card:nth-child(2){animation-delay:.14s}
+html[data-platform="ios"] .stat-card:nth-child(3){animation-delay:.20s}
+html[data-platform="ios"] .stat-card:nth-child(4){animation-delay:.26s}
+html[data-platform="ios"] .stat-card:nth-child(5){animation-delay:.32s}
+html[data-platform="ios"] .stat-card:nth-child(n+6){animation-delay:.38s}
+
+/* Leaderboard: one glass sheet */
+html[data-platform="ios"] .leaderboard{
+  margin-bottom:14px;
+  border:1px solid var(--g-edge);
+  border-radius:30px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 10px 26px var(--shadow2);
+  animation:stats-spring-in .7s var(--spring) .22s both;
+}
+html[data-platform="ios"] .lb-title{
+  padding:18px 20px 12px;
+  font-size:var(--fs-lg);
+  font-weight:800;
+  letter-spacing:-.01em;
+  border-bottom:1px solid var(--g-edge);
+}
+html[data-platform="ios"] .lb-row{
+  padding:12px 20px;
+  border-bottom:1px solid var(--g-edge);
+  animation:stats-spring-in .55s var(--spring) both;
+  transition:background .2s;
+}
+html[data-platform="ios"] .lb-row:active{background:color-mix(in srgb,var(--pri) 10%,transparent)}
+html[data-platform="ios"] .lb-row:nth-child(2){animation-delay:.34s}
+html[data-platform="ios"] .lb-row:nth-child(3){animation-delay:.39s}
+html[data-platform="ios"] .lb-row:nth-child(4){animation-delay:.44s}
+html[data-platform="ios"] .lb-row:nth-child(5){animation-delay:.49s}
+html[data-platform="ios"] .lb-row:nth-child(6){animation-delay:.54s}
+html[data-platform="ios"] .lb-row:nth-child(7){animation-delay:.59s}
+html[data-platform="ios"] .lb-row:nth-child(n+8){animation-delay:.64s}
+
+/* Ranks: glossy medals */
+html[data-platform="ios"] .lb-rank{
+  width:30px;height:30px;
+  font-size:var(--fs-sm);
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--card) 70%,#fff),var(--bg2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 6px var(--shadow2);
+}
+html[data-platform="ios"] .lb-rank.gold{
+  background:linear-gradient(to bottom,#FFF0A8,#F5B21A);color:#7A4503;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 3px 10px rgba(245,158,11,.4);
+  animation:stats-bob 2.6s ease-in-out infinite;
+}
+html[data-platform="ios"] .lb-rank.silver{
+  background:linear-gradient(to bottom,#FFFFFF,#CBD5E1);color:#475569;
+}
+html[data-platform="ios"] .lb-rank.bronze{
+  background:linear-gradient(to bottom,#FDBA74,#C2570C);color:#fff;
+}
+html[data-platform="ios"] .lb-val{font-weight:800}
+
+/* Bars: glossy pill that springs out from the left */
+html[data-platform="ios"] .lb-bar-wrap{
+  height:9px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--txt) 8%,transparent);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.12);
+}
+html[data-platform="ios"] .lb-bar{
+  position:relative;
+  border-radius:999px;
+  background:linear-gradient(to right,var(--pri2),var(--pri));
+  box-shadow:0 0 10px color-mix(in srgb,var(--pri) 45%,transparent);
+  transform-origin:left center;
+  animation:stats-bar-grow 1s var(--spring) .5s both;
+  transition:width .7s var(--spring);
+}
+html[data-platform="ios"] .lb-bar::after{
+  content:'';
+  position:absolute;inset:0 0 50% 0;
+  border-radius:inherit;
+  background:linear-gradient(to bottom,rgba(255,255,255,.5),rgba(255,255,255,0));
+}
+
+html[data-platform="ios"] .top-post-label{
+  background:linear-gradient(to bottom,#FFF3B8,#FCD34D);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+  font-weight:800;
+}
+
+html[data-platform="ios"] .reminder-nudge{
+  padding:16px 18px;
+  border:1px solid var(--g-edge);
+  border-radius:26px;
+  background:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:var(--g-lit),0 8px 22px var(--shadow2);
+  animation:stats-spring-in .6s var(--spring) both;
+  transition:transform .35s var(--spring);
+}
+html[data-platform="ios"] .reminder-nudge:active{transform:scale(.96)}
+html[data-platform="ios"] .nudge-meta{color:var(--txt2)}
+
+
+/* ── 3. ANDROID · MATERIAL YOU (M3) ───────────────────── */
+
+/* Tonal palette derived from the active theme's --pri */
+html[data-platform="android"] .stats-wrap{
+  --m-c1:color-mix(in srgb,var(--pri) 12%,var(--card));
+  --m-c2:color-mix(in srgb,var(--pri2) 30%,var(--card));
+  --m-c3:color-mix(in srgb,var(--blue) 14%,var(--card));
+  --m-c4:color-mix(in srgb,var(--pri) 22%,var(--card));
+  --m-state:color-mix(in srgb,var(--txt) 8%,transparent);       /* pressed state layer */
+  --m-ease:cubic-bezier(.05,.7,.1,1);                            /* emphasized decelerate */
+}
+
+/* Hero: tonal container, expressive asymmetric shape */
+html[data-platform="android"] .stats-hero{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  padding:30px 24px 28px;
+  margin-bottom:12px;
+  border-radius:44px 44px 44px 14px;
+  background:var(--m-c4);
+  color:var(--txt);
+  text-align:left;
+  animation:stats-rise .6s var(--m-ease) both;
+  transition:border-radius .3s var(--m-ease);
+}
+html[data-platform="android"] .stats-hero:active{border-radius:28px}
+html[data-platform="android"] .stats-hero::before{     /* big tonal circle, the M3 shape accent */
+  content:'';
+  position:absolute;right:-48px;top:-52px;
+  width:190px;height:190px;border-radius:50%;
+  background:color-mix(in srgb,var(--pri) 20%,transparent);
+  z-index:-1;
+}
+html[data-platform="android"] .stats-hero::after{
+  content:'';
+  position:absolute;right:34px;bottom:-30px;
+  width:84px;height:84px;border-radius:28px;
+  background:color-mix(in srgb,var(--pri2) 34%,transparent);
+  transform:rotate(18deg);
+  z-index:-1;
+}
+html[data-platform="android"] .stats-hero-n{
+  font-size:60px;
+  font-weight:600;
+  letter-spacing:-.03em;
+  color:var(--pri);
+}
+html[data-platform="android"] .stats-hero-l{
+  opacity:1;
+  font-size:var(--fs);
+  font-weight:600;
+  color:var(--txt2);
+  margin-top:6px;
+}
+
+/* Stat tiles: tonal, no border or shadow, shape morphs on press */
+html[data-platform="android"] .stats-grid{gap:8px;margin-bottom:12px}
+html[data-platform="android"] .stat-card{
+  padding:20px 16px;
+  border:0;
+  border-radius:28px;
+  background:var(--m-c1);
+  box-shadow:none;
+  text-align:left;
+  animation:stats-rise .55s var(--m-ease) both;
+  transition:border-radius .25s var(--m-ease),box-shadow .2s;
+}
+html[data-platform="android"] .stat-card:nth-child(4n+2){background:var(--m-c2)}
+html[data-platform="android"] .stat-card:nth-child(4n+3){background:var(--m-c3)}
+html[data-platform="android"] .stat-card:nth-child(4n+4){background:var(--m-c4)}
+html[data-platform="android"] .stat-card:active{
+  border-radius:14px;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .stat-card-n{font-size:34px;font-weight:600;letter-spacing:-.02em}
+html[data-platform="android"] .stat-card-l{
+  color:var(--txt2);
+  text-transform:none;
+  letter-spacing:.1px;
+  font-size:var(--fs-sm);
+  font-weight:600;
+  margin-top:6px;
+}
+html[data-platform="android"] .stat-card:nth-child(1){animation-delay:.06s}
+html[data-platform="android"] .stat-card:nth-child(2){animation-delay:.10s}
+html[data-platform="android"] .stat-card:nth-child(3){animation-delay:.14s}
+html[data-platform="android"] .stat-card:nth-child(4){animation-delay:.18s}
+html[data-platform="android"] .stat-card:nth-child(5){animation-delay:.22s}
+html[data-platform="android"] .stat-card:nth-child(n+6){animation-delay:.26s}
+
+/* Leaderboard: surface container */
+html[data-platform="android"] .leaderboard{
+  margin-bottom:12px;
+  border:0;
+  border-radius:28px;
+  background:color-mix(in srgb,var(--pri) 6%,var(--card));
+  box-shadow:none;
+  animation:stats-rise .6s var(--m-ease) .16s both;
+}
+html[data-platform="android"] .lb-title{
+  padding:20px 24px 10px;
+  font-size:var(--fs-lg);
+  font-weight:600;
+  border-bottom:0;
+}
+html[data-platform="android"] .lb-row{
+  padding:12px 24px;
+  border-bottom:0;
+  animation:stats-rise .5s var(--m-ease) both;
+  transition:background .2s;
+}
+html[data-platform="android"] .lb-row:active{background:var(--m-state)}
+html[data-platform="android"] .lb-row:nth-child(2){animation-delay:.24s}
+html[data-platform="android"] .lb-row:nth-child(3){animation-delay:.28s}
+html[data-platform="android"] .lb-row:nth-child(4){animation-delay:.32s}
+html[data-platform="android"] .lb-row:nth-child(5){animation-delay:.36s}
+html[data-platform="android"] .lb-row:nth-child(6){animation-delay:.40s}
+html[data-platform="android"] .lb-row:nth-child(7){animation-delay:.44s}
+html[data-platform="android"] .lb-row:nth-child(n+8){animation-delay:.48s}
+
+html[data-platform="android"] .lb-rank{
+  width:32px;height:32px;
+  font-size:var(--fs-sm);
+  background:var(--m-c4);
+  color:var(--pri);
+}
+html[data-platform="android"] .lb-rank.gold{background:#FEF3C7;color:#92400E}
+html[data-platform="android"] .lb-rank.silver{background:#E8EDF3;color:#475569}
+html[data-platform="android"] .lb-rank.bronze{background:#FFEDD5;color:#B45309}
+html[data-platform="android"] .lb-name{font-weight:600}
+html[data-platform="android"] .lb-val{font-weight:700}
+
+/* Bars: M3 linear indicator, thick and fully rounded */
+html[data-platform="android"] .lb-bar-wrap{
+  height:8px;
+  border-radius:4px;
+  background:var(--m-c4);
+}
+html[data-platform="android"] .lb-bar{
+  border-radius:4px;
+  background:var(--pri);
+  transform-origin:left center;
+  animation:stats-bar-grow .8s var(--m-ease) .35s both;
+  transition:width .5s var(--m-ease);
+}
+
+html[data-platform="android"] .top-post-label{
+  background:color-mix(in srgb,var(--yellow) 28%,var(--card));
+  color:#7A4503;
+  font-weight:700;
+}
+
+html[data-platform="android"] .reminder-nudge{
+  padding:16px 20px;
+  border:0;
+  border-radius:24px;
+  background:var(--m-c1);
+  box-shadow:none;
+  animation:stats-rise .5s var(--m-ease) both;
+  transition:border-radius .25s var(--m-ease),box-shadow .2s;
+}
+html[data-platform="android"] .reminder-nudge:active{
+  border-radius:12px;
+  box-shadow:inset 0 0 0 100vmax var(--m-state);
+}
+html[data-platform="android"] .nudge-name{font-weight:700}
+html[data-platform="android"] .nudge-meta{color:var(--txt2)}
+
+/* ══════════════════════════════════════════════════════
+   THEME SHEET
+   ══════════════════════════════════════════════════════ */
+.sheet-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:60;display:none;align-items:flex-end;backdrop-filter:blur(3px)}
+.sheet-overlay.show{display:flex}
+.sheet{width:100%;background:var(--card);border-radius:24px 24px 0 0;padding:0 0 calc(20px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+.sheet-overlay.show .sheet{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--bd2);margin:12px auto 20px}
+.sheet-title{font-family:var(--font);font-size:var(--fs-lg);font-weight:700;text-align:center;margin-bottom:20px;color:var(--txt)}
+.theme-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:0 16px}
+.theme-swatch{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;padding:0}
+.theme-circle{width:44px;height:44px;border-radius:50%;border:3px solid transparent;transition:transform .2s,border-color .2s;position:relative;display:flex;align-items:center;justify-content:center;font-size:18px}
+.theme-circle.active{border-color:var(--pri)}
+.theme-circle.active::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);border-radius:50%;color:#fff;font-size:16px;font-weight:700}
+.theme-swatch:active .theme-circle{transform:scale(.9)}
+.theme-name{font-size:10px;color:var(--txt2);font-weight:700;text-align:center}
+.size-row{display:flex;align-items:center;gap:12px;padding:16px 20px 0}
+.size-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--txt2)}
+.size-btns{display:flex;gap:8px;margin-left:auto}
+.size-step{width:40px;height:40px;border-radius:var(--r3);background:var(--bg2);border:1.5px solid var(--bd);font-weight:800;color:var(--txt);display:flex;align-items:center;justify-content:center}
+.size-step.active{background:var(--pri-light);border-color:var(--pri);color:var(--pri)}
+/* Custom color picker row */
+.color-picker-row{padding:16px 20px 0;display:flex;align-items:center;gap:12px}
+.color-picker-row label{font-size:var(--fs-sm);font-weight:700;color:var(--txt2)}
+.color-picker-input{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--bd);padding:0;cursor:pointer;overflow:hidden;-webkit-appearance:none}
+.color-picker-input::-webkit-color-swatch-wrapper{padding:0}
+.color-picker-input::-webkit-color-swatch{border:none;border-radius:50%}
+.color-picker-apply{background:var(--pri);color:#fff;border:none;border-radius:var(--r2);padding:8px 16px;font-size:var(--fs-sm);font-weight:800;font-family:var(--font)}
+.color-picker-apply:active{transform:scale(.95)}
+
+/* ══════════════════════════════════════════════════════
+   ONBOARDING
+   ══════════════════════════════════════════════════════ */
+.ob{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;text-align:center;background:var(--card);overflow-y:auto}
+.ob-logo{font-size:52px;font-family:var(--font);font-weight:700;color:var(--pri);margin-bottom:4px}
+.ob-sub{font-size:var(--fs);color:var(--txt3);margin-bottom:28px;font-family:var(--font)}
+.feat-card{display:flex;align-items:center;gap:13px;background:var(--bg2);border-radius:var(--r);padding:14px;margin-bottom:10px;text-align:left;width:100%;max-width:340px;border:1.5px solid var(--bd)}
+.feat-ico{font-size:22px;flex-shrink:0}
+.feat-label{font-size:var(--fs-sm);font-weight:700;color:var(--txt)}
+.feat-desc{font-size:var(--fs-xs);color:var(--txt3);margin-top:2px}
+.ob-input{max-width:340px;width:100%;background:var(--card);border:2px solid var(--bd);border-radius:var(--r);padding:15px;font-size:var(--fs-lg);color:var(--txt);outline:none;-webkit-appearance:none;appearance:none;margin-bottom:12px;transition:border-color .2s;margin-top:22px}
+.ob-input:focus{border-color:var(--pri)}
+.ob-btn{max-width:340px;width:100%;background:var(--pri);border:none;border-radius:var(--r);padding:17px;font-size:var(--fs-lg);font-weight:800;color:#fff;transition:transform .15s,opacity .2s;box-shadow:0 4px 16px var(--shadow);font-family:var(--font)}
+.ob-btn:not(:disabled):active{transform:scale(.98)}
+.ob-btn:disabled{opacity:.35}
+
+/* ══════════════════════════════════════════════════════
+   LOADING / EMPTY / SKELETON / OVERLAYS
+   ══════════════════════════════════════════════════════ */
+.spinner{width:34px;height:34px;border:3px solid var(--bd);border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite}
+.loading-wrap{display:flex;align-items:center;justify-content:center;padding:60px 20px}
+.empty-wrap{display:flex;flex-direction:column;align-items:center;padding:60px 20px;text-align:center}
+.empty-ico{font-size:50px;margin-bottom:14px}
+.empty-title{font-family:var(--font);font-size:var(--fs-lg);font-weight:700;margin-bottom:7px}
+.empty-desc{font-size:var(--fs-sm);color:var(--txt2);line-height:1.7;max-width:260px}
+.skeleton{background:var(--bg2);border-radius:var(--r2);animation:shimmer 1.5s infinite}
+.skeleton-card{background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.skeleton-header-branding{display:flex;gap:10px;padding:14px;align-items:center}
+.skeleton-circle{width:40px;height:40px;border-radius:50%;flex-shrink:0}
+.skeleton-lines{flex:1;display:flex;flex-direction:column;gap:7px}
+.skeleton-line{height:12px;border-radius:6px}
+.skeleton-img{height:200px;width:100%}
+.skeleton-footer{padding:12px 14px;display:flex;gap:6px}
+.skeleton-pill{height:28px;width:52px;border-radius:20px}
+.uploading-overlay{position:absolute;inset:0;background:rgba(250,248,243,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:70;gap:14px;backdrop-filter:blur(4px)}
+.uploading-overlay.show{display:flex}
+.uploading-txt{font-size:var(--fs);font-weight:800;color:var(--txt)}
+.uploading-sub{font-size:var(--fs-sm);color:var(--txt2)}
+.toast {
+  position: fixed;
+  /* 1. Use top to handle the hidden state height offset instead of translateY */
+  top: calc(env(safe-area-inset-top) - 20px); 
+  
+  /* 2. Center horizontally using standard layout rules instead of transform */
+  left: 50%;
+  width: max-content;
+  max-width: 92%;
+  margin-left: auto;
+  margin-right: auto;
+  transform: translateX(-50%); /* Match your nav's stable single-axis transform */
+  
+  /* 3. Render your styling identically to the nav bar from the start */
+  background: rgba(20,17,24,0.92);
+  -webkit-backdrop-filter: blur(15px) saturate(1.7);
+  backdrop-filter: blur(15px) saturate(1.7);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  border-radius: 26px;
+  padding: 16px 26px;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  z-index: 300;
+  
+  /* 4. Use standard visibility and opacity to trigger rendering layout cleanly */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  
+  text-align: center;
+  line-height: 1.4;
+  letter-spacing: .1px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+  
+  /* Match your nav's transition curve exactly */
+  transition: 
+    opacity .35s cubic-bezier(.4,0,.2,1),
+    top .35s cubic-bezier(.4,0,.2,1),
+    visibility .35s;
+}
+
+.toast.toast-error { background: rgba(90,22,22,0.92); }
+.toast.toast-success { background: rgba(18,61,36,0.92); }
+
+/* The Shown State */
+.toast.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  /* Simply drop it down into view via top, leaving the horizontal transform unbothered */
+  top: calc(env(safe-area-inset-top) + 10px); 
+}
+
+
+.new-post-banner{position:sticky;top:10px;display:flex;justify-content:center;z-index:25;pointer-events:none;padding:0 16px;margin-bottom:4px}
+.new-post-pill{background:var(--pri);color:#fff;border-radius:30px;padding:10px 22px;font-size:var(--fs-sm);font-weight:800;box-shadow:0 4px 16px var(--shadow);pointer-events:all;border:none;font-family:var(--font);animation:slide-down .3s cubic-bezier(.34,1.2,.64,1)}
+body.chat-active .nav {
+  min-width: 0;
+  width: 44px;
+  min-height: 0;
+  top: 50%;
+  right: 6px;
+  left: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+  flex-direction: column;
+  border-radius: 24px;
+  padding: 8px 6px;
+  gap: 8px;
+  justify-content: center;
+}
+body.chat-active .nav .nav-lbl {
+  display: none;
+}
+body.chat-active .nav .nav-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+body.chat-active .nav .fab {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+
+body.chat-active .nav .nav-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  transition: width .35s cubic-bezier(.4,0,.2,1), height .35s cubic-bezier(.4,0,.2,1);
+}
+body.chat-active .nav .fab {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  transition: width .35s cubic-bezier(.4,0,.2,1), height .35s cubic-bezier(.4,0,.2,1), font-size .35s cubic-bezier(.4,0,.2,1);
+}
+/* ══════════════════════════════════════════════════════
+   ANIMATIONS
+   ══════════════════════════════════════════════════════ */
+@keyframes card-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cmt-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+@keyframes ctx-in{from{opacity:0;transform:scale(.9) translateY(-8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes slide-down{from{transform:translateY(-30px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes tbounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+@keyframes fab-in{from{transform:scale(0) rotate(-180deg)}to{transform:scale(1) rotate(0)}}
+.fab{animation:fab-in .5s cubic-bezier(.34,1.56,.64,1) both}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE + ACCESSIBILITY
+   ══════════════════════════════════════════════════════ */
+@media(max-width:360px){:root{--fs:14px;--fs-sm:12px;--fs-xs:10px;--fs-lg:16px;--fs-xl:20px}.fab{width:48px;height:48px;font-size:22px}.nav-btn{padding:4px 6px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+
+/* ═══════════════════════════════════════════════════════
+   CHAT · PLATFORM STYLES (CONSOLIDATED & FIXED)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 1. SHARED INTEGRATION & APPLICATION ENGINE ───────────────────────── */
+
+/* Lock the view boundaries securely so the chat acts like a native app frame */
+html:is([data-platform="ios"],[data-platform="android"]) body.chat-active #app :has(.chat-wrap) {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base structural layout for the chat window container */
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-wrap {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+/* Turn your chat list track into an isolated, fluid scrolling container */
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-list {
+  flex: 1 1 0%;
+  min-height: 0;
+   height: 100vh
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Structural message layout elements */
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row {
+  display: flex;
+  width: 100%;
+}
+
+/* Force message speech bubbles to wrap tightly to the length of the text */
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-body-wrap {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 75%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row:not(.own) .msg-body-wrap {
+  align-items: flex-start;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-row.own .msg-body-wrap {
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .msg-bubble {
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Flex Composer Input Elements */
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-input-wrap {
+  display: flex;
+  align-items: flex-end;
+  border-top: 0;
+  box-sizing: border-box;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-input-wrap > :has(> .chat-input) {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-input {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
+  min-height: 56px;
+  max-height: 140px;
+  padding: 17px 20px;
+  line-height: 1.4;
+  border-radius: 28px;
+}
+
+html:is([data-platform="ios"],[data-platform="android"]) body .chat-send {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+
+/* ── 2. iOS · LIQUID GLASS (CONSOLIDATED) ───────────────────────────── */
+
+html[data-platform="ios"] :is(.chat-list,.chat-wrap,.chat-tabs) {
+  --lg-fill: color-mix(in srgb, var(--card) 50%, transparent);
+  --lg-edge: color-mix(in srgb, var(--txt) 10%, transparent);
+  --lg-lit: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.04);
+  --lg-blur: blur(22px) saturate(1.9);
+}
+
+html[data-platform="ios"] .chat-wrap {
+  background:
+    radial-gradient(120% 55% at 10% 0%, color-mix(in srgb, var(--pri) 16%, transparent), transparent 65%),
+    radial-gradient(100% 50% at 100% 100%, color-mix(in srgb, var(--pri2) 20%, transparent), transparent 65%),
+    var(--bg);
+}
+
+/* Glass Surfaces */
+html[data-platform="ios"] :is(.chat-hdr, .chat-call-btn, .chat-input, .chat-tabs) {
+  border: 1px solid var(--lg-edge);
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-lit);
+}
+
+html[data-platform="ios"] .chat-hdr {
+  margin: 8px 10px 6px;
+  border-radius: 28px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.08), var(--lg-lit);
+}
+
+html[data-platform="ios"] .chat-call-btn {
+  border-radius: 50%;
+}
+
+/* iOS Bubbles Configuration */
+html[data-platform="ios"] .msg-row {
+  animation: ios-spring-bounce 1s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
+}
+
+html[data-platform="ios"] .msg-bubble {
+  border-radius: 22px;
+  letter-spacing: -0.1px;
+   padding: 9px 13px;
+}
+
+html[data-platform="ios"] .msg-row:not(.own) .msg-bubble {
+  border-bottom-left-radius: 6px;
+   
+}
+
+html[data-platform="ios"] .msg-row.own .msg-bubble {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--pri) 86%, #fff), var(--pri));
+  border-bottom-right-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 10px color-mix(in srgb, var(--pri) 28%, transparent);
+   padding: 6px;
+}
+
+
+/* Divider & Composer Layout Elements */
+html[data-platform="ios"] .day-divider {
+  width: fit-content;
+  margin: 10px auto 14px;
+  padding: 4px 12px;
+  border: 1px solid var(--lg-edge);
+  border-radius: 999px;
+  background: var(--lg-fill);
+  box-shadow: var(--lg-lit);
+}
+
+html[data-platform="ios"] .chat-input-wrap {
+   position: absolute;
+   bottom;
+   bottom: calc(10px + env(safe-area-inset-bottom));
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+}
+
+html[data-platform="ios"] .chat-input {
+  font-size: 16px; /* Prevents Safari layout scale hopping */
+}
+
+html[data-platform="ios"] .chat-input:focus {
+  border-color: color-mix(in srgb, var(--pri) 60%, transparent);
+  box-shadow: var(--lg-lit), 0 0 0 3px color-mix(in srgb, var(--pri) 18%, transparent);
+}
+
+html[data-platform="ios"] .chat-send {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--pri) 86%, #fff), var(--pri));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 4px 14px color-mix(in srgb, var(--pri) 35%, transparent);
+}
+
+html[data-platform="ios"] .chat-tabs {
+  margin: 8px 12px 0;
+  padding: 3px;
+  border-radius: 999px;
+}
+
+html[data-platform="ios"] .chat-tab {
+  border-bottom: 0;
+  border-radius: 999px;
+  padding: 8px;
+}
+
+html[data-platform="ios"] .chat-tab.active {
+  color: var(--pri);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12), var(--lg-lit);
+}
+
+html[data-platform="ios"] .chat-list {
+  padding: 8px 12px;
+}
+
+html[data-platform="ios"] .chat-list-item {
+  margin-bottom: 8px;
+  border: 1px solid var(--lg-edge);
+  border-radius: 24px;
+  background-color: color-mix(in srgb, var(--card) 50%, transparent);
+  background-image: linear-gradient(to bottom, rgba(255,255,255,.28), transparent 60%);
+  box-shadow: var(--lg-lit);
+}
+
+html[data-platform="ios"] .chat-list-item:active {
+  background-color: color-mix(in srgb, var(--pri-light) 85%, transparent);
+}
+
+
+/* ── 3. ANDROID · WHATSAPP-STYLE (CONSOLIDATED) ─────────────────────── */
+
+html[data-platform="android"] .chat-wrap {
+  background-color: color-mix(in srgb, var(--pri) 8%, var(--bg));
+  background-image: radial-gradient(color-mix(in srgb, var(--txt) 6%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+html[data-platform="android"] .chat-hdr {
+  padding: 10px 8px 10px 12px;
+  background: var(--pri-dark);
+  color: #fff;
+  border-bottom: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+
+html[data-platform="android"] .chat-hdr-name { color: #fff; font-weight: 600; font-size: var(--fs-lg); }
+html[data-platform="android"] .chat-hdr-status { color: rgba(255,255,255,.82); }
+html[data-platform="android"] .chat-hdr :is(button, a) { color: #fff; }
+
+html[data-platform="android"] .chat-call-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  transition: transform .15s;
+}
+
+html[data-platform="android"] .day-divider {
+  width: fit-content;
+  margin: 10px auto 14px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  color: var(--txt2);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 1px 1px rgba(0,0,0,.12);
+}
+
+/* Android Speech Bubble Framework & Geometry Tails */
+html[data-platform="android"] .msg-row {
+  animation: android-slate-up 0.22s cubic-bezier(0.5, 0, 0, 1) both;
+}
+
+html[data-platform="android"] .msg-bubble {
+  position: relative;
+  padding: 9px 13px;
+  border-radius: 12px;
+  color: var(--txt);
+  box-shadow: 0 1px 1px rgba(0,0,0,.14);
+}
+
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble {
+  background: var(--card);
+  border-top-left-radius: 0;
+}
+
+html[data-platform="android"] .msg-row:not(.own) .msg-bubble::before {
+  content: ''; position: absolute; top: 0; left: -7px;
+  width: 8px; height: 12px; background: var(--card);
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+
+html[data-platform="android"] .msg-row.own .msg-bubble {
+  background: color-mix(in srgb, var(--pri) 20%, var(--card));
+  border-top-right-radius: 0;
+}
+
+html[data-platform="android"] .msg-row.own .msg-bubble::before {
+  content: ''; position: absolute; top: 0; right: -7px;
+  width: 8px; height: 12px; background: color-mix(in srgb, var(--pri) 20%, var(--card));
+  clip-path: polygon(0 0, 0 100%, 100% 0);
+}
+
+html[data-platform="android"] .msg-sender,
+html[data-platform="android"] .msg-time { color: var(--txt2); }
+
+/* Composer Component Sets */
+html[data-platform="android"] .chat-input-wrap {
+ position: absolute; 
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  gap: 8px;
+  padding: 6px 8px calc(10px + env(safe-area-inset-bottom));
+}
+
+html[data-platform="android"] .chat-input {
+  background: var(--card);
+  color: var(--txt);
+  caret-color: var(--pri);
+  border: 0;
+  border-radius: 24px;
+   width: 70%
+  padding: 12px 18px;
+  min-height: 48px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+html[data-platform="android"] .chat-input::placeholder { color: var(--txt2); opacity: 1; }
+
+html[data-platform="android"] .chat-input:focus {
+  box-shadow: 0 1px 3px rgba(0,0,0,.2), 0 0 0 2px color-mix(in srgb, var(--pri) 55%, transparent);
+}
+
+html[data-platform="android"] .chat-send {
+  background: var(--pri-dark);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+html[data-platform="android"] .chat-tabs {
+  background: var(--pri-dark);
+  border-bottom: 0;
+}
+
+html[data-platform="android"] .chat-tab {
+  color: rgba(255,255,255,.78);
+  font-weight: 700;
+  padding: 12px 8px;
+  border-bottom: 3px solid transparent;
+}
+
+html[data-platform="android"] .chat-tab:active { background: rgba(255,255,255,.12); }
+
+html[data-platform="android"] .chat-tab.active { color: #fff; border-bottom-color: #fff; }
+html[data-platform="android"] .chat-list {
+padding: 8px 0;
+}
+html[data-platform="android"] .chat-list-item {
+border-radius: 0;
+}
+   /* Combine your padding with the layout rules so they don't overwrite each other */
+html[data-platform="android"] .chat-list {
+  padding: 8px 0;
+  
+  /* ── RE-INJECT THE FLEX LAYOUT HERE ── */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 12px;
+
+   
+}
+html[data-platform="android"] .chat-list-item:active {
+background: color-mix(in srgb, var(--pri) 10%, transparent);
+}
+html[data-platform="android"] .chat-list-name { font-weight: 700; }
+html[data-platform="android"] .chat-list-preview,
+html[data-platform="android"] .chat-list-time { color: var(--txt2); }
+html[data-platform="android"] .chat-list-unread {
+display: flex;
+align-items: center;
+justify-content: center;
+min-width: 20px;
+height: 20px;
+padding: 0 6px;
+border-radius: 10px;
+font-size: 11px;
+background: var(--pri-dark);
+}
+/* ── 4. FLUID REACTION & TYPING WAVE METRICS ──────────────────────────── */
+.typing-indicator {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+}
+html[data-platform="ios"] .typing-indicator {
+margin: 0 12px 4px;
+padding: 7px 14px;
+border-radius: 999px;
+background: var(--lg-fill);
+}
+html[data-platform="android"] .typing-indicator {
+align-self: flex-start;
+width: fit-content;
+margin: 0 12px 6px;
+padding: 7px 12px;
+border-radius: 12px;
+background: var(--card);
+box-shadow: 0 1px 1px rgba(0,0,0,.14);
+}
+.typing-dot {
+width: 6px;
+height: 6px;
+border-radius: 50%;
+background: var(--pri);
+animation: typing-wave-dot 1.2s infinite ease-in-out both;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+/* Animation Frames Initialization Track */
+@keyframes ios-spring-bounce {
+from { opacity: 0; transform: translateY(16px) scale(0.94); }
+to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes android-slate-up {
+from { opacity: 0; transform: translateY(8px); }
+to { opacity: 1; transform: translateY(0); }
+}
+@keyframes typing-wave-dot {
+0%, 80%, 100% { transform: scale(0.8) translateY(0); opacity: 0.4; }
+40% { transform: scale(1.1) translateY(-5px); opacity: 1; }
+}
+
+
+
+  
