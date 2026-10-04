@@ -1407,36 +1407,7 @@ html[data-platform="android"] {
   .change-btn {
     border: 1px solid var(--bd2);
     border-radius: 100px; /* Fully rounded capsule M3 button */
-    padding: 8px 16px;
-    font-size: var(--fs-sm);
-    color: var(--pri);
-    background: transparent;
-    font-weight: 500;
-    
-    &:active {
-      background-color: rgba(var(--pri-rgb), 0.12);
-      transform: scale(0.98);
-    }
-  }
 
-  .photo-btn {
-    flex: 1;
-    background: var(--m3-surface-1);
-    border: 1px dashed var(--bd2);
-    padding: 24px 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-
-    &:active {
-      background: var(--m3-surface-2);
-      transform: scale(0.98);
-    }
-
-    .photo-btn-ico { font-size: 24px; color: var(--pri); }
-    .photo-btn-txt { font-size: var(--fs-sm); font-weight: 500; color: var(--txt); }
-  }
 
   .remove-img {
     position: absolute;
@@ -1450,89 +1421,7 @@ html[data-platform="android"] {
     box-shadow: var(--m3-elevation-1);
     font-size: var(--fs-xs);
     font-weight: 500;
-  }
 
-  .oct-btn {
-    padding: 10px 20px;
-    border-radius: 8px; /* M3 Filter chips styling */
-    border: 1px solid var(--bd);
-    background: var(--card);
-    font-size: var(--fs-sm);
-    color: var(--txt2);
-    white-space: nowrap;
-    font-weight: 500;
-
-    &.on {
-      border-color: transparent;
-      background: rgba(var(--pri-rgb), 0.12);
-      color: var(--pri);
-      font-weight: 700;
-    }
-
-    &:active {
-      transform: scale(0.97);
-    }
-  }
-
-  /* Modern Material Text Fields with bottom emphasis states */
-  .field {
-    width: 100%;
-    background: var(--m3-surface-1);
-    border: 1px solid var(--bd);
-    border-bottom: 2px solid var(--txt3);
-    border-radius: 4px 4px 0 0; /* Traditional M3 Filled container geometry */
-    padding: 16px;
-    font-size: var(--fs);
-    color: var(--txt);
-    outline: none;
-    margin-block-end: 16px;
-    transition: background-color var(--duration-m3-standard) ease, border-color var(--duration-m3-standard) ease;
-
-    &:focus {
-      background: var(--m3-surface-2);
-      border-bottom-color: var(--pri);
-    }
-  }
-
-  .rich-btn {
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--bd);
-    background: var(--card);
-font-size: var(--fs-sm);
-color: var(--txt2);
-font-weight: 500;
-&:active {
-background-color: rgba(var(--pri-rgb), 0.08);
-}
-}
-/* High Elevation Floating Action Button (FAB) / Button Logic */
-.submit-btn {
-background: var(--pri);
-border: none;
-padding: 18px;
-font-size: var(--fs-lg);
-font-weight: 700;
-color: #fff;
-width: 100%;
-box-shadow: var(--m3-elevation-1);
-transition: box-shadow var(--duration-m3-emphasized) cubic-bezier(0.2, 0, 0, 1),
-transform var(--duration-m3-emphasized) cubic-bezier(0.2, 0, 0, 1);
-&:not(:disabled):hover {
-box-shadow: var(--m3-elevation-2);
-}
-&:not(:disabled):active {
-transform: scale(0.96);
-box-shadow: var(--m3-elevation-1);
-}
-&:disabled {
-opacity: 0.12;
-background: var(--txt3);
-color: var(--bg2);
-box-shadow: none;
-}
-}
-}
 /* ══════════════════════════════════════════════════════
    PROFILE PAGE
    ══════════════════════════════════════════════════════ */
