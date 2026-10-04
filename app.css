@@ -14,6 +14,15 @@
   --tr:0.18s cubic-bezier(0.4,0,0.2,1);--nav-h:68px;
    --glass-bg:rgba(255,255,255,0.18);
    --glass-border:rgba(255,255,255,0.35);
+   --duration-ios-spring: 0.45s;
+  --duration-m3-standard: 0.2s;
+  --duration-m3-emphasized: 0.35s;
+
+  /* Material Design 3 Elevation Tokens (Tonal Overlays) */
+  --m3-surface-1: linear-gradient(0deg, rgba(var(--pri-rgb, 103, 80, 164), 0.05), rgba(var(--pri-rgb, 103, 80, 164), 0.05)), var(--card);
+  --m3-surface-2: linear-gradient(0deg, rgba(var(--pri-rgb, 103, 80, 164), 0.08), rgba(var(--pri-rgb, 103, 80, 164), 0.08)), var(--card);
+  --m3-elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --m3-elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
 }
 [data-theme="midnight"]{--bg:#0F0E17;--bg2:#1A1826;--card:#1E1D2E;--card2:#252438;--pri:#8B5CF6;--pri2:#C4B5FD;--pri-light:#2D1F4E;--pri-dark:#7C3AED;--txt:#F4F3FF;--txt2:#9B98C5;--txt3:#5C5A7A;--bd:#2D2B45;--bd2:#3A3860;--shadow:rgba(139,92,246,.18);--shadow2:rgba(0,0,0,.35);--green:#34D399;--red:#F87171;--glass-bg:rgba(20,17,24,0.55);
 --glass-border:rgba(255,255,255,0.12);}
@@ -1095,41 +1104,435 @@ html[data-platform="ios"] .nav-ico::before{display:none}
 .fs-meta{color:rgba(255,255,255,.85);font-family:var(--font);font-size:var(--fs-lg);font-weight:700;margin-top:16px;text-align:center}
 .fs-cap{color:rgba(255,255,255,.55);font-size:var(--fs-sm);margin-top:6px;text-align:center;line-height:1.6;max-width:340px}
 
-/* ══════════════════════════════════════════════════════
-   ADD POST
-   ══════════════════════════════════════════════════════ */
-.add-wrap{padding:16px 16px calc(30px + var(--nav-h))}
-.page-ttl{font-family:var(--font);font-size:var(--fs-xl);font-weight:700;margin-bottom:18px;color:var(--txt)}
-.posting-as{background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--r);padding:13px 15px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
-.pa-lbl{font-size:var(--fs-xs);color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.pa-name{font-size:var(--fs-lg);font-weight:800;color:var(--txt);margin-top:2px}
-.change-btn{border:1.5px solid var(--bd2);border-radius:var(--r2);padding:7px 13px;font-size:var(--fs-sm);color:var(--txt2);background:var(--card);font-weight:700}
-.change-btn:active{border-color:var(--pri)}
-.photo-row{display:flex;gap:10px;margin-bottom:16px}
-.photo-btn{flex:1;background:var(--bg2);border:1.5px dashed var(--bd2);border-radius:var(--r);padding:22px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;transition:border-color .2s,background .2s}
-.photo-btn:active{border-color:var(--pri);background:var(--pri-light)}
-.photo-btn-ico{font-size:28px}
-.photo-btn-txt{font-size:var(--fs-sm);font-weight:800;color:var(--txt2)}
-.draft-wrap{margin-bottom:14px;border-radius:var(--r);overflow:hidden;position:relative}
-.draft-img{width:100%;max-height:240px;object-fit:cover}
-.remove-img{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;border-radius:var(--r2);padding:6px 12px;color:#fff;font-size:var(--fs-xs);font-weight:700}
-.oct-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none}.oct-row::-webkit-scrollbar{display:none}
-.oct-btn{padding:8px 14px;border-radius:30px;border:1.5px solid var(--bd);background:transparent;font-size:var(--fs-sm);color:var(--txt2);white-space:nowrap;font-weight:700;transition:all .15s}
-.oct-btn.on{border-color:var(--pri);background:var(--pri-light);color:var(--pri)}
-.oct-btn:active{transform:scale(.95)}
-.field-lbl{font-size:var(--fs-xs);font-weight:800;color:var(--txt2);display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
-.field{width:100%;background:var(--card);border:1.5px solid var(--bd);border-radius:var(--r);padding:14px;font-size:var(--fs);color:var(--txt);outline:none;margin-bottom:16px;-webkit-appearance:none;appearance:none;transition:border-color .2s}
-.field:focus{border-color:var(--pri)}
-textarea.field{resize:none;min-height:90px;line-height:1.6}
-.rich-toolbar{display:flex;gap:6px;padding:0 0 8px;flex-wrap:wrap}
-.rich-btn{padding:6px 11px;border-radius:var(--r3);border:1.5px solid var(--bd);background:var(--bg2);font-size:var(--fs-sm);color:var(--txt2);font-weight:700;transition:all .15s}
-.rich-btn:active{background:var(--pri-light);border-color:var(--pri);color:var(--pri)}
-.char-count{font-size:var(--fs-xs);color:var(--txt3);text-align:right;margin-top:-12px;margin-bottom:10px}
-.char-count.warn{color:var(--yellow)}.char-count.over{color:var(--red)}
-.submit-btn{background:var(--pri);border:none;border-radius:var(--r);padding:16px;font-size:var(--fs-lg);font-weight:800;color:#fff;width:100%;transition:transform .15s,opacity .2s;box-shadow:0 4px 16px var(--shadow);font-family:var(--font)}
-.submit-btn:not(:disabled):active{transform:scale(.98)}
-.submit-btn:disabled{opacity:.35}
+/* ==========================================================================
+   Shared Core Architecture & Base Structural Tokens
+   ========================================================================== */
 
+/* Base Global Scaffolding */
+.add-wrap {
+  padding: 16px 16px calc(30px + var(--nav-h));
+}
+
+.page-ttl {
+  font-family: var(--font);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  margin-block-end: 18px;
+  color: var(--txt);
+}
+
+/* Layout Core Elements */
+.photo-row {
+  display: flex;
+  gap: 10px;
+  margin-block-end: 16px;
+}
+
+.draft-wrap {
+  margin-block-end: 14px;
+  overflow: hidden;
+  position: relative;
+  
+  .draft-img {
+    width: 100%;
+    max-height: 240px;
+    object-fit: cover;
+  }
+}
+
+.oct-row {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-block-end: 4px;
+  margin-block-end: 16px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.field-lbl {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--txt2);
+  display: block;
+  margin-block-end: 7px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+textarea.field {
+  resize: none;
+  min-height: 90px;
+  line-height: 1.6;
+}
+
+.rich-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 8px;
+  flex-wrap: wrap;
+}
+
+.char-count {
+  font-size: var(--fs-xs);
+  color: var(--txt3);
+  text-align: right;
+  margin-block-start: -12px;
+  margin-block-end: 10px;
+  &
+  .warn { color: var(--yellow); }
+  &.over { color: var(--red); }
+}
+
+
+/* ==========================================================================
+   VARIATION 1: iOS Implementation (Bouncy Glassmorphism)
+   ========================================================================== */
+html[data-platform="ios"] {
+  
+  /* Inherited Overrides */
+  .posting-as, .photo-btn, .draft-wrap, .field, .submit-btn {
+    border-radius: var(--r, 14px);
+  }
+  
+  /* Premium Glass Surfaces */
+  .posting-as {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+    padding: 13px 15px;
+    margin-block-end: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pa-lbl {
+    font-size: var(--fs-xs);
+    color: var(--txt3);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .pa-name {
+    font-size: var(--fs-lg);
+    font-weight: 800;
+    color: var(--txt);
+    margin-top: 2px;
+  }
+
+  /* Interactive Buttons with Swift-like Bouncy Springs */
+  .change-btn, .photo-btn, .oct-btn, .rich-btn, .submit-btn, .remove-img {
+    will-change: transform;
+    transition: transform var(--duration-ios-spring) cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    
+    &:active {
+      transform: scale(0.92);
+    }
+  }
+
+  .change-btn {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--r2, 8px);
+    padding: 7px 13px;
+    font-size: var(--fs-sm);
+    color: var(--txt2);
+    background: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+    
+    &:active {
+      border-color: var(--pri);
+      background: var(--card);
+    }
+  }
+
+  .photo-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    padding: 22px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+
+    &:active {
+      border-color: var(--pri);
+      background: rgba(var(--pri-rgb), 0.08);
+    }
+
+    .photo-btn-ico { font-size: 28px; }
+    .photo-btn-txt { font-size: var(--fs-sm); font-weight: 600; color: var(--txt2); }
+  }
+
+  .remove-img {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none;
+    border-radius: var(--r2, 8px);
+    padding: 6px 12px;
+    color: #fff;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+
+  .oct-btn {
+    padding: 8px 14px;
+    border-radius: 40px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-sm);
+    color: var(--txt2);
+    white-space: nowrap;
+    font-weight: 600;
+
+    &.on {
+      border-color: transparent;
+      background: var(--pri);
+      color: #fff;
+    }
+  }
+
+  .field {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 14px;
+    font-size: var(--fs);
+    color: var(--txt);
+    outline: none;
+    margin-block-end: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+
+    &:focus {
+      border-color: var(--pri);
+      background: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  .rich-btn {
+    padding: 6px 11px;
+    border-radius: var(--r3, 6px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.6);
+    font-size: var(--fs-sm);
+    color: var(--txt2);
+    font-weight: 600;
+
+    &:active {
+      background: rgba(var(--pri-rgb), 0.1);
+      border-color: var(--pri);
+    }
+  }
+
+  .submit-btn {
+    background: var(--pri);
+    border: none;
+    padding: 16px;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+    color: #fff;
+    width: 100%;
+    box-shadow: 0 8px 24px rgba(var(--pri-rgb), 0.3);
+    font-family: var(--font);
+
+    &:disabled {
+      opacity: 0.35;
+      transform: none !important;
+      box-shadow: none;
+    }
+  }
+}
+
+
+/* ==========================================================================
+   VARIATION 2: Android Implementation (Material You Adaptive)
+   ========================================================================== */
+html[data-platform="android"] {
+  
+  /* Material 3 Token Assignments */
+  .posting-as, .photo-btn, .draft-wrap, .field, .submit-btn {
+    border-radius: 28px; /* Strict M3 Surface Standard */
+  }
+
+  /* Structural Tonal Surfaces */
+  .posting-as {
+    background: var(--m3-surface-1);
+    border: none;
+    box-shadow: var(--m3-elevation-1);
+    padding: 16px;
+    margin-block-end: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pa-lbl {
+    font-size: var(--fs-xs);
+    color: var(--txt3);
+    font-weight: 500;
+    letter-spacing: .25px;
+  }
+
+  .pa-name {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    color: var(--txt);
+  }
+
+  /* Tactile State Architecture for interactive objects */
+  .change-btn, .photo-btn, .oct-btn, .rich-btn, .submit-btn {
+    position: relative;
+    overflow: hidden;
+    will-change: transform, box-shadow;
+    transition: transform var(--duration-m3-standard) cubic-bezier(0.2, 0, 0, 1),
+                box-shadow var(--duration-m3-standard) cubic-bezier(0.2, 0, 0, 1),
+                background-color var(--duration-m3-standard) linear;
+  }
+
+  .change-btn {
+    border: 1px solid var(--bd2);
+    border-radius: 100px; /* Fully rounded capsule M3 button */
+    padding: 8px 16px;
+    font-size: var(--fs-sm);
+    color: var(--pri);
+    background: transparent;
+    font-weight: 500;
+    
+    &:active {
+      background-color: rgba(var(--pri-rgb), 0.12);
+      transform: scale(0.98);
+    }
+  }
+
+  .photo-btn {
+    flex: 1;
+    background: var(--m3-surface-1);
+    border: 1px dashed var(--bd2);
+    padding: 24px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+
+    &:active {
+      background: var(--m3-surface-2);
+      transform: scale(0.98);
+    }
+
+    .photo-btn-ico { font-size: 24px; color: var(--pri); }
+    .photo-btn-txt { font-size: var(--fs-sm); font-weight: 500; color: var(--txt); }
+  }
+
+  .remove-img {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--m3-surface-2);
+    border: none;
+    border-radius: 100px;
+    padding: 8px 16px;
+    color: var(--txt);
+    box-shadow: var(--m3-elevation-1);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+  }
+
+  .oct-btn {
+    padding: 10px 20px;
+    border-radius: 8px; /* M3 Filter chips styling */
+    border: 1px solid var(--bd);
+    background: var(--card);
+    font-size: var(--fs-sm);
+    color: var(--txt2);
+    white-space: nowrap;
+    font-weight: 500;
+
+    &.on {
+      border-color: transparent;
+      background: rgba(var(--pri-rgb), 0.12);
+      color: var(--pri);
+      font-weight: 700;
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  /* Modern Material Text Fields with bottom emphasis states */
+  .field {
+    width: 100%;
+    background: var(--m3-surface-1);
+    border: 1px solid var(--bd);
+    border-bottom: 2px solid var(--txt3);
+    border-radius: 4px 4px 0 0; /* Traditional M3 Filled container geometry */
+    padding: 16px;
+    font-size: var(--fs);
+    color: var(--txt);
+    outline: none;
+    margin-block-end: 16px;
+    transition: background-color var(--duration-m3-standard) ease, border-color var(--duration-m3-standard) ease;
+
+    &:focus {
+      background: var(--m3-surface-2);
+      border-bottom-color: var(--pri);
+    }
+  }
+
+  .rich-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    background: var(--card);
+font-size: var(--fs-sm);
+color: var(--txt2);
+font-weight: 500;
+&:active {
+background-color: rgba(var(--pri-rgb), 0.08);
+}
+}
+/* High Elevation Floating Action Button (FAB) / Button Logic */
+.submit-btn {
+background: var(--pri);
+border: none;
+padding: 18px;
+font-size: var(--fs-lg);
+font-weight: 700;
+color: #fff;
+width: 100%;
+box-shadow: var(--m3-elevation-1);
+transition: box-shadow var(--duration-m3-emphasized) cubic-bezier(0.2, 0, 0, 1),
+transform var(--duration-m3-emphasized) cubic-bezier(0.2, 0, 0, 1);
+&:not(:disabled):hover {
+box-shadow: var(--m3-elevation-2);
+}
+&:not(:disabled):active {
+transform: scale(0.96);
+box-shadow: var(--m3-elevation-1);
+}
+&:disabled {
+opacity: 0.12;
+background: var(--txt3);
+color: var(--bg2);
+box-shadow: none;
+}
+}
+}
 /* ══════════════════════════════════════════════════════
    PROFILE PAGE
    ══════════════════════════════════════════════════════ */
@@ -1169,22 +1572,7 @@ textarea.field{resize:none;min-height:90px;line-height:1.6}
 /* ══════════════════════════════════════════════════════
    DM / CHAT
    ══════════════════════════════════════════════════════ */
-/* 1. Tell your scrolling area to keep track of time */
-.chat-list{
-  scroll-timeline: --hide-input block;
-}
 
-/* 2. Tell your input to fade out based on that scroll timeline */
-.chat-input-wrap {
-  animation: fadeOut linear both;
-  animation-timeline: --hide-input;
-  animation-range: entry 0px entry 40px; /* Adjust 40px to change how fast it fades */
-}
-
-/* 3. The standard fade effect */
-@keyframes fadeOut {
-  to { opacity: 0; visibility: hidden; }
-}
 
 /* ══ CHAT · iOS · Liquid Glass ══ */
 /* Tokens live on the chat containers, not on html: var() inside a custom property
