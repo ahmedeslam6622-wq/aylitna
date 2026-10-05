@@ -573,6 +573,19 @@ function repaintNav(){
     badge.remove();
   }
 }
+
+// one delegated listener: works even if the nav is re-rendered
+document.addEventListener('pointerdown', e => {
+  const nav = e.target.closest('.nav');
+  if (!nav) return;
+  nav.classList.remove('bump');
+  void nav.offsetWidth;                 // restart the animation on rapid taps
+  nav.classList.add('bump');
+});
+document.addEventListener('animationend', e => {
+  if (e.animationName === 'nav-bump') e.target.classList.remove('bump');
+});
+
 function repaintChat(){
   const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
   const v=document.getElementById('chatInput')?.value||'';
