@@ -930,6 +930,11 @@ html[data-platform="ios"] .nav-ico::before{display:none}
   transition:all .35s cubic-bezier(.4,0,.2,1);
 }
 
+.nav:active {
+   transform: scale(0.75);
+}   
+
+
 .nav-btn{
   display:flex;
   flex-direction:column;
