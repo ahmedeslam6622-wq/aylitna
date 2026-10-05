@@ -931,9 +931,17 @@ html[data-platform="ios"] .nav-ico::before{display:none}
 }
 
 .nav:active {
-   transform: scale(0.75);
+   transform: scale(0.85);
 }   
-
+@keyframes nav-bump{
+  0%  {transform:scale(1)}
+  30% {transform:scale(.94)}    /* squish */
+  65% {transform:scale(1.03)}   /* overshoot */
+  100%{transform:scale(1)}
+}
+body:not(.chat-active) .nav.bump{
+  animation:nav-bump .5s cubic-bezier(.3,0,.2,1);
+}
 
 .nav-btn{
   display:flex;
