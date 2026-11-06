@@ -2,14 +2,17 @@
   "id": "/aylitna/",
   "name": "عيلتنا — Our Family",
   "short_name": "عيلتنا",
+  "description": "Your family's private space: moments, chat and calls.",
   "start_url": "/aylitna/",
   "scope": "/aylitna/",
-  "display": "fullscreen",
-"display_override": ["fullscreen", "standalone"],
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "theme_color": "#000000",
-  "background_color": "#ffffff",
+  "theme_color": "#FAF8F3",
+  "background_color": "#FAF8F3",
+  "lang": "en",
+  "categories": ["social", "lifestyle"],
   "icons": [
-    { "src": "icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+    { "src": "icon.png", "sizes": "192x192 512x512 1024x1024", "type": "image/png", "purpose": "any" }
   ]
 }
