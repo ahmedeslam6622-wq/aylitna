@@ -1,1693 +1,889 @@
-/* ══════════════════════════════════════════════════════
-   INIT
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   عيلتنا · app.js
+   The markup lives in index.html (screens, sheets and the <template>s).
+   This file only: talks to Supabase/Cloudinary, fills data into that
+   markup, and handles taps. No big HTML strings, no full re-renders.
 
-async function init(){
-  initTheme();
+   Sections: helpers · state · data · feed · comments · chat · people
+             · add post · sheets · viewer · realtime · boot
+   Voice/video calls are in calls.js (loaded lazily after first paint).
+   ═══════════════════════════════════════════════════════════ */
+'use strict';
 
-  myName=ls('ayl_name','');
-  lastSeen=+(ls('ayl_seen',0));
-  lastMsgSeen=+(ls('ayl_msgseen',0));
-  pinnedPostId=ls('ayl_pinned',null);
-  lss('ayl_seen',Date.now());
-  loadSeenBy();loadProfiles();
-  if(!messages.group)messages.group=[];
-  loadingFeed=true;render();
-  // ... rest of your original init code continues unchanged below
+/* ── helpers ─────────────────────────────────────────────── */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const f = (r, n) => r.querySelector(`[data-f="${n}"]`);
+const tpl = id => document.getElementById(id).content.firstElementChild.cloneNode(true);
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  e.append(...kids.flat().filter(x => x != null));
+  return e;
+}
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  json(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  setJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const buzz = (ms = 15) => navigator.vibrate?.(ms);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const rich = t => esc(t || '')
+  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')
+  .replace(/@([\p{L}\p{N}_]+)/gu, '<span class="mention">@$1</span>');
+const hash = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
+const oct = id => OCTS[id] || OCTS.everyday;
+const ago = iso => {
+  const d = Date.now() - new Date(iso).getTime(), m = d / 6e4 | 0, h = d / 36e5 | 0, dy = d / 864e5 | 0;
+  if (m < 1) return 'just now'; if (m < 60) return m + 'm'; if (h < 24) return h + 'h';
+  if (dy === 1) return 'yesterday'; if (dy < 7) return dy + 'd ago';
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const fullDate = iso => new Date(iso).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' · ' + fmtTime(iso);
+const fmtDay = iso => {
+  const d = new Date(iso), n = new Date();
+  if (d.toDateString() === n.toDateString()) return 'Today';
+  n.setDate(n.getDate() - 1);
+  return d.toDateString() === n.toDateString() ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+};
+const dmKey = (a, b) => [a, b].sort().join('|');
 
-  await Promise.all([loadPosts(),loadMessages()]);
-  loadingFeed=false;
-  render(); // Render immediately with posts
-  loadAllCmtCounts().then(()=>{
-    // Update all comment badges without full re-render
-    document.querySelectorAll('[id^="cb-"]').forEach(el=>{
-      const pid=el.id.replace('cb-','');
-      el.textContent=cmtCountRaw(pid);
-    });
-    loadSeenByFromDB().then(()=>markSeenBy());
+/* Cloudinary: ask for a right-sized, modern-format image instead of the original. */
+const cld = (u, w) => CFG.CLD_TRANSFORM !== false && u && u.includes('res.cloudinary.com') && u.includes('/upload/') && !u.includes('/upload/f_auto')
+  ? u.replace('/upload/', `/upload/f_auto,q_auto,w_${w}/`) : u;
+const vidUrl = u => u && u.includes('res.cloudinary.com') ? u.replace('/upload/', '/upload/q_auto,vc_auto/') : u;
+const posterUrl = u => u && u.includes('res.cloudinary.com') ? u.replace('/upload/', '/upload/so_0,w_700,f_jpg/').replace(/\.\w+$/, '.jpg') : null;
+function imgEl(url, w, extra = {}) {
+  const i = el('img', { src: cld(url, w), alt: '', loading: 'lazy', decoding: 'async', ...extra });
+  i.onerror = () => { if (i.src !== url) { i.onerror = null; i.src = url; } };
+  return i;
+}
+
+let toastT;
+function toast(msg, ms = 2400, err = false) {
+  const t = $('#toast'); t.textContent = msg; t.classList.toggle('error', err);
+  clearTimeout(toastT);
+  if (t.showPopover) { try { t.hidePopover(); } catch {} try { t.showPopover(); } catch {} toastT = setTimeout(() => { try { t.hidePopover(); } catch {} }, ms); }
+  else { t.style.opacity = 1; toastT = setTimeout(() => (t.style.opacity = 0), ms); }
+}
+let AC;
+function beep(type) {            // tiny synthesized sounds, one shared AudioContext
+  try {
+    AC ??= new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    const p = { send: [880, .12, .08], receive: [660, .1, .12], react: [1047, .07, .05], ring: [440, .2, .35], end: [300, .15, .3] }[type] || [660, .1, .1];
+    o.frequency.value = p[0]; g.gain.setValueAtTime(p[1], t); g.gain.exponentialRampToValueAtTime(.001, t + p[2]);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + p[2]);
+  } catch {}
+}
+let cfRes;
+function confirmSheet(title, ok = 'Delete') {
+  $('#cf-t').textContent = title; $('#cf-ok').textContent = ok;
+  const d = $('#dlg-confirm'); d.showModal();
+  return new Promise(r => { cfRes = r; d.addEventListener('close', () => { cfRes?.(false); cfRes = null; }, { once: true }); });
+}
+const busy = (on, txt) => { $('#busy').hidden = !on; if (txt) $('#busy-t').textContent = txt; };
+
+/* ── state ───────────────────────────────────────────────── */
+const S = {
+  name: '', view: 'feed', posts: [], msgs: [], dms: {}, cmts: {}, cc: {}, profiles: {}, seen: {},
+  filter: null, q: '', pinned: store.get('ayl_pinned') || null, lastSeen: +store.get('ayl_seen', 0),
+  chatTab: 'group', thread: null, groupUnread: 0, dmUnread: {}, cmtState: {}, cmtPage: {}, newDot: new Set(),
+  draft: [], draftPic: null, viewer: null, viewingUser: null, loaded: false, newCount: 0, me: null,
+};
+const isOwn = n => S.name && n && S.name.trim().toLowerCase() === n.trim().toLowerCase();
+const sb = supabase.createClient(CFG.SB_URL, CFG.SB_KEY, {
+  auth: { persistSession: CFG.GATE_ON, autoRefreshToken: CFG.GATE_ON, detectSessionInUrl: false },
+});
+const scroller = $('#scroller'), feedEl = $('#feed'), msgsEl = $('#msgs');
+const cardEls = new Map();
+
+/* avatars: one span, filled in place */
+const colorOf = n => MC[S.profiles[n]?.colorIdx ?? hash(n || '?') % MC.length];
+function setAv(node, name, size = '') {
+  const c = colorOf(name), ph = S.profiles[name]?.photo;
+  node.className = 'av' + (size ? ' ' + size : '');
+  node.style.cssText = `background:${c.bg};color:${c.tx};--c-br:${c.br}`;
+  node.replaceChildren();
+  if (ph) node.append(imgEl(ph, size === 'lg' ? 300 : 120));
+  else node.textContent = (name || '?').trim().charAt(0).toUpperCase();
+  return node;
+}
+const avEl = (n, size) => setAv(document.createElement('span'), n, size);
+const allNames = () => [...new Set([...S.posts.map(p => p.name), ...Object.keys(S.profiles), ...Object.keys(S.cmts).flatMap(k => S.cmts[k].map(c => c.name))])].filter(Boolean);
+
+/* ── data ────────────────────────────────────────────────── */
+const db = {
+  async posts() {
+    const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false }).limit(CFG.FEED_LIMIT);
+    if (error || !data) return false; S.posts = data; store.setJson('ayl_cache', data.slice(0, 12)); return true;
+  },
+  async group() {
+    const { data, error } = await sb.from('messages').select('*').is('dm_key', null).order('created_at', { ascending: false }).limit(150);
+    if (!error && data) S.msgs = data.reverse();
+  },
+  async dmAll() {
+    const pat = '%' + S.name.replace(/[%_\\]/g, '\\$&') + '%';
+    const { data } = await sb.from('messages').select('*').ilike('dm_key', pat).order('created_at', { ascending: false }).limit(300);
+    if (!data) return;
+    const by = {};
+    for (const m of data.reverse()) if (m.dm_key?.split('|').includes(S.name)) (by[m.dm_key] ??= []).push(m);
+    S.dms = by;
+    for (const [k, l] of Object.entries(by)) {
+      const seen = +store.get('ayl_dmseen_' + k, 0);
+      S.dmUnread[k] = l.filter(m => !isOwn(m.name) && new Date(m.created_at) > seen).length;
+    }
+  },
+  async cmtMeta() {
+    const { data } = await sb.from('comments').select('id,post_id,name');
+    if (!data) return; S.cc = {}; S.cmtMeta = data;
+    data.forEach(c => (S.cc[c.post_id] = (S.cc[c.post_id] || 0) + 1));
+  },
+  async cmts(pid) {
+    const { data } = await sb.from('comments').select('*').eq('post_id', pid).order('created_at', { ascending: true });
+    if (data) { S.cmts[pid] = data; S.cc[pid] = data.length; }
+  },
+  async profiles() {
+    const { data, error } = await sb.from('profiles').select('*');
+    if (error || !data) return;
+    const p = {};
+    data.forEach(r => (p[r.name] = { photo: r.photo || undefined, bio: r.bio || undefined, birthday: r.birthday || undefined, colorIdx: r.color_idx ?? undefined }));
+    S.profiles = p; store.setJson('ayl_profiles', p);
+  },
+  async seen() {
+    const ids = S.posts.slice(0, 20).map(p => p.id); if (!ids.length) return;
+    const { data } = await sb.from('post_views').select('post_id,viewer').in('post_id', ids);
+    (data || []).forEach(r => { const l = (S.seen[r.post_id] ??= []); if (!l.includes(r.viewer)) l.push(r.viewer); });
+  },
+  async markSeen() {
+    const rows = S.posts.slice(0, 8).filter(p => !(S.seen[p.id] || []).includes(S.name)).map(p => ({ post_id: p.id, viewer: S.name }));
+    if (!rows.length) return;
+    rows.forEach(r => (S.seen[r.post_id] ??= []).push(S.name));
+    try { await sb.from('post_views').upsert(rows, { onConflict: 'post_id,viewer', ignoreDuplicates: true }); } catch {}
+  },
+};
+S.cmtMeta = [];
+
+async function shrink(file, max = CFG.IMG_MAX, q = CFG.IMG_QUALITY) {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const r = Math.min(1, max / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * r), h = Math.round(bmp.height * r);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(bmp, 0, 0, w, h); bmp.close?.();
+    return await new Promise(res => c.toBlob(b => res(b || file), 'image/jpeg', q));
+  } catch { return file; }
+}
+async function upload(kind, blob) {
+  const c = kind === 'video' ? CFG.CLD_VID : CFG.CLD_IMG, fd = new FormData();
+  fd.append('file', blob); fd.append('upload_preset', c.preset);
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${c.cloud}/${kind}/upload`, { method: 'POST', body: fd });
+  const d = await r.json(); if (d.error) throw new Error(d.error.message); return d.secure_url;
+}
+const needOnline = () => navigator.onLine || (toast('📡 No internet — connect and try again', 2600, true), false);
+
+/* ── navigation ──────────────────────────────────────────── */
+const scrollPos = {};
+function go(v, { push = true } = {}) {
+  if (!S.name) return;
+  if (v === S.view && v !== 'user') { if (v === 'feed') scroller.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  scrollPos[S.view] = scroller.scrollTop;
+  S.view = v; document.body.dataset.view = v;
+  $$('.tab,.fab').forEach(t => t.classList.toggle('on', t.dataset.go === v));
+  const slot = TAB_SLOT[v], bar = $('#tabbar');
+  bar.classList.toggle('noind', slot == null); if (slot != null) bar.style.setProperty('--i', slot);
+  $('#title').textContent = v === 'user' ? S.viewingUser : VIEW_TITLE[v];
+  if (v !== 'feed') closeSearch();
+  ({ stats: renderStats, members: renderMembers, chat: openChat, add: resetAdd, user: renderUser, edit: fillEdit })[v]?.();
+  if (push) { const both = v in TAB_SLOT && history.state?.v in TAB_SLOT; history[both ? 'replaceState' : 'pushState']({ v, u: S.viewingUser }, ''); }
+  scroller.scrollTop = v === 'feed' ? scrollPos.feed || 0 : 0;
+}
+addEventListener('popstate', e => { if (e.state?.u) S.viewingUser = S.renamed?.[e.state.u] || e.state.u; go(e.state?.v || 'feed', { push: false }); });
+let scrolled = false;
+scroller.addEventListener('scroll', () => {
+  const s = scroller.scrollTop > 8; if (s !== scrolled) { scrolled = s; $('#topbar').classList.toggle('scrolled', s); }
+}, { passive: true });
+
+/* ── feed ────────────────────────────────────────────────── */
+function visiblePosts() {
+  let l = S.posts;
+  if (S.filter) l = l.filter(p => p.name === S.filter);
+  if (S.q) { const q = S.q.toLowerCase(); l = l.filter(p => p.name.toLowerCase().includes(q) || (p.caption || '').toLowerCase().includes(q) || oct(p.oct).l.toLowerCase().includes(q)); }
+  const i = S.pinned ? l.findIndex(p => p.id === S.pinned) : -1;
+  return i > 0 ? [l[i], ...l.slice(0, i), ...l.slice(i + 1)] : l;
+}
+function renderFeed() {
+  const list = visiblePosts(), want = new Set(list.map(p => p.id));
+  feedEl.removeAttribute('aria-busy'); $$('.sk', feedEl).forEach(n => n.remove());
+  for (const [id, n] of cardEls) if (!want.has(id)) { n.remove(); cardEls.delete(id); }
+  let prev = null;
+  for (const p of list) {
+    let n = cardEls.get(p.id);
+    if (!n) { n = buildCard(p); cardEls.set(p.id, n); if (S.loaded) n.classList.add('enter'); } else updateCard(n, p);
+    const at = prev ? prev.nextElementSibling : feedEl.firstElementChild;
+    if (n !== at) feedEl.insertBefore(n, at);
+    prev = n;
+  }
+  const empty = !list.length && S.ready;
+  $('#feed-empty').hidden = !empty;
+  if (empty) {
+    $('#empty-i').textContent = S.q ? '🔍' : '📸'; $('#empty-t').textContent = S.q ? 'No results' : 'No moments yet';
+    $('#empty-d').textContent = S.q ? `Nothing found for “${S.q}”` : 'Tap + to share the first family moment!';
+  }
+}
+const mediaOf = p => Array.isArray(p.media) && p.media.length ? p.media
+  : p.video_url ? [{ type: 'video', url: p.video_url }] : p.photo_url ? [{ type: 'photo', url: p.photo_url }] : [];
+
+function slide(m, i) {
+  if (m.type === 'video') {
+    return el('div', { class: 'slide' }, el('video', { src: vidUrl(m.url), poster: posterUrl(m.url), playsinline: true, preload: 'none' }),
+      el('div', { class: 'vplay', 'data-act': 'vplay', text: '▶' }));
+  }
+  return el('div', { class: 'slide' }, imgEl(m.url, 900, { 'data-act': 'view', 'data-i': i }));
+}
+function buildCard(p) {
+  const n = tpl('t-post'), o = oct(p.oct), list = mediaOf(p);
+  n.dataset.id = p.id;
+  setAv(f(n, 'av'), p.name);
+  f(n, 'name').textContent = p.name;
+  const tag = f(n, 'oct'); tag.textContent = `${o.e} ${o.l}`; tag.style.cssText = `background:${o.bg};color:${o.tx};border-color:${o.br}`;
+  const media = f(n, 'media');
+  if (!list.length) { media.replaceWith(el('div', { class: 'nomedia', style: `background:${o.bg};border-color:${o.br};color:${o.tx}` }, `${o.e} ${o.l}`)); }
+  else if (list.length === 1) media.append(slide(list[0], 0));
+  else {
+    media.append(el('div', { class: 'carousel' }, el('div', { class: 'track' }, list.map(slide)),
+      el('div', { class: 'cnt', text: `1/${list.length}` }), el('div', { class: 'dots' }, list.map((_, i) => el('i', { class: i ? '' : 'on' })))));
+  }
+  if (p.caption) { const c = f(n, 'caption'); c.innerHTML = rich(p.caption); c.hidden = false; }
+  setAv(f(n, 'myav'), S.name, 'sm');
+  updateCard(n, p);
+  return n;
+}
+function updateCard(n, p) {
+  f(n, 'time').textContent = ago(p.created_at);
+  f(n, 'pin').hidden = S.pinned !== p.id; n.classList.toggle('pinned', S.pinned === p.id);
+  // seen by
+  const seen = (S.seen[p.id] || []).filter(x => !isOwn(x)), sn = f(n, 'seen');
+  sn.hidden = !seen.length;
+  if (seen.length) sn.replaceChildren(...seen.slice(0, 4).map(x => avEl(x, 'xs')), el('span', { text: `Seen by ${seen.slice(0, 3).join(', ')}${seen.length > 3 ? ` +${seen.length - 3}` : ''}` }));
+  // reactions
+  const rx = Object.entries(p.reactions || {}).filter(([, v]) => v?.length);
+  f(n, 'rxns').replaceChildren(...rx.map(([e, names]) => el('button', {
+    class: 'rxn-pill' + (names.includes(S.name) ? ' mine' : ''), 'data-act': 'rxn', 'data-e': e, title: names.join(', '), 'aria-label': `${e} ${names.join(', ')}`,
+  }, el('span', { text: e }), String(names.length))));
+  const b = f(n, 'cbadge'); b.textContent = S.cc[p.id] ?? 0;
+  f(n, 'ndot').hidden = !S.newDot.has(p.id);
+}
+const cardOf = pid => cardEls.get(pid);
+feedEl.addEventListener('scroll', e => {          // carousel counter + dots (scroll doesn't bubble → capture)
+  const t = e.target; if (!t.classList?.contains('track')) return;
+  const i = Math.round(t.scrollLeft / (t.clientWidth || 1)), car = t.parentElement;
+  const cnt = $('.cnt', car); const txt = `${i + 1}/${t.children.length}`;
+  if (cnt.textContent !== txt) { cnt.textContent = txt; $$('.dots i', car).forEach((d, k) => d.classList.toggle('on', k === i)); }
+}, { capture: true, passive: true });
+document.addEventListener('play', e => { if (e.target.tagName === 'VIDEO') { $$('video').forEach(v => v !== e.target && v.pause()); const b = e.target.nextElementSibling; if (b) b.hidden = true; } }, true);
+document.addEventListener('pause', e => { if (e.target.tagName === 'VIDEO') { const b = e.target.nextElementSibling; if (b?.classList.contains('vplay')) b.hidden = false; } }, true);
+document.addEventListener('ended', e => { const b = e.target.nextElementSibling; if (b?.classList.contains('vplay')) b.hidden = false; }, true);
+
+async function react(card, e) {
+  const p = S.posts.find(x => x.id === card.dataset.id); if (!p) return;
+  const r = { ...(p.reactions || {}) }, l = r[e] ? [...r[e]] : [], i = l.indexOf(S.name);
+  if (i > -1) l.splice(i, 1); else { l.push(S.name); buzz(12); beep('react'); }
+  l.length ? (r[e] = l) : delete r[e];
+  p.reactions = r; $$(`.card[data-id="${CSS.escape(p.id)}"]`).forEach(n => updateCard(n, p));
+  const pill = $(`.rxn-pill[data-e="${e}"]`, card); pill?.classList.add('pop');
+  const { error } = await sb.from('posts').update({ reactions: r }).eq('id', p.id);
+  if (error) toast('Couldn’t save reaction', 2200, true);
+}
+function newPostArrived() {
+  if (S.view === 'feed' && scroller.scrollTop > 240) {
+    S.newCount++; const b = $('#newpill'); b.textContent = `▲ ${S.newCount} new moment${S.newCount > 1 ? 's' : ''}`; b.hidden = false;
+  } else renderFeed();
+  beep('receive');
+}
+function showGreeting() {
+  const key = 'ayl_greet_' + new Date().toDateString(); if (store.get(key)) return; store.set(key, '1');
+  const h = new Date().getHours();
+  const [t, s] = h >= 5 && h < 12 ? ['Good morning', 'Hope you have a wonderful day ☀️'] : h < 17 && h >= 12 ? ['Good afternoon', 'What’s happening in the family today?']
+    : h >= 17 && h < 21 ? ['Good evening', 'Share a moment from your day 📸'] : ['Good night', 'Rest well — the family loves you ❤️'];
+  const recent = S.posts.find(p => !isOwn(p.name) && Date.now() - new Date(p.created_at) < 108e5);
+  $('#greet-t').textContent = `${t}, ${S.name}!`; $('#greet-s').textContent = recent ? `${recent.name} just shared something 👇` : s;
+  const g = $('#greet'); g.hidden = false; setTimeout(() => (g.hidden = true), 5200);
+}
+let remDismissed = false;
+function showReminder() {
+  if (remDismissed) return;
+  const mine = S.posts.filter(p => p.name === S.name); let m = '';
+  if (!mine.length) m = 'You haven’t shared anything yet — be the first! 📸';
+  else { const d = (Date.now() - new Date(mine[0].created_at)) / 864e5; if (d > 2) m = `You haven’t posted in ${d | 0} days — share a moment!`; }
+  $('#rem-txt').textContent = m; $('#reminder').hidden = !m;
+}
+
+/* ── comments ────────────────────────────────────────────── */
+async function toggleCmts(card) {
+  const pid = card.dataset.id, body = f(card, 'cbody'), btn = $('[data-act=cmts]', card), open = body.hidden;
+  btn.setAttribute('aria-expanded', open); body.hidden = !open;
+  if (!open) return;
+  S.newDot.delete(pid); f(card, 'ndot').hidden = true;
+  if (!S.cmts[pid]) await db.cmts(pid);
+  renderCmts(card); f(card, 'ctext').focus({ preventScroll: true });
+}
+function renderCmts(card) {
+  const pid = card.dataset.id, all = S.cmts[pid] || [], top = all.filter(c => !c.parent_id), page = S.cmtPage[pid] || 1;
+  const shown = top.slice(0, page * CFG.CMT_PAGE), out = [];
+  const walk = (c, d) => { out.push(cmtEl(c, d)); if (d < 2) all.filter(r => r.parent_id === c.id).forEach(r => walk(r, d + 1)); };
+  shown.forEach(c => walk(c, 0));
+  if (top.length > shown.length) out.push(el('button', { class: 'chip pressable', 'data-act': 'more-cmts', style: 'margin:6px 12px' }, `Load ${Math.min(CFG.CMT_PAGE, top.length - shown.length)} more`));
+  f(card, 'clist').replaceChildren(...out);
+  f(card, 'cbadge').textContent = S.cc[pid] ?? all.length;
+  const st = S.cmtState[pid] || {};
+  f(card, 'replying').hidden = !st.reply; if (st.reply) f(card, 'replyname').textContent = st.reply.name;
+  f(card, 'cprev').hidden = !st.img; if (st.img) f(card, 'cprev-img').src = st.img.url;
+}
+function cmtEl(c, depth) {
+  const n = tpl('t-cmt'); n.dataset.cid = c.id; if (depth) n.classList.add('r' + depth);
+  setAv(f(n, 'av'), c.name, 'sm');
+  f(n, 'name').textContent = c.name; f(n, 'text').innerHTML = rich(c.text); f(n, 'time').textContent = ago(c.created_at);
+  if (c.photo_url) { const i = f(n, 'img'); i.src = cld(c.photo_url, 500); i.dataset.full = c.photo_url; i.hidden = false; }
+  f(n, 'del').hidden = !isOwn(c.name);
+  if (depth >= 2) $('[data-act=reply]', n).remove();
+  $$('.crx button', n).forEach(b => {
+    const names = (c.reactions || {})[b.dataset.e] || [];
+    b.textContent = b.dataset.e + (names.length ? ' ' + names.length : ''); b.classList.toggle('mine', names.includes(S.name));
   });
-  migrateLocalProfilesToDB().then(()=>loadProfilesFromDB()).then(()=>{ nameColors={}; render(); });
-  if(USE_SB){
-    try{
-      const{data}=await sb.from('posts').select('id,ai_tags').not('ai_tags','is',null);
-      if(data)data.forEach(p=>{if(p.ai_tags?.length)postTags[p.id]=p.ai_tags});
-    }catch(e){console.log('ai_tags fetch failed:',e)}
-  }
-  subscribeRealtime();
-  if(myName){initNotifs();initPeer();}
-  checkBirthdays();
+  return n;
+}
+async function sendCmt(form) {
+  const card = form.closest('.card'), pid = card.dataset.id, ta = f(card, 'ctext'), text = ta.value.trim(), st = S.cmtState[pid] ||= {};
+  if (!text && !st.img) return; if (!needOnline()) return;
+  const btn = $('.send', form); btn.disabled = true;
+  try {
+    const photo_url = st.img ? await upload('image', st.img.blob) : null;
+    const row = { post_id: pid, parent_id: st.reply?.id || null, name: S.name, text, photo_url, reactions: {} };
+    const { data, error } = await sb.from('comments').insert(row).select().single(); if (error) throw error;
+    addCmtLocal(data);
+    ta.value = ''; ta.style.height = ''; if (st.img) URL.revokeObjectURL(st.img.url); S.cmtState[pid] = {};
+    renderCmts(card); toast('💬 Comment sent'); buzz(); beep('send');
+  } catch (e) { toast('Couldn’t send comment', 2400, true); }
+  btn.disabled = false;
+}
+function addCmtLocal(c) {
+  const l = S.cmts[c.post_id]; if (l && !l.some(x => x.id === c.id)) l.push(c);
+  if (!S.cmtMeta.some(x => x.id === c.id)) { S.cmtMeta.push({ id: c.id, post_id: c.post_id, name: c.name }); S.cc[c.post_id] = (S.cc[c.post_id] || 0) + 1; }
+}
+async function reactCmt(node, e) {
+  const card = node.closest('.card'), pid = card.dataset.id, c = (S.cmts[pid] || []).find(x => String(x.id) === node.dataset.cid); if (!c) return;
+  const r = { ...(c.reactions || {}) }, l = r[e] ? [...r[e]] : [], i = l.indexOf(S.name);
+  i > -1 ? l.splice(i, 1) : l.push(S.name); l.length ? (r[e] = l) : delete r[e];
+  c.reactions = r; renderCmts(card); buzz(8);
+  sb.from('comments').update({ reactions: r }).eq('id', c.id).then(() => {});
+}
+async function deleteCmt(node) {
+  const card = node.closest('.card'), pid = card.dataset.id, id = node.dataset.cid;
+  if (!await confirmSheet('Delete this comment?')) return;
+  await sb.from('comments').delete().eq('id', id);
+  removeCmtLocal(id, pid); renderCmts(card);
+}
+function removeCmtLocal(id, pid) {
+  const l = S.cmts[pid]; if (l) S.cmts[pid] = l.filter(c => String(c.id) !== String(id) && String(c.parent_id) !== String(id));
+  const had = S.cmtMeta.filter(c => String(c.id) === String(id) || String(c.parent_id) === String(id)).length;
+  S.cmtMeta = S.cmtMeta.filter(c => String(c.id) !== String(id)); S.cc[pid] = Math.max(0, (S.cc[pid] || 0) - (had || 1));
 }
 
-/* ══════════════════════════════════════════════════════
-   MAIN RENDER
-   ══════════════════════════════════════════════════════ */
-function render(){
-  const app=document.getElementById('app');
-  if(!myName){renderOnboarding(app);return}
-  // Capture the current slide position BEFORE the rebuild destroys it, so
-  // the freshly-created slide can be placed there instantly (no transition)
-  // before animating to its real target. Without this, render() replacing
-  // #navBar's innerHTML creates a brand-new .nav-slide with no prior
-  // transform set — it then animates FROM the CSS default (effectively
-  // Home's position) instead of from wherever it actually was, which is
-  // the "jumps to Home first" bug.
-  const prevSlide=document.getElementById('navSlide');
-  const prevSlideState=prevSlide&&prevSlide.style.opacity==='1'
-    ?{transform:prevSlide.style.transform,width:prevSlide.style.width}
-    :null;
-  const newPosts=posts.filter(p=>new Date(p.created_at).getTime()>lastSeen).length;
-  const th=ls('ayl_theme','default'),fs=ls('ayl_fs','md');
-  const offline=!isOnline?`<div class="offline-banner"><span>📡</span> No internet — some features may not work</div>`:'';
-  const greet=view==='feed'?buildGreeting():'';
-  const pills=view==='feed'?buildPills():'';
-  const rem=view==='feed'&&!reminderDismissed?buildReminder():'';
-  const search=buildSearchBar();
-  let body='';
-  if(view==='feed')body=buildFeed();
-  else if(view==='add')body=buildAdd();
-  else if(view==='chat')body=buildChatScreen();
-  else if(view==='stats')body=buildStats();
-  else if(view==='members')body=buildMembers();
-  else if(view==='profile')body=buildProfilePage();
-  else if(view==='profile-edit')body=buildProfileEdit();
-  else if(view==='view-profile')body=buildViewProfile(viewingProfile);
-  
-function buildLiquidFilter() {
-  return `
-    <svg xmlns="http://w3.org" version="1.1" style="display:none;">
-      <defs>
-        <filter id="liquid-melt">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="gooey" />
-          <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
-        </filter>
-      </defs>
-    </svg>
-  `;
+/* ── chat ────────────────────────────────────────────────── */
+const threadKey = () => S.thread ? dmKey(S.name, S.thread) : null;
+function openChat() { setChatTab(S.chatTab === 'thread' && !S.thread ? 'dms' : S.chatTab); }
+function setChatTab(t, name) {
+  const v = $('#v-chat'); S.chatTab = t; v.dataset.ctab = t;
+  if (t === 'thread') {
+    S.thread = name || S.thread; const key = threadKey();
+    setAv($('#th-av'), S.thread, 'sm'); $('#th-name').textContent = S.thread;
+    S.dmUnread[key] = 0; store.set('ayl_dmseen_' + key, Date.now()); updateBadges();
+    renderMsgs(S.dms[key] || [], key);
+  } else if (t === 'group') {
+    S.groupUnread = 0; store.set('ayl_msgseen', Date.now()); updateBadges(); renderMsgs(S.msgs, null);
+  } else { renderDmList(); db.dmAll().then(() => S.chatTab === 'dms' && renderDmList()); }
+}
+let lastDay = '';
+function msgEl(m, key) {
+  const n = tpl('t-msg'), own = isOwn(m.name);
+  n.classList.toggle('own', own); n.dataset.id = m.id;
+  setAv(f(n, 'av'), m.name, 'sm'); if (own) f(n, 'av').hidden = true;
+  const s = f(n, 'sender'); s.textContent = m.name; s.hidden = own || !!key;
+  f(n, 'text').innerHTML = rich(m.text); f(n, 'time').textContent = fmtTime(m.created_at); f(n, 'del').hidden = !own;
+  return n;
+}
+function dayDivider(m) {
+  const d = fmtDay(m.created_at); if (d === lastDay) return null; lastDay = d; return el('div', { class: 'day', text: d });
+}
+function renderMsgs(list, key) {
+  lastDay = ''; const out = [];
+  for (const m of list) { const d = dayDivider(m); if (d) out.push(d); out.push(msgEl(m, key)); }
+  if (!out.length) out.push(el('div', { class: 'empty', style: 'margin:auto' }, el('div', { class: 'e-ico', text: '💬' }), el('p', { text: key ? 'Say hi 👋' : 'Send the first message to the family!' })));
+  msgsEl.replaceChildren(...out); msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+function appendMsg(m, key) {
+  $('.empty', msgsEl)?.remove();
+  const stick = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 120 || isOwn(m.name);
+  const d = dayDivider(m); if (d) msgsEl.append(d); msgsEl.append(msgEl(m, key));
+  if (stick) msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+function renderDmList() {
+  const names = [...new Set([...allNames(), ...Object.keys(S.dms).flatMap(k => k.split('|'))])].filter(n => !isOwn(n)).sort();
+  const box = $('#dm-list');
+  if (!names.length) { box.replaceChildren(el('div', { class: 'empty' }, el('div', { class: 'e-ico', text: '💬' }), el('h2', { text: 'No family members yet' }), el('p', { text: 'Once people join, you can message them here.' }))); return; }
+  const rows = names.map(nm => {
+    const key = dmKey(S.name, nm), l = S.dms[key] || [], last = l[l.length - 1], n = tpl('t-dm');
+    n.dataset.name = nm; setAv(f(n, 'av'), nm); f(n, 'name').textContent = nm;
+    f(n, 'last').textContent = last ? last.text : 'Tap to message'; f(n, 'time').textContent = last ? ago(last.created_at) : '';
+    const u = S.dmUnread[key] || 0; f(n, 'unread').hidden = !u; f(n, 'unread').textContent = u; return { n, t: last ? new Date(last.created_at) : 0 };
+  }).sort((a, b) => b.t - a.t).map(x => x.n);
+  box.replaceChildren(...rows);
+}
+function updateBadges() {
+  const dm = Object.values(S.dmUnread).reduce((a, b) => a + b, 0), tot = S.groupUnread + dm, b = $('#chat-badge');
+  b.hidden = !tot || S.view === 'chat'; b.textContent = tot > 99 ? '99+' : tot; $('#dm-dot').hidden = !dm;
+}
+async function sendChat() {
+  const ta = $('#chat-in'), text = ta.value.trim(); if (!text || !needOnline()) return;
+  const key = S.chatTab === 'thread' ? threadKey() : null;
+  ta.value = ''; ta.style.height = ''; beep('send'); buzz(10);
+  const tmp = { id: 'tmp' + Date.now(), name: S.name, text, dm_key: key, created_at: new Date().toISOString() };
+  pushMsg(tmp, key); appendMsg(tmp, key);
+  const { data, error } = await sb.from('messages').insert({ name: S.name, text, dm_key: key }).select().single();
+  const list = key ? S.dms[key] : S.msgs, i = list.findIndex(m => m.id === tmp.id);
+  if (error) { toast('Message not sent', 2400, true); if (i > -1) list.splice(i, 1); msgsEl.querySelector(`[data-id="${tmp.id}"]`)?.remove(); return; }
+  const dup = list.findIndex(m => m.id === data.id);
+  if (dup > -1 && i > -1) { list.splice(i, 1); msgsEl.querySelector(`[data-id="${tmp.id}"]`)?.remove(); }
+  else if (i > -1) { list[i] = data; const n = msgsEl.querySelector(`[data-id="${tmp.id}"]`); if (n) n.dataset.id = data.id; }
+}
+const pushMsg = (m, key) => key ? (S.dms[key] ??= []).push(m) : S.msgs.push(m);
+async function deleteMsg(node) {
+  const id = node.dataset.id, key = S.chatTab === 'thread' ? threadKey() : null;
+  if (!await confirmSheet('Delete this message?')) return;
+  const list = key ? S.dms[key] : S.msgs, i = list.findIndex(m => String(m.id) === id); if (i > -1) list.splice(i, 1);
+  node.remove(); await sb.from('messages').delete().eq('id', id);
 }
 
-// Then update your innerHTML line to append it:
-app.innerHTML=buildHeader(newPosts)+offline+search+greet+rem+pills+
-  `<div class="main">${body}</div>`+
-  buildNav()+buildFullscreen()+buildThemeSheet(th,fs) + buildLiquidFilter();
-
-  if(view==='chat'){setupChatInput();scrollChat()}
-  if(view==='feed'){setupFeedListeners();setTimeout(prefetchVisibleVideos,1500);}
-  setupSheet();
-  if(os==='ios'){
-    if(prevSlideState){
-      const newSlide=document.getElementById('navSlide');
-      if(newSlide){
-        newSlide.style.transition='none';
-        newSlide.style.opacity='1';
-        newSlide.style.width=prevSlideState.width;
-        newSlide.style.transform=prevSlideState.transform;
-        newSlide.offsetHeight; // force layout flush so the instant jump actually applies before re-enabling transition
-        newSlide.style.transition='';
-      }
-    }
-    requestAnimationFrame(()=>requestAnimationFrame(positionNavSlide));
-  }
-}
-
-/* Toggles .hdr.scrolled when the scrollable .main area has scrolled past a
-   small threshold. Re-attached every render() since .main is a fresh
-   element each time (see innerHTML above). Style .hdr.scrolled in app.css —
-   see the placeholder rule there. */
-
-/* ══════════════════════════════════════════════════════
-   HEADER
-   ══════════════════════════════════════════════════════ */
-
-let hdrMenuOpen=false;
-function buildHeader(newPosts){
-
-   //MENU
-  const prof=profiles[myName];
-  const profImg=prof?.photo
-    ?`<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-    :ICO_USER;
-  return`<div class="glass-menu-wrap${hdrMenuOpen?' open':''}" id="glassMenu">
-    <button class="glass-menu-btn" onclick="toggleHdrMenu()" aria-label="Menu">
-      ${newPosts>0&&view==='feed'?`<span class="glass-menu-badge">${newPosts}</span>`:''}
-      ${ICO_DOTS}
-    </button>
-    <div class="glass-menu-panel">
-      <button class="glass-menu-item" onclick="toggleSearch();closeHdrMenu()">${ICO_SEARCH}<span>Search</span></button>
-      <button class="glass-menu-item" onclick="goView('profile');closeHdrMenu()">
-        <span class="glass-menu-item-av">${profImg}</span><span>Profile</span>
-      </button>
-      <button class="glass-menu-item" onclick="openThemeSheet();closeHdrMenu()">${ICO_THEME}<span>Theme</span></button>
-      <button class="glass-menu-item" onclick="toggleCategorySheet(); closeHdrMenu()">
-  ${ICO_FILTER} <span>Filter</span>
-</button>
-
-    </div>
-  </div>`;
-}
-function toggleHdrMenu(){
-  hdrMenuOpen=!hdrMenuOpen;
-  document.getElementById('glassMenu')?.classList.toggle('open',hdrMenuOpen);
-}
-function closeHdrMenu(){
-  hdrMenuOpen=false;
-  document.getElementById('glassMenu')?.classList.remove('open');
-}
-document.addEventListener('click',(e)=>{
-  if(!hdrMenuOpen)return;
-  const wrap=document.getElementById('glassMenu');
-  if(wrap&&!wrap.contains(e.target))closeHdrMenu();
-});
-
-/* ══════════════════════════════════════════════════════
-   SEARCH
-   ══════════════════════════════════════════════════════ */
-function buildSearchBar(){
-  return`<div class="search-bar${showSearch?' show':''}" id="searchBar">
-    <div class="search-inner">
-      <span style="font-size:16px;opacity:.4">🔍</span>
-      <input id="searchIn" placeholder="Search posts, names, tags…" value="${searchQ}" oninput="onSearch(this.value)" autocomplete="off">
-      ${searchQ?`<button class="search-clear" onclick="clearSearch()">✕</button>`:''}
-    </div>
-    ${searchQ?`<div class="search-tag-row scrollx">${OCTS.filter(o=>posts.some(p=>p.oct===o.id)).map(o=>`<button class="search-tag" onclick="onSearch('${o.l}')">${o.e} ${o.l}</button>`).join('')}</div>`:''}
-  </div>`;
-}
-function toggleSearch(){showSearch=!showSearch;if(!showSearch)searchQ='';render();if(showSearch)setTimeout(()=>document.getElementById('searchIn')?.focus(),100)}
-function onSearch(v){searchQ=v;const main=document.querySelector('.main');if(main)main.innerHTML=buildFeed()}
-function clearSearch(){searchQ='';render()}
-
-/* ══════════════════════════════════════════════════════
-   GREETING
-   ══════════════════════════════════════════════════════ */
-function buildGreeting(){
-  if(greetingDismissed)return'';
-  const key='ayl_greet_'+new Date().toDateString();
-  if(ls(key))return'';
-  const h=new Date().getHours();
-  let emoji,title,sub;
-  if(h>=5&&h<12){emoji='🌅';title=`Good morning, ${myName}!`;sub='Hope you have a wonderful day ☀️'}
-  else if(h>=12&&h<17){emoji='☀️';title=`Good afternoon, ${myName}!`;sub='What is happening in the family today?'}
-  else if(h>=17&&h<21){emoji='🌆';title=`Good evening, ${myName}!`;sub='Share a moment from your day 📸'}
-  else{emoji='🌙';title=`Good night, ${myName}!`;sub='Rest well — family loves you ❤️'}
-  const recent=posts.filter(p=>!isOwn(p.name)&&(Date.now()-new Date(p.created_at).getTime())<10800000);
-  if(recent.length)sub=`${recent[0].name} just shared something — check it out! 👇`;
-  setTimeout(()=>dismissGreeting(),5000);
-  return`<div class="greeting-bar" id="greetingBar">
-    <div class="greeting-emoji">${emoji}</div>
-    <div class="greeting-txt"><div class="greeting-title">${title}</div><div class="greeting-sub">${sub}</div></div>
-  </div>`;
-}
-function dismissGreeting(){
-  greetingDismissed=true;lss('ayl_greet_'+new Date().toDateString(),'1');
-  const el=document.getElementById('greetingBar');
-  if(el){el.classList.add('fade-out');setTimeout(()=>el.remove(),650);}
-}
-
-/* ══════════════════════════════════════════════════════
-   REMINDER
-   ══════════════════════════════════════════════════════ */
-function buildReminder(){
-  const mine=posts.filter(p=>p.name===myName);
-  let msg='';
-  if(!mine.length)msg="You haven't shared anything yet — be the first! 📸";
-  else{const days=(Date.now()-new Date(mine[0].created_at).getTime())/86400000;if(days>2)msg=`You haven't posted in ${Math.floor(days)} days — share a moment! 📸`;}
-  if(!msg)return'';
-  return`<div class="reminder"><span style="font-size:20px">📸</span>
-    <div class="reminder-txt">${msg}</div>
-    <button class="reminder-share" onclick="goView('add')">Share now</button>
-    <button class="reminder-close" onclick="reminderDismissed=true;render()">✕</button>
-  </div>`;
-}
-
-
-function buildPills() {
-  const names = [...new Set(posts.map(p => p.name))];
-  if (names.length < 2) return '';
-
-  return `
-    <div id="categorySheet" class="category-dropdown-panel" style="display: none;">
-      <div class="category-dropdown-header">
-        <strong>Filter by Member</strong>
-        <button class="category-close-btn" onclick="toggleCategorySheet()">✕</button>
-      </div>
-      <div class="pills-grid">
-        ${['All', ...names].map(n => {
-          const on = n === 'All' ? !filter : filter === n;
-          return `
-            <button class="pill${on ? ' on' : ''}" onclick="setFilter('${n}'); toggleCategorySheet();">
-              ${n}
-            </button>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function toggleCategorySheet() {
-  const sheet = document.getElementById('categorySheet');
-  if (!sheet) return;
-  
-  if (sheet.style.display === 'none') {
-    sheet.style.display = 'block';
-  } else {
-    sheet.style.display = 'none';
-  }
-}
-
-
-
-
-
-/* ══════════════════════════════════════════════════════
-   FEED
-   ══════════════════════════════════════════════════════ */
-function buildFeed(){
-  if(loadingFeed)return buildSkeletons();
-  let fp=filter?posts.filter(p=>p.name===filter):posts;
-  if(searchQ){
-    const q=searchQ.toLowerCase();
-    fp=fp.filter(p=>p.name.toLowerCase().includes(q)||(p.caption||'').toLowerCase().includes(q)||getOct(p.oct).l.toLowerCase().includes(q)||(postTags[p.id]||[]).some(t=>t.includes(q)));
-  }
-  if(pinnedPostId){const pi=fp.findIndex(p=>p.id===pinnedPostId);if(pi>0){const[pin]=fp.splice(pi,1);fp=[pin,...fp]}}
-  if(!fp.length)return`<div class="empty-wrap"><div class="empty-ico">${searchQ?'🔍':'📸'}</div>
-    <div class="empty-title">${searchQ?'No results':'No moments yet'}</div>
-    <div class="empty-desc">${searchQ?`Nothing found for "${searchQ}"`:'Tap + below to share the first family moment!'}</div></div>`;
-  return`<div class="content">${fp.map((p,i)=>buildCard(p,i)).join('')}</div>`;
-}
-function buildSkeletons(){
-  return`<div class="content">${[1,2,3].map(()=>`<div class="skeleton-card">
-    <div class="skeleton-header"><div class="skeleton skeleton-circle"></div><div class="skeleton-lines"><div class="skeleton skeleton-line" style="width:55%"></div><div class="skeleton skeleton-line" style="width:35%"></div></div></div>
-    <div class="skeleton skeleton-img"></div>
-    <div class="skeleton-footer"><div class="skeleton skeleton-pill"></div><div class="skeleton skeleton-pill"></div><div class="skeleton skeleton-pill"></div></div>
-  </div>`).join('')}</div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   POST CARD
-   ══════════════════════════════════════════════════════ */
-function buildCard(p,idx){
-  const c=getC(p.name),o=getOct(p.oct);
-  const isNew=new Date(p.created_at).getTime()>lastSeen;
-  const isPinned=pinnedPostId===p.id;
-  const seenList=(seenBy[p.id]||[]).filter(n=>!isOwn(n));
-  const seenHtml=seenList.length?`<div class="seen-by">
-    ${seenList.slice(0,4).map(n=>{const sc=getC(n);const sp=profiles[n];return sp?.photo?`<div class="seen-av"><img src="${sp.photo}"></div>`:`<span class="seen-av" style="background:${sc.bg};border-color:${sc.br};color:${sc.tx}">${n[0]}</span>`}).join('')}
-    <span>Seen by ${seenList.slice(0,3).join(', ')}${seenList.length>3?` +${seenList.length-3}`:''}</span>
-  </div>`:'';
-
-  /* Media rendering: if this post has 2+ items in `media`, show a
-     swipeable carousel. If exactly 1 item in `media`, or an old post with
-     only photo_url/video_url set, fall back to the original single-media
-     markup unchanged — so nothing about old posts changes visually. */
-  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
-  const mediaHtml = mediaList&&mediaList.length>1
-    ? buildCarousel(p,mediaList)
-    : p.video_url
-      ?`<div class="post-video-wrap">
-          <video class="post-video" src="${getVideoUrl(p.video_url)}" playsinline preload="none"
-            onclick="togglePostVideo(this)"></video>
-          <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
-        </div>`
-           :p.photo_url
-      ?`<div class="post-img-wrap">
-          <div class="img-blur" id="iblur-${p.id}"><div class="img-spinner"></div></div>
-          <img class="post-img" src="${p.photo_url}" alt="" loading="lazy"
-            onclick="setFull('${p.id}')" onload="imgLoaded('${p.id}')"
-            oncontextmenu="saveImg(event,'${p.photo_url}')"
-            ontouchstart="startLP('${p.photo_url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
-          <div class="img-overlay-btns">
-            <button class="img-overlay-btn" onclick="setFull('${p.id}')">🔍 View</button>
-            <button class="img-overlay-btn" onclick="saveImg(null,'${p.photo_url}')">⬇ Save</button>
-          </div>
-        </div>${buildAiTags(p.id)}`
-      :`<div class="no-img" style="background:${o.bg};border-color:${o.br}"><span style="font-size:16px">${o.e}</span><span class="no-img-txt" style="color:${o.tx}">${o.l}</span></div>`;
-
-  return`<div class="card${isNew?' is-new':''}${isPinned?' pinned':''}" id="post-${p.id}" style="animation-delay:${idx*.04}s">
-    ${isPinned?`<div class="pin-banner">📌 Pinned</div>`:''}
-    <div class="card-hdr">
-      <div onclick="openProfile('${p.name}')" style="cursor:pointer">${buildAv(p.name,'av')}</div>
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('${p.name}')">
-        <div class="cname">${p.name}</div>
-        <div class="ctime" onclick="showFullDate('${p.id}');event.stopPropagation()">${ago(p.created_at)}</div>
-      </div>
-      <span class="oct-tag" style="background:${o.bg};color:${o.tx};border:1px solid ${o.br}">${o.e} ${o.l}</span>
-      <button class="more-btn" onclick="toggleCtx('${p.id}',event)">⋯</button>
-    </div>
-    ${openCtx===p.id?buildCtxMenu(p):''}
-    ${mediaHtml}
-    ${p.caption?`<div class="caption">${rich(p.caption)}</div>`:''}
-    ${seenHtml}
-    ${buildRxns(p)}
-    ${buildCmtSection(p)}
-  </div>`;
-}
-/* Swipeable multi-photo/video carousel — pure CSS scroll-snap, no JS drag
-   library needed. Dots update on scroll via onCarouselScroll(). Each slide
-   is either an <img> or a tap-to-play <video>, same behavior as single
-   posts. */
-function buildCarousel(p,mediaList){
-  const idx=carouselIdx[p.id]||0;
-  const slides=mediaList.map((m,i)=>{
-    if(m.type==='video'){
-      return`<div class="carousel-slide">
-        <video class="post-video" src="${getVideoUrl(m.url)}" playsinline preload="none"
-          onclick="togglePostVideo(this)"></video>
-        <div class="video-play-btn" onclick="togglePostVideo(this.previousElementSibling)">▶</div>
-      </div>`;
-    }
-    return`<div class="carousel-slide">
-      <img class="post-img carousel-img" src="${m.url}" alt="" loading="lazy"
-        onclick="setFull('${p.id}',${i})"
-        oncontextmenu="saveImg(event,'${m.url}')"
-        ontouchstart="startLP('${m.url}',event)" ontouchend="endLP()" ontouchmove="endLP()">
-    </div>`;
-  }).join('');
-  const dots=mediaList.map((_,i)=>`<span class="carousel-dot${i===idx?' active':''}"></span>`).join('');
-  return`<div class="post-carousel">
-    <div class="carousel-track" id="carousel-${p.id}" onscroll="onCarouselScroll('${p.id}',this)">${slides}</div>
-    <div class="carousel-count">${idx+1}/${mediaList.length}</div>
-    <div class="carousel-dots">${dots}</div>
-  </div>`;
-}
-function onCarouselScroll(pid,track){
-  const w=track.clientWidth;if(!w)return;
-  const idx=Math.round(track.scrollLeft/w);
-  if(carouselIdx[pid]===idx)return;
-  carouselIdx[pid]=idx;
-  const card=document.getElementById('post-'+pid);if(!card)return;
-  card.querySelectorAll('.carousel-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
-  const countEl=card.querySelector('.carousel-count');
-  const total=card.querySelectorAll('.carousel-slide').length;
-  if(countEl)countEl.textContent=(idx+1)+'/'+total;
-}
-
-/* ══════════════════════════════════════════════════════
-   CONTEXT MENU
-   ══════════════════════════════════════════════════════ */
-function buildCtxMenu(p){
-  const isPinned=pinnedPostId===p.id;
-  return`<div class="ctx-menu" id="ctx-${p.id}">
-    <button class="ctx-item" onclick="openProfile('${p.name}')"><span class="ctx-item-ico">👤</span>View profile</button>
-    ${isOwn(p.name)?`<button class="ctx-item danger" onclick="confirmDel('${p.id}')"><span class="ctx-item-ico">🗑️</span>Delete</button>`:''}
-    <button class="ctx-item" onclick="togglePin('${p.id}')"><span class="ctx-item-ico">📌</span>${isPinned?'Unpin':'Pin to top'}</button>
-    ${p.photo_url?`<button class="ctx-item" onclick="setFull('${p.id}')"><span class="ctx-item-ico">🔍</span>Fullscreen</button>`:''}
-    ${p.photo_url?`<button class="ctx-item" onclick="saveImg(null,'${p.photo_url}')"><span class="ctx-item-ico">⬇️</span>Save photo</button>`:''}
-    ${p.video_url?`<button class="ctx-item" onclick="saveImg(null,'${p.video_url}')"><span class="ctx-item-ico">⬇️</span>Save video</button>`:''}
-    <button class="ctx-item" onclick="copyCaption('${p.id}')"><span class="ctx-item-ico">📋</span>Copy caption</button>
-    <button class="ctx-item" onclick="closeCtx()"><span class="ctx-item-ico">✕</span>Close</button>
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   REACTIONS
-   ══════════════════════════════════════════════════════ */
-function buildRxns(p){
-  const rxn=p.reactions||{};
-  const pills=Object.entries(rxn).filter(([,n])=>n.length>0).map(([e,names])=>{
-    const mine=names.includes(myName);
-    return`<button class="rxn-pill${mine?' mine':''}" onclick="doRxn('${p.id}','${e}',this)"
-      onmouseenter="showWho(this)" onmouseleave="hideWho(this)"
-      ontouchstart="showWhoTouch(this)" ontouchend="hideWho(this)">
-      <span class="rxn-who">${names.join(', ')}</span>
-      <span class="rxn-emoji">${e}</span><span class="rxn-count">${names.length}</span>
-    </button>`;
-  }).join('');
-  const adds=RXN.map(e=>`<button class="rxn-add-btn" onclick="doRxn('${p.id}','${e}',this)">${e}</button>`).join('');
-  return`<div class="rxn-wrap">${pills}</div><div class="rxn-add-row">${adds}</div>`;
-}
-function doRxn(pid,emoji,btn){
-  const name=myName||'You',p=posts.find(p=>p.id===pid);if(!p)return;
-  const rxn={...(p.reactions||{})};
-  rxn[emoji]=rxn[emoji]?[...rxn[emoji]]:[];
-  const i=rxn[emoji].indexOf(name);
-  if(i>-1){rxn[emoji].splice(i,1);if(!rxn[emoji].length)delete rxn[emoji]}
-  else{rxn[emoji].push(name);vibrate(15);playSound('reaction');}
-  p.reactions=rxn;
-  btn.classList.add('pop');btn.addEventListener('animationend',()=>btn.classList.remove('pop'),{once:true});
-  const card=document.getElementById('post-'+pid);
-  if(card){const rw=card.querySelector('.rxn-wrap'),ra=card.querySelector('.rxn-add-row');
-    if(rw&&ra){const tmp=document.createElement('div');tmp.innerHTML=buildRxns(p);rw.replaceWith(tmp.children[0]);ra.replaceWith(tmp.children[0]);}}
-  updateRxn(pid,rxn);
-}
-function showWho(btn){btn.classList.add('show-who')}
-function hideWho(btn){btn.classList.remove('show-who')}
-let whoT=null;
-function showWhoTouch(btn){clearTimeout(whoT);btn.classList.add('show-who');whoT=setTimeout(()=>btn.classList.remove('show-who'),2500)}
-
-/* ══════════════════════════════════════════════════════
-   COMMENTS
-   ══════════════════════════════════════════════════════ */
-function buildCmtSection(p){
-  const cmts=(comments[p.id]||[]).filter(c=>!c._ph);
-  const total=cmtCountRaw(p.id);
-  const isOpen=openComments[p.id];
-  const draft=cmtDraft[p.id]||{text:'',photo:null,replyTo:null};
-  const page=cmtPages[p.id]||1;
-  const top=cmts.filter(c=>!c.parent_id);
-  const shown=top.slice(0,page*CMT_PAGE);
-  const hasMore=top.length>shown.length;
-  const hasNew=newCmtPosts[p.id];
-  let body='';
-  if(isOpen){
-    const list=shown.map(c=>buildCmt(p.id,c,cmts,0)).join('');
-    const more=hasMore?`<button class="load-more-cmt" onclick="moreCmts('${p.id}')">▼ Load ${Math.min(CMT_PAGE,top.length-shown.length)} more</button>`:'';
-    const replyBanner=draft.replyTo?`<div class="replying-to">↩ Replying to <strong>${draft.replyTo.name}</strong><button onclick="clearReply('${p.id}')">✕</button></div>`:'';
-    const imgPrev=draft.photo?`<div class="cmt-img-preview"><img src="${draft.photo}"><button class="cmt-img-rm" onclick="clearCmtImg('${p.id}')">✕</button></div>`:'';
-    body=`<div class="comments-body open">
-      ${list}${more}${replyBanner}${imgPrev}
-      <div class="comment-input-wrap">
-        ${buildAv(myName,'av av-sm')}
-        <div class="comment-input-inner">
-          <textarea class="comment-input" id="ci-${p.id}"
-            placeholder="${draft.replyTo?`Reply to ${draft.replyTo.name}…`:'Add a comment…'}"
-            rows="1" oninput="onCmtIn(this,'${p.id}')"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitCmt('${p.id}')}"
-          >${draft.text||''}</textarea>
-          <button class="comment-img-btn" onclick="attachCmtImg('${p.id}')">📎</button>
-        </div>
-        <button class="comment-send${draft.text?.trim()||draft.photo?' active':''}" id="cs-${p.id}" onclick="submitCmt('${p.id}')">➤</button>
-      </div>
-    </div>`;
-  }
-  return`<div class="comments-section">
-    <button class="comments-toggle${isOpen?' open':''}" onclick="toggleCmts('${p.id}')">
-      <span class="comments-toggle-ico">▶</span>
-      <span>Comments</span>
-      <span class="cmt-badge" id="cb-${p.id}">${total}</span>
-      ${hasNew&&!isOpen?`<span class="cmt-new-dot"></span>`:''}
-    </button>
-    <div id="cs-sec-${p.id}">${body}</div>
-  </div>`;
-}
-function buildCmt(pid,cmt,all,depth){
-  if(depth>2)return'';
-  const replies=all.filter(r=>r.parent_id===cmt.id);
-  const rxn=cmt.reactions||{};
-  const rxnHtml=CMT_RXN.map(e=>{const names=rxn[e]||[];const mine=names.includes(myName);
-    return`<button class="comment-rxn${mine?' mine':''}" onclick="doCmtRxn('${pid}','${cmt.id}','${e}',this)"
-      style="${mine?'opacity:1':'opacity:0.45'}">${e}${names.length?` <span style="font-size:9px;font-weight:800">${names.length}</span>`:''}</button>`;
-  }).join('');
-  const dc=depth===1?'reply':depth===2?'reply-l2':'';
-  return`<div class="comment${dc?' '+dc:''}" id="cm-${cmt.id}">
-    ${buildAv(cmt.name,'av av-xs')}
-    <div class="comment-body">
-      <div class="comment-bubble">
-        <div class="comment-name">${cmt.name}</div>
-        <div class="comment-txt">${rich(cmt.text)}</div>
-        ${cmt.photo_url?`<img class="comment-img" src="${cmt.photo_url}" loading="lazy" onclick="openImgViewer('${cmt.photo_url}')">`:''}
-      </div>
-      <div class="comment-meta">
-        <span class="comment-time">${ago(cmt.created_at)}</span>
-        ${depth<2?`<button class="comment-action" onclick="setReply('${pid}','${cmt.id}','${cmt.name}')">↩ Reply</button>`:''}
-        ${isOwn(cmt.name)?`<button class="comment-action" onclick="delComment('${pid}','${cmt.id}')" style="color:var(--red)">Delete</button>`:''}
-        <div class="comment-rxn-row">${rxnHtml}</div>
-      </div>
-    </div>
-  </div>${replies.map(r=>buildCmt(pid,r,all,depth+1)).join('')}`;
-}
-async function toggleCmts(pid){
-  const was=openComments[pid];openComments[pid]=!was;
-  if(!was){
-    const hasph=(comments[pid]||[]).some(c=>c._ph);
-    if(!comments[pid]||hasph)await loadComments(pid);
-    newCmtPosts[pid]=false;
-  }
-  repaintCard(pid);
-  if(!was)setTimeout(()=>document.getElementById('ci-'+pid)?.focus(),150);
-}
-function onCmtIn(el,pid){
-  el.style.height='auto';el.style.height=el.scrollHeight+'px';
-  if(!cmtDraft[pid])cmtDraft[pid]={text:'',photo:null,replyTo:null};
-  cmtDraft[pid].text=el.value;
-  const btn=document.getElementById('cs-'+pid);
-  if(btn)btn.className='comment-send'+(el.value.trim()||cmtDraft[pid]?.photo?' active':'');
-}
-function setReply(pid,cid,name){if(!cmtDraft[pid])cmtDraft[pid]={text:'',photo:null,replyTo:null};cmtDraft[pid].replyTo={id:cid,name};repaintCmts(pid);setTimeout(()=>document.getElementById('ci-'+pid)?.focus(),100)}
-function clearReply(pid){if(cmtDraft[pid])cmtDraft[pid].replyTo=null;repaintCmts(pid)}
-function attachCmtImg(pid){commentImgTarget=pid;document.getElementById('commentImgIn').click()}
-function clearCmtImg(pid){if(cmtDraft[pid])cmtDraft[pid].photo=null;repaintCmts(pid)}
-async function submitCmt(pid){
-  const draft=cmtDraft[pid]||{};
-  const text=(document.getElementById('ci-'+pid)?.value||draft.text||'').trim();
-  if(!text&&!draft.photo)return;if(!myName)return;
-  let photoURL=null;
-  if(draft.photo){document.getElementById('uploading').className='uploading-overlay show';photoURL=await uploadPhoto(draft.photo);document.getElementById('uploading').className='uploading-overlay';}
-  await addComment(pid,draft.replyTo?.id||null,text,photoURL);
-  cmtDraft[pid]={text:'',photo:null,replyTo:null};
-  repaintCmts(pid);repaintCmtBadge(pid);
-  toast('💬 Comment sent!');vibrate(20);playSound('send');
-}
-function doCmtRxn(pid,cid,emoji,btn){
-  const name=myName||'You',cmt=(comments[pid]||[]).find(c=>c.id===cid);if(!cmt)return;
-  const rxn={...(cmt.reactions||{})};rxn[emoji]=rxn[emoji]?[...rxn[emoji]]:[];
-  const i=rxn[emoji].indexOf(name);
-  if(i>-1){rxn[emoji].splice(i,1);if(!rxn[emoji].length)delete rxn[emoji]}else{rxn[emoji].push(name);vibrate(10);}
-  cmt.reactions=rxn;
-  btn.style.transform='scale(0.7)';requestAnimationFrame(()=>requestAnimationFrame(()=>{btn.style.transform='';btn.style.transition='transform .2s'}));
-  updateCmtRxn(pid,cid,rxn);repaintCmts(pid);
-}
-function moreCmts(pid){cmtPages[pid]=(cmtPages[pid]||1)+1;repaintCmts(pid)}
-function repaintCard(pid){const card=document.getElementById('post-'+pid);const p=posts.find(p=>p.id===pid);if(!card||!p)return;const cs=card.querySelector('.comments-section');if(cs){const tmp=document.createElement('div');tmp.innerHTML=buildCmtSection(p);cs.replaceWith(tmp.firstChild)}}
-function repaintCmts(pid){const p=posts.find(p=>p.id===pid);if(!p||!openComments[pid])return;repaintCard(pid);repaintCmtBadge(pid)}
-function repaintCmtBadge(pid){const el=document.getElementById('cb-'+pid);if(el)el.textContent=cmtCountRaw(pid)}
-function repaintNav(){
-  // Surgical update — only touch the unread badge, never destroy/rebuild
-  // the whole nav. A full outerHTML replace here would tear down the
-  // actual DOM buttons mid-tap whenever a message arrives in the
-  // background (e.g. right as the phone unlocks and realtime catches
-  // up), silently swallowing an in-progress touch.
-  const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
-  const chatBtn=document.querySelector('.nav-btn[data-view="chat"]');
-  if(!chatBtn)return;
-  const isChat=view==='chat';
-  let badge=chatBtn.querySelector('.unread-badge');
-  if(totalUnread>0&&!isChat){
-    if(!badge){
-      badge=document.createElement('span');
-      badge.className='unread-badge';
-      chatBtn.appendChild(badge);
-    }
-    badge.textContent=totalUnread;
-  } else if(badge){
-    badge.remove();
-  }
-}
-
-// one delegated listener: works even if the nav is re-rendered
-document.addEventListener('pointerdown', e => {
-  const nav = e.target.closest('.nav');
-  if (!nav) return;
-  nav.classList.remove('bump');
-  void nav.offsetWidth;                 // restart the animation on rapid taps
-  nav.classList.add('bump');
-});
-document.addEventListener('animationend', e => {
-  if (e.animationName === 'nav-bump') e.target.classList.remove('bump');
-});
-
-function repaintChat(){
-  const wrap=document.getElementById('chatMsgsWrap');if(!wrap)return;
-  const v=document.getElementById('chatInput')?.value||'';
-  wrap.innerHTML=buildMsgList();scrollChat();
-  const ni=document.getElementById('chatInput');if(ni)ni.value=v;
-}
-
-/* ══════════════════════════════════════════════════════
-   NEW POST BANNER
-   ══════════════════════════════════════════════════════ */
-function showNewBanner(){
-  const main=document.querySelector('.main');if(!main)return;
-  const fp=filter?posts.filter(p=>p.name===filter):posts;
-  const n=fp.filter(p=>new Date(p.created_at).getTime()>lastSeen);
-  if(!n.length||document.getElementById('npb'))return;
-  const d=document.createElement('div');d.className='new-post-banner';d.id='npb';
-  d.innerHTML=`<button class="new-post-pill" onclick="dismissBanner()">▲ ${n.length} new moment${n.length>1?'s':''} — tap to see</button>`;
-  const content=main.querySelector('.content');
-  if(content)content.prepend(d);else main.prepend(d);
-}
-function dismissBanner(){document.getElementById('npb')?.remove();render()}
-
-/* ══════════════════════════════════════════════════════
-   ADD POST
-   ══════════════════════════════════════════════════════ */
-function buildAdd(){
-  const fam=[...new Set(posts.map(p=>p.name))].filter(n=>!isOwn(n));
-  const pa=!showNameInput
-    ?`<div class="posting-as"><div><div class="pa-lbl">Posting as</div><div class="pa-name">${myName}</div></div><button class="change-btn" onclick="showNameInput=true;render()">Change</button></div>`
-    :`<label class="field-lbl">Your name</label><input class="field" id="nameIn" value="${myName}" placeholder="e.g. Omar" autocapitalize="words" oninput="checkSub()">`;
-  const canAddMore=draftMedia.length<MAX_MEDIA;
-  return`<div class="add-wrap">
-    <div class="page-ttl">Share a moment 📸🎬</div>
-    ${pa}
-    <div class="photo-row">
-      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('cameraIn').click()"`:'disabled'}><div class="photo-btn-ico">📷</div><div class="photo-btn-txt">Camera</div></button>
-      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('galleryIn').click()"`:'disabled'}><div class="photo-btn-ico">🖼️</div><div class="photo-btn-txt">Gallery</div></button>
-      <button class="photo-btn" ${canAddMore?`onclick="document.getElementById('videoIn').click()"`:'disabled'}><div class="photo-btn-ico">🎬</div><div class="photo-btn-txt">Video</div></button>
-    </div>
-    ${draftMedia.length?buildDraftMediaStrip():''}
-    <label class="field-lbl">Occasion</label>
-    <div class="oct-row scrollx">${OCTS.map(o=>`<button class="oct-btn${selOct===o.id?' on':''}" onclick="selOct='${o.id}';render()">${o.e} ${o.l}</button>`).join('')}</div>
-    <label class="field-lbl">Caption</label>
-    <div class="rich-toolbar">
-      <button class="rich-btn" onclick="wrapTxt('**','**')"><strong>B</strong></button>
-      <button class="rich-btn" onclick="wrapTxt('*','*')"><em>I</em></button>
-      ${fam.map(n=>`<button class="rich-btn" onclick="insertMention('${n}')">@${n}</button>`).join('')}
-    </div>
-    <textarea class="field" id="captIn" placeholder="Say something… Use **bold**, *italic*, @Name" rows="3" oninput="updateCharCount(this)"></textarea>
-    <div class="char-count" id="charCount">0 / ${MAX_CAP}</div>
-    <button class="submit-btn" id="subBtn" onclick="submitPost()" ${showNameInput?'disabled':''}>Share with family ❤️</button>
-  </div>`;
-}
-/* Horizontal strip of thumbnails for everything queued in draftMedia,
-   each with its own remove (✕) button. Photos show the compressed
-   dataURL directly; videos show a small tappable preview via <video>
-   (muted, no controls) so it's clear which slot is a video. */
-function buildDraftMediaStrip(){
-  const items=draftMedia.map((m,i)=>{
-    const thumb=m.type==='video'
-      ?`<video src="${m.previewURL}" muted></video><span class="draft-media-badge">🎬</span>`
-      :`<img src="${m.dataURL}">`;
-    return`<div class="draft-media-item">
-      ${thumb}
-      <button class="draft-media-rm" onclick="removeDraftMedia(${i})">✕</button>
-    </div>`;
-  }).join('');
-  return`<div class="draft-media-strip scrollx">${items}
-    <div class="draft-media-count">${draftMedia.length}/${MAX_MEDIA}</div>
-  </div>`;
-}
-function removeDraftMedia(idx){
-  const item=draftMedia[idx];
-  if(item?.previewURL)URL.revokeObjectURL(item.previewURL);
-  draftMedia.splice(idx,1);
-  render();
-}
-async function submitPost(){
-  if(!requireOnline())return;
-  const name=(showNameInput?(document.getElementById('nameIn')?.value||''):myName).trim();
-  const caption=(document.getElementById('captIn')?.value||'').trim();
-  if(!name||caption.length>MAX_CAP)return;
-  const upEl=document.getElementById('uploading');
-  upEl.className='uploading-overlay show';
-  const hasVideo=draftMedia.some(m=>m.type==='video');
-  if(hasVideo){
-    upEl.querySelector('.uploading-txt').textContent='Uploading… ❤️';
-    upEl.querySelector('.uploading-sub').textContent='This may take a moment';
-  }
-  try{
-    const media=[];
-    for(const item of draftMedia){
-      if(item.type==='photo'){
-        const url=await uploadPhoto(item.dataURL);
-        if(!url){upEl.className='uploading-overlay';toast('❌ A photo failed to upload');return;}
-        media.push({type:'photo',url});
-      } else {
-        const url=await uploadVideo(item.file);
-        if(!url){upEl.className='uploading-overlay';toast('❌ A video failed to upload');return;}
-        media.push({type:'video',url});
-      }
-    }
-    await addPost(name,caption,media,selOct);
-    if(name!==myName){myName=name;lss('ayl_name',name)}
-    const newPost=posts[0];
-    const firstPhoto=draftMedia.find(m=>m.type==='photo');
-    if(firstPhoto&&newPost)tagPhotoWithAI(newPost.id,firstPhoto.dataURL);
-    draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});
-    draftMedia=[];selOct='everyday';showNameInput=false;
-    if(!USE_SB)await loadPosts();
-    view='feed';render();toast('✨ Moment shared!');vibrate([20,10,20]);playSound('send');
-  }catch(e){alert('Something went wrong. Please try again.')}
-  finally{
-    upEl.className='uploading-overlay';
-    upEl.querySelector('.uploading-txt').textContent='Sharing with family… ❤️';
-    upEl.querySelector('.uploading-sub').textContent='Just a moment';
-  }
-}
-function wrapTxt(b,a){const ta=document.getElementById('captIn');if(!ta)return;const s=ta.selectionStart,e=ta.selectionEnd;const sel=ta.value.substring(s,e)||'text';ta.value=ta.value.substring(0,s)+b+sel+a+ta.value.substring(e);ta.focus()}
-function insertMention(n){const ta=document.getElementById('captIn');if(!ta)return;const p=ta.selectionStart;ta.value=ta.value.substring(0,p)+'@'+n+' '+ta.value.substring(p);ta.focus()}
-function updateCharCount(el){const c=document.getElementById('charCount');if(!c)return;const n=el.value.length;c.textContent=`${n} / ${MAX_CAP}`;c.className='char-count'+(n>MAX_CAP?' over':n>MAX_CAP*.8?' warn':'')}
-function checkSub(){const v=(document.getElementById('nameIn')?.value||'').trim();const b=document.getElementById('subBtn');if(b)b.disabled=!v}
-
-/* ══════════════════════════════════════════════════════
-   CHAT (group + DM)
-   ══════════════════════════════════════════════════════ */
-function buildChatScreen(){
-  const allNames=[...new Set(posts.map(p=>p.name))].filter(n=>!isOwn(n));
-  if(chatView==='group'){
-    return`<div class="chat-wrap">
-      <div class="chat-tabs">
-        <button class="chat-tab active" onclick="setChatView('group')">👨‍👩‍👧‍👦 Family Chat</button>
-        <button class="chat-tab" onclick="setChatView('dms')">💬 Direct Messages</button>
-      </div>
-      <div class="chat-msgs-wrap" id="chatMsgsWrap">${buildMsgList(null)}</div>
-      <div class="typing-indicator" id="typingInd"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span>typing…</span></div>
-      <div class="chat-input-wrap">
-        <textarea class="chat-input" id="chatInput" placeholder="Say something to the family…" rows="1"
-          oninput="onChatIn(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(null)}"></textarea>
-        <button class="chat-send" id="chatSend" onclick="sendChat(null)" style="opacity:.4">➤</button>
-      </div>
-    </div>`;
-  }
-  if(chatView==='dms'){
-    // DM list
-    return`<div class="chat-wrap">
-      <div class="chat-tabs">
-        <button class="chat-tab" onclick="setChatView('group')">👨‍👩‍👧‍👦 Family Chat</button>
-        <button class="chat-tab active" onclick="setChatView('dms')">💬 Direct Messages</button>
-      </div>
-      <div class="main" style="flex:1">
-        ${allNames.length?`<div class="chat-list">${allNames.map(n=>{
-          const key=dmKey(myName,n);
-          const msgs=dmMessages[key]||[];
-          const last=msgs[msgs.length-1];
-          const unread=dmUnread[key]||0;
-          return`<div class="chat-list-item" onclick="openDM('${n}')">
-            ${buildAv(n,'av')}
-            <div style="flex:1;min-width:0">
-              <div class="chat-list-name">${n}</div>
-              <div class="chat-list-preview">${last?last.text:'Tap to message'}</div>
-            </div>
-            ${last?`<div class="chat-list-time">${ago(last.created_at)}</div>`:''}
-            ${unread>0?`<div class="chat-list-unread">${unread}</div>`:''}
-          </div>`;
-        }).join('')}</div>`:`<div class="empty-wrap"><div class="empty-ico">💬</div><div class="empty-title">No family members yet</div><div class="empty-desc">Once family members post, you can message them privately here.</div></div>`}
-      </div>
-    </div>`;
-  }
-  // Individual DM thread
-  const target=chatView; // it's a name
-  const key=dmKey(myName,target);
-  if(!dmMessages[key])loadDMs(key).then(()=>repaintChat());
-  return`<div class="chat-wrap">
-    <div class="chat-hdr">
-      <button class="icon-btn" onclick="setChatView('dms')" style="margin-right:4px">←</button>
-      ${buildAv(target,'av av-sm')}
-      <div style="flex:1"><div class="chat-hdr-name">${target}</div></div>
-      <button class="chat-call-btn" onclick="startCall('${target}',false)" title="Voice call">📞</button>
-      <button class="chat-call-btn" onclick="startCall('${target}',true)" title="Video call">📹</button>
-    </div>
-    <div class="chat-msgs-wrap" id="chatMsgsWrap">${buildMsgList(key)}</div>
-    <div class="chat-input-wrap">
-      <textarea class="chat-input" id="chatInput" placeholder="Message ${target}…" rows="1"
-        oninput="onChatIn(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('${key}')}"></textarea>
-      <button class="chat-send" id="chatSend" onclick="sendChat('${key}')" style="opacity:.4">➤</button>
-    </div>
-  </div>`;
-}
-function buildMsgList(key=null){
-  const msgs=key?(dmMessages[key]||[]):(messages.group||[]);
-  if(!msgs.length)return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;color:var(--txt2)">
-    <div style="font-size:40px;margin-bottom:12px">💬</div>
-    <div style="font-size:var(--fs-lg);font-weight:700;color:var(--txt);margin-bottom:6px">${key?'Start the conversation':'Family Chat'}</div>
-    <div style="font-size:var(--fs-sm)">Send the first message!</div></div>`;
-  let html='',lastDay='';
-  msgs.forEach(m=>{
-    const day=fmtDay(m.created_at);
-    if(day!==lastDay){html+=`<div class="day-divider">${day}</div>`;lastDay=day}
-    const own=isOwn(m.name);
-    html+=`<div class="msg-row${own?' own':''}">
-      ${!own?buildAv(m.name,'av av-sm'):''}
-      <div class="msg-body-wrap">
-        ${!own&&!key?`<div class="msg-sender">${m.name}</div>`:''}
-        <div class="msg-bubble">${rich(m.text)}${own?`<button onclick="delMsg('${m.id}','${key||''}')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:10px;cursor:pointer;margin-left:8px;padding:0;vertical-align:middle">✕</button>`:''}</div>
-        <div class="msg-time">${fmtTime(m.created_at)}</div>
-      </div>
-    </div>`;
-  });
-  return html;
-}
-function setChatView(v){
-  chatView=v;
-  if(v!=='group'&&v!=='dms'){
-    const key=dmKey(myName,v);
-    dmUnread[key]=0;
-  }
-  render();if(view==='chat')scrollChat();
-}
-function openDM(name){chatView=name;const key=dmKey(myName,name);dmUnread[key]=0;render();scrollChat();}
-async function sendChat(key=null){
-  if(!requireOnline())return;
-  const el=document.getElementById('chatInput');const txt=(el?.value||'').trim();
-  if(!txt||!myName)return;
-  el.value='';el.style.height='auto';const btn=document.getElementById('chatSend');if(btn)btn.style.opacity='.4';
-  await sendMsg(txt,key||null);
-  playSound('send');vibrate(15);
-}
-function setupChatInput(){
-  const inp=document.getElementById('chatInput'),btn=document.getElementById('chatSend');
-  if(!inp||!btn)return;
-  inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';btn.style.opacity=inp.value.trim()?'1':'.4'});
-}
-function onChatIn(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';const btn=document.getElementById('chatSend');if(btn)btn.style.opacity=el.value.trim()?'1':'.4'}
-function scrollChat(){setTimeout(()=>{const el=document.getElementById('chatMsgsWrap');if(el)el.scrollTop=el.scrollHeight},60)}
-function markSeen(){unreadMsgs=0;lastMsgSeen=Date.now();lss('ayl_msgseen',lastMsgSeen)}
-
-/* ══════════════════════════════════════════════════════
-   PROFILE VIEW (other people)
-   ══════════════════════════════════════════════════════ */
-function openProfile(name){viewingProfile=name;goView('view-profile')}
-function buildViewProfile(name){
-  if(!name)return'';
-  const prof=profiles[name]||{};
-  const c=getC(name);
-  const ps=posts.filter(p=>p.name===name);
-  const rxns=ps.reduce((a,p)=>a+totalRxn(p.reactions),0);
-  const cmts=Object.values(comments).flat().filter(c=>c.name===name&&!c._ph).length;
-  const days=ps[0]?(Date.now()-new Date(ps[0].created_at).getTime())/86400000:999;
-  const streak=days<1?'🔥 Active today':days<3?`⭐ ${Math.floor(days)}d ago`:'';
-  const photoPosts=ps.filter(p=>p.photo_url);
-  const col=prof.color||c;
-  return`<div class="profile-wrap">
-    <div class="profile-hero">
-      <div class="profile-hero-bg"></div>
-      <div class="profile-av-wrap">
-        <div class="profile-av" style="background:${col.bg};border-color:${col.br};color:${col.tx}">
-          ${prof.photo?`<img src="${prof.photo}">`:`${name[0].toUpperCase()}`}
-        </div>
-      </div>
-      <div class="profile-name">${name}</div>
-      ${prof.bio?`<div class="profile-bio">${prof.bio}</div>`:''}
-      <div class="profile-badges">
-        ${streak?`<div class="profile-badge">${streak}</div>`:''}
-        ${prof.birthday?`<div class="profile-badge">🎂 ${new Date(prof.birthday).toLocaleDateString([],{month:'long',day:'numeric'})}</div>`:''}
-      </div>
-    </div>
-    <div class="profile-stats-bar">
-      <div class="profile-stat"><div class="profile-stat-n">${ps.length}</div><div class="profile-stat-l">Posts</div></div>
-      <div class="profile-stat"><div class="profile-stat-n">${rxns}</div><div class="profile-stat-l">Reactions</div></div>
-      <div class="profile-stat"><div class="profile-stat-n">${cmts}</div><div class="profile-stat-l">Comments</div></div>
-    </div>
-    <div class="profile-action-row">
-      <button class="profile-action-btn" onclick="openDM('${name}');goView('chat')">💬 Message</button>
-      <button class="profile-action-btn pri" onclick="startCall('${name}',false)">📞 Call</button>
-      <button class="profile-action-btn" onclick="startCall('${name}',true)">📹 Video</button>
-    </div>
-    ${photoPosts.length?`<div class="profile-section">
-      <div class="profile-section-title">📸 Moments (${photoPosts.length})</div>
-      <div class="profile-gallery">
-        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
-      </div>
-    </div>`:''}
-    ${ps.filter(p=>!p.photo_url&&p.caption).length?`<div class="profile-section">
-      <div class="profile-section-title">💬 Text moments</div>
-      ${ps.filter(p=>!p.photo_url).slice(0,3).map(p=>{const o=getOct(p.oct);return`<div class="card" style="margin-bottom:10px">
-        <div style="padding:12px 14px;font-size:var(--fs-sm);color:var(--txt);font-family:var(--font-d)">${p.caption||''}</div>
-        <div style="padding:0 14px 10px;font-size:var(--fs-xs);color:var(--txt3)">${o.e} ${o.l} · ${ago(p.created_at)}</div>
-      </div>`}).join('')}
-    </div>`:''}
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   MY PROFILE PAGE + EDIT
-   ══════════════════════════════════════════════════════ */
-function buildProfilePage(){
-  const prof=getMyProfile();
-  const ps=posts.filter(p=>p.name===myName);
-  const rxns=ps.reduce((a,p)=>a+totalRxn(p.reactions),0);
-  const cmts=Object.values(comments).flat().filter(c=>c.name===myName&&!c._ph).length;
-  const photoPosts=ps.filter(p=>p.photo_url);
-  const col=prof.color||getC(myName);
-  return`<div class="profile-wrap">
-    <div class="profile-hero">
-      <div class="profile-hero-bg"></div>
-      <div class="profile-av-wrap" onclick="goView('profile-edit')">
-        <div class="profile-av" style="background:${col.bg};border-color:${col.br};color:${col.tx}">
-          ${prof.photo?`<img src="${prof.photo}">`:`${myName[0].toUpperCase()}`}
-        </div>
-        <div class="profile-av-edit">✏️</div>
-      </div>
-      <div class="profile-name">${myName}</div>
-      ${prof.bio?`<div class="profile-bio">${prof.bio}</div>`:`<div class="profile-bio" style="opacity:.6">Tap to add a bio…</div>`}
-      <div class="profile-badges">
-        ${prof.birthday?`<div class="profile-badge">🎂 ${new Date(prof.birthday).toLocaleDateString([],{month:'long',day:'numeric'})}</div>`:''}
-        <div class="profile-badge">${ps.length} moments shared</div>
-      </div>
-    </div>
-    <div class="profile-stats-bar">
-      <div class="profile-stat"><div class="profile-stat-n">${ps.length}</div><div class="profile-stat-l">Posts</div></div>
-      <div class="profile-stat"><div class="profile-stat-n">${rxns}</div><div class="profile-stat-l">Reactions</div></div>
-      <div class="profile-stat"><div class="profile-stat-n">${cmts}</div><div class="profile-stat-l">Comments</div></div>
-    </div>
-    <div class="profile-action-row">
-      <button class="profile-action-btn pri" onclick="goView('profile-edit')">✏️ Edit profile</button>
-    </div>
-    ${photoPosts.length?`<div class="profile-section">
-      <div class="profile-section-title">📸 Your moments (${photoPosts.length})</div>
-      <div class="profile-gallery">
-        ${photoPosts.slice(0,9).map(p=>`<img class="profile-gallery-img" src="${p.photo_url}" onclick="setFull('${p.id}')" loading="lazy">`).join('')}
-        ${photoPosts.length===0?`<div class="profile-gallery-empty">📸</div>`:''} 
-      </div>
-    </div>`:`<div class="profile-section"><div class="profile-section-title">No photos yet</div></div>`}
-  </div>`;
-}
-function buildProfileEdit(){
-  const prof=getMyProfile();
-  const hasCustomPic=!!prof.photo;
-  const avHtml=draftProfilePic
-    ?`<div class="profile-av" style="background:var(--bg2);border-color:var(--pri)"><img src="${draftProfilePic}"></div>`
-    :prof.photo
-      ?`<div class="profile-av" style="background:var(--bg2);border-color:var(--pri)"><img src="${prof.photo}"></div>`
-      :`<div class="profile-av" style="background:${(prof.color||getC(myName)).bg};border-color:${(prof.color||getC(myName)).br};color:${(prof.color||getC(myName)).tx}">${myName[0].toUpperCase()}</div>`;
-  return`<div class="profile-edit-wrap">
-    <div class="page-ttl">Edit profile ✏️</div>
-    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">
-      <div class="profile-av-wrap" onclick="document.getElementById('profilePicIn').click()" style="cursor:pointer">
-        ${avHtml}<div class="profile-av-edit">📷</div>
-      </div>
-      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-top:8px">Tap to change photo</div>
-    </div>
-    ${draftProfilePic?`<div class="profile-warn">📸 New photo selected — tap Save to apply</div>`:''}
-    ${hasCustomPic&&!draftProfilePic?`<div class="profile-warn">⚠️ You have a custom photo. To use an avatar color, remove the photo first.</div>`:''}
-    <label class="field-lbl">Name</label>
-    <input class="field" id="profileNameIn" value="${myName}" placeholder="Your name" autocapitalize="words">
-    <label class="field-lbl">Bio (optional)</label>
-    <input class="field" id="profileBioIn" value="${prof.bio||''}" placeholder="Something about yourself…">
-    <label class="field-lbl">Birthday (optional)</label>
-    <input class="field" id="profileBdayIn" type="date" value="${prof.birthday||''}">
-    ${!hasCustomPic||draftProfilePic?`
-    <label class="field-lbl">Avatar color</label>
-    <div class="color-grid">
-      ${MC.map((c,i)=>`<div class="color-swatch${(prof.colorIdx||0)===i&&!draftProfilePic?' active':''}" style="background:${c.bg};border-color:${c.br}" onclick="pickProfileColor(${i})"></div>`).join('')}
-    </div>`:''}
-    ${prof.photo&&!draftProfilePic?`<button class="field" style="color:var(--red);border-color:var(--red);margin-bottom:14px;text-align:center;background:var(--card)" onclick="removeProfilePic()">🗑 Remove profile photo</button>`:''}
-    <button class="submit-btn" onclick="saveProfile()">Save ✓</button>
-  </div>`;
-}
-function pickProfileColor(idx){
-  selProfileColor=idx;
-  const grid=document.querySelector('.color-grid');
-  if(grid)grid.innerHTML=MC.map((c,i)=>`<div class="color-swatch${selProfileColor===i?' active':''}" style="background:${c.bg};border-color:${c.br}" onclick="pickProfileColor(${i})"></div>`).join('');
-}
-function removeProfilePic(){const prof=getMyProfile();delete prof.photo;draftProfilePic=null;profiles[myName]=prof;saveProfilesLocal();saveProfileToDB(myName,prof);nameColors={};render();toast('Profile photo removed')}
-async function saveProfile(){
-  const newName=(document.getElementById('profileNameIn')?.value||'').trim()||myName;
-  const bio=(document.getElementById('profileBioIn')?.value||'').trim();
-  const bday=document.getElementById('profileBdayIn')?.value||'';
-  const prof=getMyProfile();
-
-  if(draftProfilePic){
-    // New photo picked — upload it to Cloudinary (same simple flow as
-    // post photos) instead of storing the raw base64 locally/in the DB.
-    const upEl=document.getElementById('uploading');
-    if(upEl)upEl.className='uploading-overlay show';
-    const url=await uploadPhoto(draftProfilePic);
-    if(upEl)upEl.className='uploading-overlay';
-    if(!url){toast('❌ Profile photo failed to upload');return;}
-    prof.photo=url;draftProfilePic=null;delete prof.colorIdx;delete prof.color;
-  } else if(!prof.photo){
-    prof.colorIdx=selProfileColor;prof.color=MC[selProfileColor];
-  }
-  prof.bio=bio;prof.birthday=bday;
-
-  if(newName!==myName){
-    profiles[newName]={...prof};delete profiles[myName];
-    // Move the row in the DB too — write the new name, remove the old one.
-    await saveProfileToDB(newName,prof);
-    if(USE_SB){try{await sb.from('profiles').delete().eq('name',myName);}catch(e){console.log('old profile row cleanup failed:',e)}}
-    myName=newName;lss('ayl_name',myName);
-  } else {
-    profiles[myName]=prof;
-    await saveProfileToDB(myName,prof);
-  }
-
-  saveProfilesLocal();nameColors={};
-  toast('✓ Profile saved!');vibrate(20);goView('profile');
-}
-
-/* ══════════════════════════════════════════════════════
-   MEMBERS
-   ══════════════════════════════════════════════════════ */
-function buildMembers(){
-  const names=[...new Set(posts.map(p=>p.name))];
-  return`<div class="add-wrap">
-    <div class="page-ttl">Family members 👨‍👩‍👧‍👦</div>
-    ${!names.length?`<div class="empty-wrap"><div class="empty-ico">👨‍👩‍👧‍👦</div><div class="empty-title">No members yet</div></div>`:
-    names.map((n,i)=>{
-      const ps=posts.filter(p=>p.name===n),last=ps[0];
-      const days=last?(Date.now()-new Date(last.created_at).getTime())/86400000:999;
-      const streak=days<1?'🔥 Active today':days<3?`⭐ ${Math.floor(days)}d ago`:'';
-      const rxns=ps.reduce((a,p)=>a+totalRxn(p.reactions),0);
-      const cmtCnt=ps.reduce((a,p)=>a+cmtCount(p.id),0);
-      return`<div class="member-card" style="animation-delay:${i*.06}s" onclick="openProfile('${n}')">
-        ${buildAv(n,'av')}
-        <div style="flex:1;min-width:0">
-          <div class="member-name">${n}${isOwn(n)?' <span style="font-size:11px;font-weight:600;color:var(--txt3)">(you)</span>':''}${streak?`<span class="streak-badge">${streak}</span>`:''}</div>
-          <div class="member-meta">${ps.length} moment${ps.length!==1?'s':''} · last ${last?ago(last.created_at):'never'}</div>
-          <div class="member-stats">
-            <div class="stat"><div class="stat-n">${ps.length}</div><div class="stat-l">Posts</div></div>
-            <div class="stat"><div class="stat-n">${rxns}</div><div class="stat-l">Reactions</div></div>
-            <div class="stat"><div class="stat-n">${cmtCnt}</div><div class="stat-l">Comments</div></div>
-          </div>
-        </div>
-        <div style="font-size:18px;color:var(--txt3)">›</div>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   STATS
-   ══════════════════════════════════════════════════════ */
-function buildStats(){
-  const names=[...new Set(posts.map(p=>p.name))];
-  const totalPosts=posts.length;
-  const totalRxns=posts.reduce((a,p)=>a+totalRxn(p.reactions),0);
-  const totalCmts=Object.entries(comments).reduce((a,[,c])=>a+(Array.isArray(c)?c.filter(x=>!x._ph).length:0),0);
-  const totalMsgs=(messages.group||[]).length;
-  const pStats=names.map(n=>{
-    const ps=posts.filter(p=>p.name===n);
-    const rxns=ps.reduce((a,p)=>a+totalRxn(p.reactions),0);
-    const cmts=Object.values(comments).flat().filter(c=>c.name===n&&!c._ph).length;
-    const lastPost=ps[0]?new Date(ps[0].created_at).getTime():0;
-    return{name:n,posts:ps.length,rxns,cmts,score:ps.length*3+rxns+cmts,lastPost};
-  }).sort((a,b)=>b.score-a.score);
-  const topPost=posts.length?[...posts].sort((a,b)=>totalRxn(b.reactions)-totalRxn(a.reactions))[0]:null;
-  const topRxnCount=topPost?totalRxn(topPost.reactions):0;
-  const inactive=pStats.filter(p=>(Date.now()-p.lastPost)/86400000>7&&!isOwn(p.name));
-  const octCounts={};posts.forEach(p=>{octCounts[p.oct]=(octCounts[p.oct]||0)+1});
-  const topOct=Object.entries(octCounts).sort((a,b)=>b[1]-a[1])[0];
-  const topOctData=topOct?getOct(topOct[0]):null;
-  const maxScore=pStats[0]?.score||1;
-  const rankCls=i=>i===0?'gold':i===1?'silver':i===2?'bronze':'';
-  return`<div class="stats-wrap">
-    <div class="page-ttl">Family Stats 📊</div>
-    <div class="stats-hero"><div class="stats-hero-n">${totalPosts}</div><div class="stats-hero-l">moments shared together ❤️</div></div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-card-n">${totalRxns}</div><div class="stat-card-l">Reactions</div></div>
-      <div class="stat-card"><div class="stat-card-n">${totalCmts}</div><div class="stat-card-l">Comments</div></div>
-      <div class="stat-card"><div class="stat-card-n">${totalMsgs}</div><div class="stat-card-l">Messages</div></div>
-      <div class="stat-card"><div class="stat-card-n">${names.length}</div><div class="stat-card-l">Members</div></div>
-    </div>
-    ${topOctData?`<div class="stat-card" style="margin-bottom:16px;text-align:left;display:flex;align-items:center;gap:12px">
-      <span style="font-size:28px">${topOctData.e}</span>
-      <div><div class="stat-card-n" style="font-size:20px;text-align:left">${topOctData.l}</div><div class="stat-card-l">most shared occasion</div></div>
-    </div>`:''}
-    <div class="leaderboard">
-      <div class="lb-title">🏆 Most Active</div>
-      ${pStats.map((p,i)=>`<div class="lb-row" style="animation-delay:${i*.06}s;cursor:pointer" onclick="openProfile('${p.name}')">
-        <div class="lb-rank ${rankCls(i)}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
-        ${buildAv(p.name,'av av-xs')}
-        <div class="lb-name">${p.name}${isOwn(p.name)?' <span style="color:var(--txt3);font-weight:400">(you)</span>':''}</div>
-        <div style="flex:1;margin:0 8px"><div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(p.score/maxScore*100)}%"></div></div></div>
-        <div class="lb-val">${p.posts} posts</div>
-      </div>`).join('')}
-    </div>
-    <div class="leaderboard">
-      <div class="lb-title">❤️ Most Reactions Received</div>
-      ${[...pStats].sort((a,b)=>b.rxns-a.rxns).map((p,i)=>{const max=[...pStats].sort((a,b)=>b.rxns-a.rxns)[0]?.rxns||1;
-        return`<div class="lb-row" style="animation-delay:${i*.06}s;cursor:pointer" onclick="openProfile('${p.name}')">
-          <div class="lb-rank ${rankCls(i)}">${i+1}</div>
-          ${buildAv(p.name,'av av-xs')}
-          <div class="lb-name">${p.name}</div>
-          <div style="flex:1;margin:0 8px"><div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(p.rxns/max*100)}%"></div></div></div>
-          <div class="lb-val">${p.rxns} ❤️</div>
-        </div>`;
-      }).join('')}
-    </div>
-    ${topPost&&topRxnCount>0?`<div style="margin-bottom:6px;font-family:var(--font-d);font-size:var(--fs);font-weight:700;color:var(--txt)">⭐ Most Loved Moment</div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="top-post-label">⭐ ${topRxnCount} reaction${topRxnCount!==1?'s':''}</div>
-      ${buildCard(topPost,0)}
-    </div>`:''}
-    ${inactive.length?`<div style="margin-bottom:10px;font-family:var(--font-d);font-size:var(--fs);font-weight:700;color:var(--txt)">😴 Not posted in a while</div>
-    ${inactive.map(p=>`<div class="reminder-nudge" onclick="openProfile('${p.name}')" style="cursor:pointer">
-      <span style="font-size:28px">😴</span>
-      <div style="flex:1"><div class="nudge-name">${p.name}</div><div class="nudge-meta">Last posted ${Math.floor((Date.now()-p.lastPost)/86400000)} days ago</div></div>
-      <div style="font-size:16px;color:var(--txt3)">›</div>
-    </div>`).join('')}`:''}
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   NAV
-   ══════════════════════════════════════════════════════ */
-function buildNav(){
-  const isFeed=view==='feed',isChat=view==='chat',isSt=view==='stats',isMem=view==='members';
-  const totalUnread=unreadMsgs+Object.values(dmUnread).reduce((a,b)=>a+b,0);
-  const rippleAttr=os==='android'?' onpointerdown="navRipple(event,this)"':'';
-  
-  return`<div class="nav" id="navBar">
-    ${os==='ios'?`<div class="nav-slide" id="navSlide"></div>`:''}
-    
-    <!-- Home Tab -->
-    <button class="nav-btn" data-view="feed" onclick="goView('feed')"${rippleAttr}>
-      <div class="nav-ico${isFeed?' active':''}">
-        <svg viewBox="0 0 24 24" class="nav-svg">
-          <defs>
-            <linearGradient id="homeGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
-            </linearGradient>
-            <linearGradient id="homeAccent" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="var(--pri-dark)"/>
-              <stop offset="100%" stop-color="var(--pri)"/>
-            </linearGradient>
-          </defs>
-          <path d="M12 3L3 10.5V20.25C3 20.6642 3.33579 21 3.75 21H9.75V14.25H14.25V21H20.25C20.6642 21 21 20.6642 21 20.25V10.5L12 3Z" fill="url(#homeGlass)" stroke="var(--glass-border)" stroke-width="1.2" stroke-linejoin="round"/>
-          <path d="M5.25 11.5L12 5.875L18.75 11.5V18.75H14.25V13.5H9.75V18.75H5.25V11.5Z" fill="rgba(255, 255, 255, 0.08)"/>
-          <rect x="10.5" y="15" width="3" height="4.5" rx="1" fill="url(#homeAccent)"/>
-        </svg>
-      </div>
-      <div class="nav-lbl${isFeed?' active':''}">Home</div>
-    </button>
-    
-    <!-- Chat Tab -->
-    <button class="nav-btn" data-view="chat" onclick="goView('chat');markSeen()" style="position:relative"${rippleAttr}>
-      <div class="nav-ico${isChat?' active':''}">
-        <svg viewBox="0 0 24 24" class="nav-svg">
-          <defs>
-            <linearGradient id="chatGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
-            </linearGradient>
-            <linearGradient id="chatAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--pri)"/>
-              <stop offset="100%" stop-color="var(--pri2)"/>
-            </linearGradient>
-          </defs>
-          <path d="M18 15.75C19.6569 15.75 21 14.4069 21 12.75C21 11.0931 19.6569 9.75 18 9.75C16.3431 9.75 15 11.0931 15 12.75C15 13.3769 15.1919 13.9589 15.5192 14.441L15 16.5L17.059 15.9808C17.3592 16.0598 17.6747 16.0962 18 15.75Z" fill="url(#chatAccent)" opacity="0.85"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4.5C6.75329 4.5 2.5 8.34289 2.5 13.1C2.5 15.0232 3.19014 16.8043 4.35711 18.23L3.5 21.5L6.96248 20.6344C8.44498 21.3175 10.16 21.7 12 21.7C17.2467 21.7 21.5 17.8571 21.5 13.1C21.5 8.34289 17.2467 4.5 12 4.5Z" fill="url(#chatGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
-          <circle cx="7.5" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
-          <circle cx="12" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
-          <circle cx="16.5" cy="13" r="1.5" fill="var(--txt)" opacity="0.3"/>
-        </svg>
-      </div>
-      <div class="nav-lbl${isChat?' active':''}">Chat</div>
-      ${totalUnread>0&&!isChat?`<span class="unread-badge">${totalUnread}</span>`:''}
-    </button>
-    
-    <!-- Action FAB Button -->
-    <button class="fab" onclick="goView('add')"${rippleAttr}>＋</button>
-    
-    <!-- Stats Tab -->
-    <button class="nav-btn" data-view="stats" onclick="goView('stats')"${rippleAttr}>
-      <div class="nav-ico${isSt?' active':''}">
-        <svg viewBox="0 0 24 24" class="nav-svg">
-          <defs>
-            <linearGradient id="statsGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
-            </linearGradient>
-            <linearGradient id="statsAccent" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="var(--pri-dark)"/>
-              <stop offset="100%" stop-color="var(--pri)"/>
-            </linearGradient>
-          </defs>
-          <rect x="3" y="3" width="18" height="18" rx="4" fill="url(#statsGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
-          <rect x="5" y="5" width="14" height="14" rx="2.5" fill="rgba(255, 255, 255, 0.05)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="0.8"/>
-          <rect x="7" y="13" width="2.5" height="4" rx="0.75" fill="var(--txt3)" opacity="0.6"/>
-          <rect x="10.75" y="9" width="2.5" height="8" rx="0.75" fill="url(#statsAccent)"/>
-          <rect x="14.5" y="6" width="2.5" height="11" rx="0.75" fill="var(--pri2)" opacity="0.8"/>
-        </svg>
-      </div>
-      <div class="nav-lbl${isSt?' active':''}">Stats</div>
-    </button>
-    
-    <!-- Family Tab -->
-    <button class="nav-btn" data-view="members" onclick="goView('members')"${rippleAttr}>
-      <div class="nav-ico${isMem?' active':''}">
-        <svg viewBox="0 0 24 24" class="nav-svg">
-          <defs>
-            <linearGradient id="familyGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--glass-border)" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="var(--glass-bg)" stop-opacity="0.15"/>
-            </linearGradient>
-            <linearGradient id="familyAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="var(--pri)"/>
-              <stop offset="100%" stop-color="var(--pri-dark)"/>
-            </linearGradient>
-          </defs>
-          <circle cx="16" cy="9" r="2.5" fill="var(--pri2)" opacity="0.7"/>
-          <path d="M12.5 15.5C12.5 13.8431 14.067 12.5 16 12.5C17.933 12.5 19.5 13.8431 19.5 15.5V17.5H12.5V15.5Z" fill="var(--pri2)" opacity="0.7"/>
-          <circle cx="9" cy="8" r="3.5" fill="url(#familyGlass)" stroke="var(--glass-border)" stroke-width="1.2"/>
-          <path d="M3.5 16.5C3.5 14.0147 5.96243 12 9 12C12.0376 12 14.5 14.0147 14.5 16.5V19.5H3.5V16.5Z" fill="url(#familyGlass)" stroke="var(--glass-border)" stroke-width="1.2" stroke-linejoin="round"/>
-          <circle cx="9" cy="8" r="1.5" fill="url(#familyAccent)"/>
-        </svg>
-      </div>
-      <div class="nav-lbl${isMem?' active':''}">Family</div>
-    </button>
-  </div>`;
-}
-
-/* ── iOS: sliding tab indicator ────────────────────────────────────────
-   Positions .nav-slide under whichever .nav-btn matches the current view.
-   Uses offsetLeft/offsetWidth (relative to #navBar, the nearest positioned
-   ancestor) rather than getBoundingClientRect() — the browser computes
-   that relative-to-parent offset natively, sidestepping any ambiguity
-   between #navBar's padding box vs border box that raw viewport-relative
-   rects can introduce. Retries via rAF if layout hasn't settled yet. */
-function positionNavSlide(){
-  if(os!=='ios')return;
-  const nav=document.getElementById('navBar');
-  const slide=document.getElementById('navSlide');
-  if(!nav||!slide)return;
-  const activeBtn=nav.querySelector('.nav-ico.active')?.closest('.nav-btn');
-  if(!activeBtn){slide.style.opacity='0';return;}
-  if(activeBtn.offsetWidth===0){requestAnimationFrame(positionNavSlide);return;}
-  
-  const targetX = activeBtn.offsetLeft;
-  const targetWidth = activeBtn.offsetWidth;
-  
-  // Track continuous positioning variables
-  const currentTransform = slide.style.transform;
-  let currentX = targetX;
-  if (currentTransform && currentTransform.includes('translateX')) {
-    currentX = parseInt(currentTransform.replace(/[^0-9-]/g, '')) || targetX;
-  }
-  
-  const distance = Math.abs(targetX - currentX);
-  let stretch = 1;
-  if (distance > 40) {
-    stretch = 1.2; // Soft physical elasticity factor instead of broad scaling block
-  }
-
-  slide.style.opacity='1';
-  slide.style.width=targetWidth+'px';
-  
-  // Apply linear transforms with gentle horizontal momentum scaling constraints
-  slide.style.transform=`translateX(${targetX}px) scaleX(${stretch})`;
-  
-  setTimeout(() => {
-    slide.style.transform = `translateX(${targetX}px) scaleX(1)`;
-  }, 180);
-}
-
-
-function navRipple(e,btn){
-  if(os!=='android')return;
-  const host=btn.querySelector('.nav-ico')||btn;   // ripple lives in the pill (or the FAB itself)
-  const r=host.getBoundingClientRect();
-  const cx=e.clientX??(r.left+r.width/2);
-  const cy=e.clientY??(r.top+r.height/2);
-  // clamp so taps on the label still ripple from the pill's edge
-  const x=Math.min(Math.max(cx-r.left,0),r.width);
-  const y=Math.min(Math.max(cy-r.top,0),r.height);
-  // radius = distance to the farthest corner, so it always fills the pill exactly
-  const radius=Math.hypot(Math.max(x,r.width-x),Math.max(y,r.height-y));
-  const s=document.createElement('span');
-  s.className='nav-ripple';
-  s.style.width=s.style.height=radius*2+'px';
-  s.style.left=x-radius+'px';
-  s.style.top=y-radius+'px';
-  host.appendChild(s);
-  s.addEventListener('animationend',()=>s.remove(),{once:true});
-}
-/* ══════════════════════════════════════════════════════
-   FULLSCREEN + THEME SHEET
-   ══════════════════════════════════════════════════════ */
-function buildFullscreenInner(p){
-  const o=getOct(p.oct);
-  const mediaList=Array.isArray(p.media)&&p.media.length?p.media:null;
-  const idx=mediaList?Math.min(carouselIdx[p.id]||0,mediaList.length-1):0;
-  const current=mediaList?mediaList[idx]:{type:p.video_url?'video':'photo',url:p.photo_url};
-  const isPhoto=current.type==='photo'&&current.url;
-  return`<div class="fs-top">
-      <button class="fs-close" onclick="setFull(null)">✕ Close</button>
-      ${isPhoto?`<button class="fs-save" onclick="saveImg(null,'${current.url}')">⬇ Save</button>`:''}
-    </div>
-    ${isPhoto?`<img class="fs-img" src="${current.url}" alt="">`:''}
-    ${mediaList&&mediaList.length>1?`<div class="fs-meta" style="margin-bottom:-8px">${idx+1} / ${mediaList.length}</div>`:''}
-    <div class="fs-meta">${p.name} · <span style="opacity:.6">${o.e} ${o.l}</span></div>
-    ${p.caption?`<div class="fs-cap">${rich(p.caption)}</div>`:''}
-    <div style="color:rgba(255,255,255,.3);font-size:11px;margin-top:8px">${fullDate(p.created_at)}</div>`;
-}
-function buildFullscreen(){
-  if(!fullPost)return`<div class="fullscreen" id="fullscreen"></div>`;
-  const p=posts.find(p=>p.id===fullPost);if(!p)return`<div class="fullscreen" id="fullscreen"></div>`;
-  return`<div class="fullscreen show" id="fullscreen">${buildFullscreenInner(p)}</div>`;
-}
-function buildThemeSheet(curTheme,curFS){
-  const customPri=ls('ayl_custom_pri','#C4622D');
-  const customPri2=ls('ayl_custom_pri2','#E8A87C');
-  return`<div class="sheet-overlay" id="themeOverlay" onclick="closeSheet(event)">
-    <div class="sheet">
-      <div class="sheet-handle"></div>
-      <div class="sheet-title">Personalise ✨</div>
-      <div class="theme-grid">
-        ${THEMES.map(t=>`<button class="theme-swatch" onclick="setTheme('${t.id}')">
-          <div class="theme-circle${curTheme===t.id?' active':''}" style="background:${t.bg};box-shadow:0 3px 10px rgba(0,0,0,.15)"><span style="font-size:18px">${t.e}</span></div>
-          <div class="theme-name">${t.name}</div>
-        </button>`).join('')}
-        <button class="theme-swatch" onclick="">
-          <div class="theme-circle${curTheme==='custom'?' active':''}" style="background:${customPri};box-shadow:0 3px 10px rgba(0,0,0,.15)"><span style="font-size:18px">🎨</span></div>
-          <div class="theme-name">Custom</div>
-        </button>
-      </div>
-      <div class="color-picker-row">
-        <label>Primary</label>
-        <input type="color" class="color-picker-input" id="cpri" value="${customPri}">
-        <label>Accent</label>
-        <input type="color" class="color-picker-input" id="cpri2" value="${customPri2}">
-        <button class="color-picker-apply" onclick="applyCustomFromPicker()">Apply</button>
-      </div>
-      <div class="size-row">
-        <div class="size-lbl">Text size</div>
-        <div class="size-btns">
-          <button class="size-step${curFS==='sm'?' active':''}" onclick="setFS('sm')" data-s="sm" style="font-size:11px">A</button>
-          <button class="size-step${curFS==='md'?' active':''}" onclick="setFS('md')" data-s="md" style="font-size:14px">A</button>
-          <button class="size-step${curFS==='lg'?' active':''}" onclick="setFS('lg')" data-s="lg" style="font-size:18px">A</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ══════════════════════════════════════════════════════
-// DYNAMIC PASSCODE VIEW GENERATOR
-// ══════════════════════════════════════════════════════
-
-
-/* ══════════════════════════════════════════════════════
-   ONBOARDING
-   ══════════════════════════════════════════════════════ */
-function renderOnboarding(app){
-  app.innerHTML=`<div class="ob">
-    <div class="ob-logo">عيلتنا</div>
-    <div class="ob-sub">Your family's private space</div>
-    <div class="feat-card"><div class="feat-ico">📸</div><div><div class="feat-label">Share moments & photos</div><div class="feat-desc">Posts, reactions, comments — all in one place</div></div></div>
-    <div class="feat-card"><div class="feat-ico">💬</div><div><div class="feat-label">Group & private chat</div><div class="feat-desc">Family chat and direct messages</div></div></div>
-    <div class="feat-card"><div class="feat-ico">📞</div><div><div class="feat-label">Voice & video calls</div><div class="feat-desc">Free internet calls — no phone number needed</div></div></div>
-    <div class="feat-card"><div class="feat-ico">🎨</div><div><div class="feat-label">Personalise everything</div><div class="feat-desc">6 themes + custom colors + text size</div></div></div>
-    <div style="font-size:var(--fs-sm);font-weight:800;color:var(--txt2);text-align:left;align-self:flex-start;max-width:340px;width:100%;margin-bottom:7px">What is your name?</div>
-    <input class="ob-input" id="obIn" placeholder="e.g. Omar" oninput="obChk()" autocapitalize="words" autocorrect="off">
-    <button class="ob-btn" id="obBtn" onclick="join()" disabled>Join the family →</button>
-  </div>`;
-}
-
-/* ══════════════════════════════════════════════════════
-   ACTIONS
-   ══════════════════════════════════════════════════════ */
-function obChk(){const v=(document.getElementById('obIn')?.value||'').trim();const b=document.getElementById('obBtn');if(b){b.disabled=!v;b.style.opacity=v?'1':'.35'}}
-function join(){const n=(document.getElementById('obIn')?.value||'').trim();if(!n)return;myName=n;lss("ayl_name",n);initNotifs();initPeer();render()}
-const VIDEO_CACHE='ayl-videos-v1';
-
-async function prefetchVideo(url){
-  if(!url||!('caches'in window))return;
-  try{
-    const cache=await caches.open(VIDEO_CACHE);
-    if(await cache.match(url))return; // already cached
-    // Fetch and cache in background — don't await so it doesn't block anything
-    fetch(url,{mode:'cors'}).then(res=>{if(res.ok)cache.put(url,res);}).catch(()=>{});
-  }catch{}
-}
-
-// Prefetch videos for visible posts in background
-function prefetchVisibleVideos(){
-  const videoPosts=posts.filter(p=>p.video_url).slice(0,5);
-  videoPosts.forEach(p=>prefetchVideo(getVideoUrl(p.video_url)));
-}
-
-function getVideoUrl(url){
-  if(!url||!url.includes('cloudinary.com'))return url;
-  return url.replace('/upload/','/upload/q_auto,vc_auto/');
-}
-async function togglePostVideo(video){
-  if(!video||video.tagName!=='VIDEO')return;
-  const btn=video.nextElementSibling;
-  if(video.paused){
-    // Try to serve from cache first
-    const cachedUrl=video.dataset.cached;
-    if(!cachedUrl&&video.src){
-      try{
-        const cache=await caches.open(VIDEO_CACHE);
-        const hit=await cache.match(video.src);
-        if(hit){
-          const blob=await hit.blob();
-          const objUrl=URL.createObjectURL(blob);
-          video.src=objUrl;
-          video.dataset.cached='1';
-        }
-      }catch{}
-    }
-    video.play();
-    if(btn)btn.style.display='none';
-    video.onwaiting=()=>{if(btn){btn.style.display='flex';btn.textContent='⏳';}};
-    video.onplaying=()=>{if(btn)btn.style.display='none';};
-    video.onended=()=>{if(btn){btn.style.display='flex';btn.textContent='▶';}};
-  }else{
-    video.pause();
-    if(btn){btn.style.display='flex';btn.textContent='▶';}
-  }
-}
-function goView(v){view=v;openCtx=null;if(v==='add'){draftMedia.forEach(m=>{if(m.previewURL)URL.revokeObjectURL(m.previewURL)});draftMedia=[];selOct='everyday';showNameInput=false}if(v==='chat')markSeen();document.body.classList.toggle('chat-active',v==='chat');render();if(v==='chat')scrollChat()}
-function setFilter(n){
-  filter=n==='All'?null:(filter===n?null:n);
-  const main=document.querySelector('.main');
-  if(main)main.innerHTML=buildFeed();
-  // Update pill active states without rebuilding them
-  document.querySelectorAll('.pill').forEach(btn=>{
-    const label=btn.textContent.trim();
-    const isAll=label.startsWith('👪');
-    const on=isAll?!filter:label===filter;
-    btn.className='pill'+(on?' on':'');
+/* ── people: stats, members, profile ─────────────────────── */
+const rxnTotal = p => Object.values(p.reactions || {}).reduce((a, b) => a + (b?.length || 0), 0);
+function memberStats() {
+  const names = [...new Set(S.posts.map(p => p.name))];
+  return names.map(n => {
+    const ps = S.posts.filter(p => p.name === n), rxns = ps.reduce((a, p) => a + rxnTotal(p), 0), cmts = S.cmtMeta.filter(c => c.name === n).length;
+    return { name: n, posts: ps.length, rxns, cmts, last: ps[0] ? new Date(ps[0].created_at).getTime() : 0, score: ps.length * 3 + rxns + cmts };
   });
 }
-function setFull(id,mediaIdx){
-  fullPost=id||null;
-  if(typeof mediaIdx==='number'&&id)carouselIdx[id]=mediaIdx;
-  const el=document.getElementById('fullscreen');
-  if(!el)return;
-  if(fullPost){
-    const p=posts.find(p=>p.id===fullPost);
-    el.className='fullscreen show';
-    el.innerHTML=p?buildFullscreenInner(p):'';
-  } else {
-    el.className='fullscreen';
-    el.innerHTML='';
-  }
-}
-function openImgViewer(url){const el=document.getElementById('fullscreen');if(!el)return;el.className='fullscreen show';el.innerHTML=`<div class="fs-top"><button class="fs-close" onclick="document.getElementById('fullscreen').className='fullscreen'">✕ Close</button><button class="fs-save" onclick="saveImg(null,'${url}')">⬇ Save</button></div><img class="fs-img" src="${url}">`}
-function confirmDel(id){openCtx=null;if(!confirm('Delete this moment?'))return;deletePost(id)}
-function toggleCtx(id,e){
-  e.stopPropagation();
-  const prevId=openCtx;
-  openCtx=openCtx===id?null:id;
-  // Close whatever menu was open before (if different post)
-  if(prevId&&prevId!==id){
-    const prevMenu=document.getElementById('ctx-'+prevId);
-    if(prevMenu)prevMenu.remove();
-  }
-  const card=document.getElementById('post-'+id);
-  if(!card)return;
-  const existing=document.getElementById('ctx-'+id);
-  if(existing){existing.remove();return;} // was open for this post -> just closed it
-  const p=posts.find(p=>p.id===id);if(!p)return;
-  const hdr=card.querySelector('.card-hdr');
-  if(hdr)hdr.insertAdjacentHTML('afterend',buildCtxMenu(p));
-}
-function closeCtx(){
-  if(!openCtx)return;
-  const menu=document.getElementById('ctx-'+openCtx);
-  if(menu)menu.remove();
-  openCtx=null;
-}
-function setupFeedListeners(){document.addEventListener('click',()=>{if(openCtx)closeCtx()},{once:true})}
-function togglePin(id){pinnedPostId=pinnedPostId===id?null:id;lss('ayl_pinned',pinnedPostId||'');closeCtx();toast(pinnedPostId?'📌 Pinned to top':'📌 Unpinned')}
-function copyCaption(id){const p=posts.find(p=>p.id===id);if(!p?.caption)return;navigator.clipboard?.writeText(p.caption).then(()=>toast('📋 Copied!'));closeCtx()}
-function showFullDate(id){const p=posts.find(p=>p.id===id);if(p)toast(fullDate(p.created_at),3500)}
-let lpTimer=null;
-function saveImg(e,url){if(e)e.preventDefault();if(!url)return;const a=document.createElement('a');a.href=url;a.download='family-moment.jpg';a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);toast('📥 Opening photo — hold to save',3000)}
-function startLP(url,e){lpTimer=setTimeout(()=>{saveImg(null,url);vibrate(30)},600)}
-function endLP(){clearTimeout(lpTimer)}
-function openThemeSheet(){document.getElementById('themeOverlay')?.classList.add('show')}
-function closeSheet(e){if(e.target.id==='themeOverlay')document.getElementById('themeOverlay')?.classList.remove('show')}
-function setTheme(id){
-  applyTheme(id);
-  const grid=document.querySelector('.theme-grid');
-  if(grid)grid.innerHTML=THEMES.map(t=>`<button class="theme-swatch" onclick="setTheme('${t.id}')">
-    <div class="theme-circle${id===t.id?' active':''}" style="background:${t.bg};box-shadow:0 3px 10px rgba(0,0,0,.15)"><span style="font-size:18px">${t.e}</span></div>
-    <div class="theme-name">${t.name}</div></button>`).join('')+`<button class="theme-swatch"><div class="theme-circle${id==='custom'?' active':''}" style="background:${ls('ayl_custom_pri','#C4622D')};box-shadow:0 3px 10px rgba(0,0,0,.15)"><span style="font-size:18px">🎨</span></div><div class="theme-name">Custom</div></button>`;
-}
-function applyCustomFromPicker(){
-  const pri=document.getElementById('cpri')?.value||'#C4622D';
-  const pri2=document.getElementById('cpri2')?.value||'#E8A87C';
-  applyCustomColors(pri,pri2);
-  toast('🎨 Custom theme applied!');
-}
-function setFS(s){applyFS(s);document.querySelectorAll('.size-step').forEach(b=>{b.className='size-step'+(b.dataset.s===s?' active':'');})}
-function setupSheet(){document.querySelectorAll('.size-step').forEach((b,i)=>{b.dataset.s=['sm','md','lg'][i]})}
-
-/* ══════════════════════════════════════════════════════
-   FILE INPUTS
-   ══════════════════════════════════════════════════════ */
-const galleryInput = document.getElementById('galleryIn');
-
-// Only run the setup if the element actually exists in the DOM right now
-if (galleryInput) {
-  galleryInput.onchange = async function() {
-    const files = [...this.files].slice(0, MAX_MEDIA - draftMedia.length);
-    this.value = '';
-    for (const f of files) {
-      const dataURL = await compress(f);
-      draftMedia.push({ type: 'photo', dataURL });
-    }
-    if (view !== 'add') view = 'add';
-    render();
+const streak = last => { const d = (Date.now() - last) / 864e5; return d < 1 ? '🔥 Active today' : d < 3 ? `⭐ ${d | 0}d ago` : ''; };
+function renderStats() {
+  const ms = memberStats().sort((a, b) => b.score - a.score);
+  $('#st-posts').textContent = S.posts.length; $('#st-rxn').textContent = S.posts.reduce((a, p) => a + rxnTotal(p), 0);
+  $('#st-cmt').textContent = S.cmtMeta.length; $('#st-msg').textContent = S.msgs.length; $('#st-mem').textContent = ms.length;
+  const oc = {}; S.posts.forEach(p => (oc[p.oct] = (oc[p.oct] || 0) + 1));
+  const top = Object.entries(oc).sort((a, b) => b[1] - a[1])[0]; $('#st-oct').hidden = !top;
+  if (top) { $('#st-oct-e').textContent = oct(top[0]).e; $('#st-oct-l').textContent = oct(top[0]).l; }
+  const board = (box, rows, key, fmt) => {
+    const max = Math.max(1, ...rows.map(r => r[key]));
+    box.replaceChildren(...rows.map((r, i) => {
+      const n = tpl('t-lb'); n.dataset.name = r.name; f(n, 'rank').textContent = ['🥇', '🥈', '🥉'][i] || i + 1;
+      setAv(f(n, 'av'), r.name, 'xs'); f(n, 'name').textContent = r.name + (isOwn(r.name) ? ' (you)' : '');
+      f(n, 'bar').style.setProperty('--w', (r[key] / max).toFixed(3)); f(n, 'val').textContent = fmt(r[key]); return n;
+    }));
   };
+  board($('#lb-active'), ms, 'score', () => ''); $$('#lb-active .lb-row').forEach((n, i) => (f(n, 'val').textContent = `${ms[i].posts} post${ms[i].posts === 1 ? "" : "s"}`));
+  board($('#lb-rxn'), [...ms].sort((a, b) => b.rxns - a.rxns), 'rxns', v => `${v} ❤️`);
+  const best = [...S.posts].sort((a, b) => rxnTotal(b) - rxnTotal(a))[0];
+  $('#st-top-sec').hidden = !best || !rxnTotal(best); if (best && rxnTotal(best)) $('#st-top').replaceChildren(buildCard(best));
+  const quiet = ms.filter(m => (Date.now() - m.last) / 864e5 > 7 && !isOwn(m.name));
+  $('#st-quiet-sec').hidden = !quiet.length;
+  $('#st-quiet').replaceChildren(...quiet.map(m => { const n = tpl('t-lb'); n.dataset.name = m.name; f(n, 'rank').remove(); setAv(f(n, 'av'), m.name, 'xs'); f(n, 'name').textContent = m.name; f(n, 'bar').parentElement.remove(); f(n, 'val').textContent = `${(Date.now() - m.last) / 864e5 | 0}d ago`; return n; }));
 }
-
-document.getElementById('cameraIn').onchange=async function(){
-  const f=this.files[0];this.value='';if(!f)return;
-  if(draftMedia.length>=MAX_MEDIA)return;
-  const dataURL=await compress(f);
-  draftMedia.push({type:'photo',dataURL});
-  if(view!=='add')view='add';render();
-};
-document.getElementById('videoIn').onchange=function(){
-  const files=[...this.files].slice(0,MAX_MEDIA-draftMedia.length);
-  this.value='';
-  for(const f of files){
-    if(!f.type.startsWith('video/')){toast('Please select a video file');continue;}
-    draftMedia.push({type:'video',file:f,previewURL:URL.createObjectURL(f)});
-  }
-  if(view!=='add')view='add';render();
-};
-document.getElementById('commentImgIn').onchange=async function(){
-  const f=this.files[0];if(!f||!commentImgTarget)return;
-  const d=await compress(f,600);this.value='';
-  if(!cmtDraft[commentImgTarget])cmtDraft[commentImgTarget]={text:'',photo:null,replyTo:null};
-  cmtDraft[commentImgTarget].photo=d;repaintCmts(commentImgTarget);
-};
-document.getElementById('profilePicIn').onchange=async function(){
-  const f=this.files[0];if(!f)return;draftProfilePic=await compress(f,400);this.value='';render();
-};
-
-const VERIFY_PASSCODE_URL = 'https://ptpprauzusyrbrigfyji.supabase.co/functions/v1/verify-passcode';
-
-async function isUnlocked() {
-  if (!USE_SB) return true;
+function renderMembers() {
+  const ms = memberStats().sort((a, b) => b.last - a.last);
+  $('#members-empty').hidden = !!ms.length;
+  $('#members').replaceChildren(...ms.map(m => {
+    const n = tpl('t-member'); n.dataset.name = m.name; setAv(f(n, 'av'), m.name);
+    f(n, 'name').textContent = m.name + (isOwn(m.name) ? ' (you)' : '');
+    const s = streak(m.last); f(n, 'streak').hidden = !s; f(n, 'streak').textContent = s;
+    f(n, 'meta').textContent = `${m.posts} moment${m.posts !== 1 ? 's' : ''} · last ${ago(new Date(m.last).toISOString())}`;
+    f(n, 'p').textContent = m.posts; f(n, 'r').textContent = m.rxns; f(n, 'c').textContent = m.cmts; return n;
+  }));
+}
+function openUser(name) { S.viewingUser = name; S.view === 'user' ? (renderUser(), $('#title').textContent = name, history.pushState({ v: 'user', u: name }, '')) : go('user'); }
+function renderUser() {
+  const n = S.viewingUser, pr = S.profiles[n] || {}, ps = S.posts.filter(p => p.name === n), own = isOwn(n);
+  $('#v-user').dataset.own = own ? 1 : 0; setAv($('#u-av'), n, 'lg');
+  $('#u-name').textContent = n; $('#u-bio').textContent = pr.bio || (own ? 'Tap edit to add a bio' : ''); $('#u-bio').hidden = !$('#u-bio').textContent;
+  const badges = [streak(ps[0] ? new Date(ps[0].created_at).getTime() : 0), pr.birthday ? '🎂 ' + new Date(pr.birthday + 'T12:00').toLocaleDateString([], { month: 'long', day: 'numeric' }) : ''].filter(Boolean);
+  $('#u-badges').replaceChildren(...badges.map(b => el('span', { text: b })));
+  $('#u-posts').textContent = ps.length; $('#u-rxn').textContent = ps.reduce((a, p) => a + rxnTotal(p), 0); $('#u-cmt').textContent = S.cmtMeta.filter(c => c.name === n).length;
+  const pics = ps.filter(p => mediaOf(p).some(m => m.type === 'photo'));
+  $('#u-gal-sec').hidden = !pics.length;
+  $('#u-gal').replaceChildren(...pics.slice(0, 9).map(p => imgEl(mediaOf(p).find(m => m.type === 'photo').url, 300, { 'data-act': 'gal', 'data-id': p.id })));
+}
+function fillEdit() {
+  const pr = S.profiles[S.name] || {}; S.draftPic = null;
+  setAv($('#e-av'), S.name, 'lg'); $('#e-name').value = S.name; $('#e-bio').value = pr.bio || ''; $('#e-bday').value = pr.birthday || '';
+  const idx = pr.colorIdx ?? hash(S.name) % MC.length; $$('input[name=pcolor]').forEach(r => (r.checked = +r.value === idx));
+  $('#e-colors').hidden = !!pr.photo; $('#rm-pic').hidden = !pr.photo;
+}
+async function saveProfile() {
+  const name = $('#e-name').value.trim() || S.name, old = S.name, pr = { ...(S.profiles[old] || {}) };
+  if (!needOnline()) return; busy(true, 'Saving…');
   try {
-    const { data, error } = await sb.auth.getSession();
-    if (error || !data?.session) return false;
-    const claim = data.session.user?.app_metadata?.unlocked;
-    return claim === true;
-  } catch (e) {
-    console.log('isUnlocked check failed:', e);
-    return false;
-  }
+    if (S.draftPic) { pr.photo = await upload('image', S.draftPic.blob); delete pr.colorIdx; }
+    else if (!pr.photo) pr.colorIdx = +($('input[name=pcolor]:checked')?.value ?? 0);
+    pr.bio = $('#e-bio').value.trim() || undefined; pr.birthday = $('#e-bday').value || undefined;
+    const row = { name, photo: pr.photo || null, bio: pr.bio || null, birthday: pr.birthday || null, color_idx: pr.colorIdx ?? null, updated_at: new Date().toISOString() };
+    const { error } = await sb.from('profiles').upsert(row, { onConflict: 'name' }); if (error) throw error;
+    if (name !== old) { delete S.profiles[old]; await sb.from('profiles').delete().eq('name', old); S.name = name; store.set('ayl_name', name); (S.renamed ??= {})[old] = name; }
+    S.profiles[name] = pr; store.setJson('ayl_profiles', S.profiles);
+    refreshAll(); toast('✓ Profile saved'); buzz(); S.viewingUser = name; history.back();
+  } catch { toast('Couldn’t save profile', 2600, true); }
+  busy(false);
+}
+function refreshAll() {
+  cardEls.clear(); feedEl.replaceChildren(); renderFeed(); setAv($('#me-av'), S.name, 'sm'); $('#add-as').textContent = S.name;
+  ({ stats: renderStats, members: renderMembers, user: renderUser, chat: () => setChatTab(S.chatTab) })[S.view]?.();
 }
 
-async function checkPasscode(password) {
-  if (!password || typeof password !== 'string') {
-    return { ok: false, error: 'Incorrect password' };
+/* ── add a moment ────────────────────────────────────────── */
+function resetAdd() {
+  S.draft.forEach(m => URL.revokeObjectURL(m.url)); S.draft = [];
+  $('#add-form').reset(); $('#count').textContent = `0 / ${CFG.MAX_CAP}`; $('#add-as').textContent = S.name;
+  $('#mentions').replaceChildren(...allNames().filter(n => !isOwn(n)).map(n => el('button', { type: 'button', class: 'chip pressable', 'data-act': 'mention', 'data-n': n, text: '@' + n })));
+  renderStrip();
+}
+function renderStrip() {
+  const s = $('#strip'); s.hidden = !S.draft.length;
+  s.replaceChildren(...S.draft.map((m, i) => el('div', { class: 'sitem' },
+    m.type === 'video' ? el('video', { src: m.url + '#t=0.1', muted: true, preload: 'metadata', playsinline: true }) : el('img', { src: m.url, alt: '' }),
+    el('button', { type: 'button', 'data-act': 'rm-draft', 'data-i': i, 'aria-label': 'Remove', text: '✕' }))));
+}
+async function addFiles(files, kind) {
+  const room = CFG.MAX_MEDIA - S.draft.length; if (room <= 0) return toast(`Up to ${CFG.MAX_MEDIA} per post`);
+  for (const file of [...files].slice(0, room)) {
+    if (kind === 'video') S.draft.push({ type: 'video', blob: file, url: URL.createObjectURL(file) });
+    else { const b = await shrink(file); S.draft.push({ type: 'photo', blob: b, url: URL.createObjectURL(b) }); }
   }
+  renderStrip();
+}
+async function sharePost() {
+  const caption = $('#cap').value.trim(), o = $('input[name=occ]:checked')?.value || 'everyday';
+  if (!S.draft.length && !caption) return toast('Add a photo or write something');
+  if (!needOnline()) return;
+  busy(true, S.draft.some(m => m.type === 'video') ? 'Uploading… this may take a moment' : 'Sharing with family… ❤️');
   try {
-    const res = await fetch(VERIFY_PASSCODE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
+    const media = await Promise.all(S.draft.map(async m => ({ type: m.type, url: await upload(m.type === 'video' ? 'video' : 'image', m.blob) })));
+    const first = media[0] || {};
+    const { data, error } = await sb.from('posts').insert({
+      name: S.name, caption, oct: o, media, reactions: {},
+      photo_url: first.type === 'photo' ? first.url : null, video_url: first.type === 'video' ? first.url : null,
+    }).select().single();
+    if (error) throw error;
+    if (!S.posts.some(p => p.id === data.id)) S.posts.unshift(data);
+    S.draft.forEach(m => URL.revokeObjectURL(m.url)); S.draft = [];
+    history.back(); renderFeed(); scroller.scrollTop = 0; toast('✨ Moment shared!'); buzz([15, 8, 15]); beep('send');
+  } catch (e) { toast('Upload failed — please try again', 3000, true); }
+  busy(false);
+}
 
-    if (!data.success) {
-      return { ok: false, error: data.error || 'Incorrect password' };
+/* ── sheets: post menu, filter, theme ────────────────────── */
+const dlgPost = $('#dlg-post');
+function openPostMenu(card) {
+  const p = S.posts.find(x => x.id === card.dataset.id); if (!p) return;
+  dlgPost.dataset.id = p.id; const ms = mediaOf(p), photo = ms.some(m => m.type === 'photo');
+  $('#pin-lbl').textContent = S.pinned === p.id ? 'Unpin' : 'Pin to top';
+  $('#p-full').hidden = !photo; $('#p-save').hidden = !ms.length; $('#p-copy').hidden = !p.caption; $('#p-del').hidden = !isOwn(p.name);
+  dlgPost.showModal();
+}
+const menuPost = () => S.posts.find(x => x.id === dlgPost.dataset.id);
+function openFilter() {
+  const names = [...new Set(S.posts.map(p => p.name))];
+  $('#filter-list').replaceChildren(...['All', ...names].map(n => el('button', { class: 'pill pressable' + ((n === 'All' ? !S.filter : S.filter === n) ? ' on' : ''), 'data-act': 'filter-pick', 'data-n': n, text: n })));
+  $('#dlg-filter').showModal();
+}
+function applyTheme(id) {
+  const d = document.documentElement; id === 'default' ? delete d.dataset.theme : (d.dataset.theme = id);
+  store.set('ayl_theme', id); $('#themeColorMeta').content = THEME_BG[id] || THEME_BG.default;
+  $$('.th').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+}
+function openTheme() {
+  const t = store.get('ayl_theme', document.documentElement.dataset.theme || 'default'); $$('.th').forEach(b => b.classList.toggle('on', b.dataset.id === t));
+  $$('[data-act=fs-pick]').forEach(b => b.classList.toggle('on', b.dataset.s === (store.get('ayl_fs') || 'md')));
+  $('#cpri').value = store.get('ayl_cp', '#C4622D'); $('#cpri2').value = store.get('ayl_cp2', '#E8A87C');
+  const nb = $('#notif-btn'); const perm = 'Notification' in window ? Notification.permission : 'unsupported';
+  nb.hidden = perm === 'unsupported' || perm === 'denied'; nb.lastChild.textContent = perm === 'granted' ? 'Notifications are on' : 'Turn on notifications';
+  $('#dlg-theme').showModal();
+}
+async function enableNotifs() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return toast('Not supported on this device');
+  if (await Notification.requestPermission() !== 'granted') return toast('Notifications are off');
+  await subscribePush(true); toast('🔔 Notifications on');
+}
+async function subscribePush(force) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') return;
+  if (!force && store.get('ayl_push') === S.name) return;
+  try {
+    const reg = await navigator.serviceWorker.ready; let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const p = '='.repeat((4 - CFG.VAPID.length % 4) % 4), raw = atob((CFG.VAPID + p).replace(/-/g, '+').replace(/_/g, '/'));
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(raw, c => c.charCodeAt(0)) });
     }
+    const j = sub.toJSON();
+    await sb.from('push_subscriptions').upsert({ endpoint: j.endpoint, auth: j.keys.auth, p256dh: j.keys.p256dh, name: S.name }, { onConflict: 'endpoint' });
+    store.set('ayl_push', S.name);
+  } catch (e) { console.log('push', e); }
+}
 
-    const { error: setErr } = await sb.auth.setSession({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-    });
+/* ── photo viewer ────────────────────────────────────────── */
+const dlgV = $('#dlg-viewer'), vImg = $('#v-img');
+function openViewer(items, i, p) {
+  S.viewer = { items, i, p }; dlgV.showModal(); showViewer();
+  $('#v-who').textContent = p ? p.name : ''; $('#v-cap').textContent = p?.caption || ''; $('#v-date').textContent = p ? fullDate(p.created_at) : '';
+}
+function showViewer() {
+  const { items, i } = S.viewer, u = items[i];
+  vImg.onerror = () => { vImg.onerror = null; vImg.src = u; }; vImg.src = cld(u, 1600);
+  $('#v-count').textContent = items.length > 1 ? `${i + 1} / ${items.length}` : '';
+  $$('.v-nav', dlgV).forEach(b => (b.hidden = items.length < 2));
+}
+const vStep = d => { const v = S.viewer; v.i = (v.i + d + v.items.length) % v.items.length; showViewer(); };
+(function swipe() {       // drag the photo 1:1; flick sideways to page, down to dismiss
+  const st = $('#v-stage'); let x0, y0, dx, dy, t0, on = false;
+  st.addEventListener('pointerdown', e => { on = true; x0 = e.clientX; y0 = e.clientY; dx = dy = 0; t0 = e.timeStamp; st.setPointerCapture(e.pointerId); vImg.style.transition = 'none'; });
+  st.addEventListener('pointermove', e => {
+    if (!on) return; dx = e.clientX - x0; dy = e.clientY - y0;
+    vImg.style.transform = Math.abs(dy) > Math.abs(dx) ? `translateY(${dy}px) scale(${1 - Math.min(Math.abs(dy) / 900, .25)})` : `translateX(${dx}px)`;
+  });
+  const end = e => {
+    if (!on) return; on = false; const v = Math.abs(Math.abs(dy) > Math.abs(dx) ? dy : dx) / Math.max(1, e.timeStamp - t0);
+    vImg.style.transition = 'transform .35s cubic-bezier(.34,1.4,.64,1)'; vImg.style.transform = '';
+    if (Math.abs(dy) > Math.abs(dx) && (Math.abs(dy) > 110 || v > .6)) dlgV.close();
+    else if (Math.abs(dx) > 60 && S.viewer.items.length > 1) vStep(dx < 0 ? 1 : -1);
+  };
+  st.addEventListener('pointerup', end); st.addEventListener('pointercancel', end);
+})();
+addEventListener('keydown', e => { if (dlgV.open) { if (e.key === 'ArrowRight') vStep(1); if (e.key === 'ArrowLeft') vStep(-1); } });
+async function saveMedia(url) {
+  try {
+    const b = await (await fetch(url, { mode: 'cors' })).blob(), file = new File([b], 'family-moment.' + (b.type.split('/')[1] || 'jpg'), { type: b.type });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+    const a = el('a', { href: URL.createObjectURL(b), download: file.name }); document.body.append(a); a.click(); a.remove();
+  } catch (e) { if (e.name !== 'AbortError') window.open(url, '_blank'); }
+}
 
-    if (setErr) {
-      console.log('setSession failed:', setErr);
-      return { ok: false, error: 'Server error' };
-    }
+/* ── tap handling: one listener for the whole app ────────── */
+const ACT = {
+  back() { history.length > 1 && history.state?.v && history.state.v !== 'feed' ? history.back() : go('feed', { push: false }); },
+  search() { const b = $('#searchbar'); b.hidden ? (b.hidden = false, document.body.classList.add('searching'), $('#q').focus()) : closeSearch(); },
+  filter: openFilter, theme: openTheme, me() { openUser(S.name); },
+  'dismiss-rem'() { remDismissed = true; $('#reminder').hidden = true; },
+  newpill(b) { b.hidden = true; S.newCount = 0; renderFeed(); scroller.scrollTo({ top: 0, behavior: 'smooth' }); },
+  pick(b) { $({ camera: '#cameraIn', gallery: '#galleryIn', video: '#videoIn' }[b.dataset.k]).click(); },
+  'rm-draft'(b) { const [m] = S.draft.splice(+b.dataset.i, 1); URL.revokeObjectURL(m.url); renderStrip(); },
+  fmt(b) {
+    const ta = $('#cap'), w = b.dataset.w, a = ta.selectionStart, z = ta.selectionEnd, sel = ta.value.slice(a, z) || 'text';
+    ta.setRangeText(w + sel + w, a, z, 'select'); ta.focus(); ta.dispatchEvent(new Event('input'));
+  },
+  mention(b) { const ta = $('#cap'); ta.setRangeText('@' + b.dataset.n + ' ', ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')); },
+  ctab(b) { setChatTab(b.dataset.t); },
+  'dm-back'() { setChatTab('dms'); },
+  'dm-open'(b) { setChatTab('thread', b.dataset.name); },
+  call(b) { callTo(S.thread, b.dataset.video === '1'); },
+  'open-user'(b) { openUser(b.dataset.name); },
+  edit() { go('edit'); },
+  'msg-user'() { S.thread = S.viewingUser; go('chat'); setChatTab('thread', S.viewingUser); },
+  'call-user'(b) { callTo(S.viewingUser, b.dataset.video === '1'); },
+  pic() { $('#profilePicIn').click(); },
+  'rm-pic'() { const pr = S.profiles[S.name]; if (pr) { delete pr.photo; sb.from('profiles').update({ photo: null }).eq('name', S.name).then(() => {}); store.setJson('ayl_profiles', S.profiles); } S.draftPic = null; fillEdit(); refreshAll(); },
+  /* post card */
+  profile(b) { openUser(S.posts.find(p => p.id === b.closest('.card').dataset.id)?.name); },
+  date(b) { const p = S.posts.find(p => p.id === b.closest('.card').dataset.id); p && toast(fullDate(p.created_at), 3500); },
+  more(b) { openPostMenu(b.closest('.card')); },
+  rxn(b) { react(b.closest('.card'), b.dataset.e); },
+  cmts(b) { toggleCmts(b.closest('.card')); },
+  view(b) {
+    const p = S.posts.find(p => p.id === b.closest('.card').dataset.id), list = mediaOf(p), photos = list.filter(m => m.type === 'photo');
+    openViewer(photos.map(m => m.url), Math.max(0, photos.indexOf(list[+b.dataset.i])), p);
+  },
+  gal(b) { const p = S.posts.find(p => p.id === b.dataset.id), ph = mediaOf(p).filter(m => m.type === 'photo'); openViewer(ph.map(m => m.url), 0, p); },
+  vplay(b) { const v = b.previousElementSibling; v.paused ? v.play() : v.pause(); },
+  'view-img'(b) { openViewer([b.dataset.full], 0, null); },
+  /* comments */
+  reply(b) { const card = b.closest('.card'), n = b.closest('.cmt'), c = (S.cmts[card.dataset.id] || []).find(x => String(x.id) === n.dataset.cid); (S.cmtState[card.dataset.id] ||= {}).reply = { id: c.id, name: c.name }; renderCmts(card); f(card, 'ctext').focus(); },
+  'clear-reply'(b) { const card = b.closest('.card'); (S.cmtState[card.dataset.id] ||= {}).reply = null; renderCmts(card); },
+  attach(b) { S.cmtTarget = b.closest('.card'); $('#commentImgIn').click(); },
+  'clear-cimg'(b) { const card = b.closest('.card'), st = S.cmtState[card.dataset.id]; if (st?.img) URL.revokeObjectURL(st.img.url); st.img = null; renderCmts(card); },
+  crxn(b) { reactCmt(b.closest('.cmt'), b.dataset.e); },
+  delc(b) { deleteCmt(b.closest('.cmt')); },
+  'more-cmts'(b) { const card = b.closest('.card'), pid = card.dataset.id; S.cmtPage[pid] = (S.cmtPage[pid] || 1) + 1; renderCmts(card); },
+  /* chat bubbles */
+  msg(b) { if (isOwn(S.name) && b.closest('.msg').classList.contains('own')) b.closest('.msg').classList.toggle('sel'); },
+  delmsg(b) { deleteMsg(b.closest('.msg')); },
+  /* sheets */
+  'p-profile'() { dlgPost.close(); openUser(menuPost()?.name); },
+  'p-pin'() { const p = menuPost(); S.pinned = S.pinned === p.id ? null : p.id; store.set('ayl_pinned', S.pinned || ''); dlgPost.close(); renderFeed(); toast(S.pinned ? '📌 Pinned to top' : 'Unpinned'); },
+  'p-full'() { const p = menuPost(), ph = mediaOf(p).filter(m => m.type === 'photo'); dlgPost.close(); openViewer(ph.map(m => m.url), 0, p); },
+  'p-save'() { const m = mediaOf(menuPost())[0]; dlgPost.close(); saveMedia(m.url); },
+  'p-copy'() { navigator.clipboard?.writeText(menuPost().caption).then(() => toast('📋 Copied')); dlgPost.close(); },
+  async 'p-del'() { const id = menuPost().id; dlgPost.close(); if (!await confirmSheet('Delete this moment?')) return; const { error } = await sb.from('posts').delete().eq('id', id); if (error) return toast('Couldn’t delete', 2400, true); S.posts = S.posts.filter(p => p.id !== id); renderFeed(); toast('Deleted'); },
+  'cf-ok'() { const r = cfRes; cfRes = null; $('#dlg-confirm').close(); r?.(true); },
+  'filter-pick'(b) { S.filter = b.dataset.n === 'All' ? null : (S.filter === b.dataset.n ? null : b.dataset.n); $('#dlg-filter').close(); renderFeed(); },
+  'theme-pick'(b) { applyTheme(b.dataset.id); },
+  'custom-apply'() {
+    const a = $('#cpri').value, c = $('#cpri2').value, d = document.documentElement;
+    store.set('ayl_cp', a); store.set('ayl_cp2', c); d.style.setProperty('--cp', a); d.style.setProperty('--cp2', c); applyTheme('custom'); toast('🎨 Custom colours applied');
+  },
+  'fs-pick'(b) { document.documentElement.dataset.fs = b.dataset.s; store.set('ayl_fs', b.dataset.s); $$('[data-act=fs-pick]').forEach(x => x.classList.toggle('on', x === b)); },
+  notif: enableNotifs,
+  'v-save'() { const v = S.viewer; saveMedia(v.items[v.i]); },
+  'v-prev'() { vStep(-1); }, 'v-next'() { vStep(1); },
+};
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t instanceof HTMLDialogElement && t.classList.contains('sheet')) {            // tap on the dimmed backdrop
+    const r = t.getBoundingClientRect(); if (e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right) t.close(); return;
+  }
+  const g = t.closest('[data-go]'); if (g) { go(g.dataset.go); return; }
+  const c = t.closest('[data-close]'); if (c) { c.closest('dialog').close(); return; }
+  const a = t.closest('[data-act]'); if (a) ACT[a.dataset.act]?.(a, e);
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const form = e.target;
+  if (form.id === 'ob-form') join(); else if (form.id === 'add-form') sharePost(); else if (form.id === 'chat-form') sendChat();
+  else if (form.id === 'edit-form') saveProfile(); else if (form.id === 'gate-form') unlock(); else if (form.dataset.f === 'cform') sendCmt(form);
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.hasAttribute('data-auto')) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 130) + 'px'; }
+  if (t.id === 'cap') { const n = t.value.length; const c = $('#count'); c.textContent = `${n} / ${CFG.MAX_CAP}`; c.classList.toggle('over', n > CFG.MAX_CAP * .9); }
+});
+document.addEventListener('keydown', e => {       // Enter sends in chat and comments, Shift+Enter = new line
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target.matches?.('textarea[data-auto]')) { e.preventDefault(); e.target.form?.requestSubmit(); }
+});
+let qT; $('#q').addEventListener('input', e => { clearTimeout(qT); qT = setTimeout(() => { S.q = e.target.value.trim(); renderFeed(); }, 160); });
+function closeSearch() { const b = $('#searchbar'); if (b.hidden) return; b.hidden = true; document.body.classList.remove('searching'); $('#q').value = ''; if (S.q) { S.q = ''; renderFeed(); } }
+for (const [id, kind] of [['galleryIn', 'photo'], ['cameraIn', 'photo'], ['videoIn', 'video']])
+  $('#' + id).addEventListener('change', e => { addFiles(e.target.files, kind); e.target.value = ''; });
+$('#commentImgIn').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file || !S.cmtTarget) return;
+  const b = await shrink(file, 1000), card = S.cmtTarget, st = (S.cmtState[card.dataset.id] ||= {});
+  if (st.img) URL.revokeObjectURL(st.img.url); st.img = { blob: b, url: URL.createObjectURL(b) }; renderCmts(card);
+});
+$('#profilePicIn').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  const b = await shrink(file, 600, .82); S.draftPic = { blob: b, url: URL.createObjectURL(b) };
+  const av = $('#e-av'); av.className = 'av lg'; av.replaceChildren(el('img', { src: S.draftPic.url, alt: '' })); $('#e-colors').hidden = true;
+});
+addEventListener('online', () => ($('#offline').hidden = true)); addEventListener('offline', () => ($('#offline').hidden = false));
 
-    return { ok: true };
-  } catch (e) {
-    console.log('checkPasscode failed:', e);
-    return { ok: false, error: 'Server error' };
+/* ── realtime (incremental: apply the change, don't refetch) ─ */
+const CH = {};
+function sub(key, table, fn) {
+  if (CH[key]) sb.removeChannel(CH[key]);
+  CH[key] = sb.channel(`${key}-${Date.now()}`).on('postgres_changes', { event: '*', schema: 'public', table }, fn).subscribe(st => {
+    if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') { clearTimeout(CH[key + 'T']); CH[key + 'T'] = setTimeout(() => document.visibilityState === 'visible' && sub(key, table, fn), 4000); }
+  });
+}
+const subscribeAll = () => { sub('posts', 'posts', onPost); sub('messages', 'messages', onMsg); sub('comments', 'comments', onCmt); sub('profiles', 'profiles', onProfile); };
+const unsubscribeAll = () => ['posts', 'messages', 'comments', 'profiles'].forEach(k => { if (CH[k]) { sb.removeChannel(CH[k]); CH[k] = null; } });
+function onPost({ eventType: t, new: n, old: o }) {
+  if (t === 'INSERT') { if (S.posts.some(p => p.id === n.id)) return; S.posts.unshift(n); isOwn(n.name) ? renderFeed() : newPostArrived(); }
+  else if (t === 'UPDATE') { const p = S.posts.find(p => p.id === n.id); if (p) { Object.assign(p, n); $$(`.card[data-id="${CSS.escape(p.id)}"]`).forEach(c => updateCard(c, p)); } }
+  else if (t === 'DELETE') { S.posts = S.posts.filter(p => p.id !== o.id); renderFeed(); }
+}
+function onMsg({ eventType: t, new: m, old: o }) {
+  if (t === 'DELETE') { const id = String(o.id); S.msgs = S.msgs.filter(x => String(x.id) !== id); for (const k in S.dms) S.dms[k] = S.dms[k].filter(x => String(x.id) !== id); msgsEl.querySelector(`[data-id="${CSS.escape(id)}"]`)?.remove(); return; }
+  if (t !== 'INSERT') return;
+  const key = m.dm_key || null; if (key && !key.split('|').includes(S.name)) return;     // not my conversation
+  const list = key ? (S.dms[key] ??= []) : S.msgs; if (list.some(x => x.id === m.id)) return;
+  const tmp = isOwn(m.name) && list.findIndex(x => String(x.id).startsWith('tmp') && x.text === m.text); if (tmp > -1) return;   // my own optimistic copy is already shown
+  list.push(m);
+  const open = S.view === 'chat' && (key ? S.chatTab === 'thread' && threadKey() === key : S.chatTab === 'group');
+  if (open) appendMsg(m, key);
+  else if (!isOwn(m.name)) { key ? (S.dmUnread[key] = (S.dmUnread[key] || 0) + 1) : S.groupUnread++; updateBadges(); if (S.view === 'chat' && S.chatTab === 'dms') renderDmList(); }
+  if (!isOwn(m.name)) beep('receive');
+}
+function onCmt({ eventType: t, new: c, old: o }) {
+  if (t === 'INSERT') {
+    if (S.cmtMeta.some(x => x.id === c.id)) return; addCmtLocal(c);
+    const card = cardOf(c.post_id); if (!card) return;
+    if (!f(card, 'cbody').hidden) renderCmts(card); else if (!isOwn(c.name)) { S.newDot.add(c.post_id); updateCard(card, S.posts.find(p => p.id === c.post_id)); }
+    f(card, 'cbadge').textContent = S.cc[c.post_id] || 0;
+  } else if (t === 'UPDATE') {
+    const l = S.cmts[c.post_id], x = l?.find(k => k.id === c.id); if (x) { x.reactions = c.reactions; const card = cardOf(c.post_id); card && !f(card, 'cbody').hidden && renderCmts(card); }
+  } else if (t === 'DELETE') {
+    const id = o.id; for (const pid in S.cmts) if (S.cmts[pid].some(k => k.id === id)) { removeCmtLocal(id, pid); const card = cardOf(pid); if (card) { renderCmts(card); } return; }
+    const m = S.cmtMeta.find(k => k.id === id); if (m) { removeCmtLocal(id, m.post_id); const card = cardOf(m.post_id); card && (f(card, 'cbadge').textContent = S.cc[m.post_id] || 0); }
   }
 }
+let profT; function onProfile() { clearTimeout(profT); profT = setTimeout(async () => { await db.profiles(); refreshAll(); }, 400); }
 
+let hiddenT, lastRefresh = Date.now(), subscribed = false;
+async function refresh() {
+  lastRefresh = Date.now();
+  await Promise.all([db.posts(), db.group()]); renderFeed();
+  if (S.view === 'chat') setChatTab(S.chatTab); for (const pid in S.cmts) if (cardOf(pid) && !f(cardOf(pid), 'cbody').hidden) db.cmts(pid).then(() => renderCmts(cardOf(pid)));
+}
+document.addEventListener('visibilitychange', () => {
+  if (!S.name) return;
+  if (document.visibilityState === 'hidden') { hiddenT = setTimeout(() => { unsubscribeAll(); subscribed = false; }, 60000); return; }   // stop listening in the background → saves battery
+  clearTimeout(hiddenT);
+  if (!subscribed) { subscribeAll(); subscribed = true; }
+  if (Date.now() - lastRefresh > 20000) refresh();
+});
+setInterval(() => { if (document.visibilityState === 'visible' && S.view === 'feed') for (const [id, n] of cardEls) { const p = S.posts.find(x => x.id === id); p && (f(n, 'time').textContent = ago(p.created_at)); } }, 60000);
 
+/* ── gate (optional), calls loader, boot ─────────────────── */
+async function unlock() {
+  const inp = $('#gate-in'), err = $('#gate-err'); err.textContent = '';
+  try {
+    const r = await (await fetch(CFG.VERIFY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: inp.value }) })).json();
+    if (!r.success) throw new Error(r.error || 'Incorrect passcode');
+    await sb.auth.setSession({ access_token: r.access_token, refresh_token: r.refresh_token }); begin();
+  } catch (e) { err.textContent = e.message; inp.value = ''; $('#gate-form').animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], { duration: 260 }); }
+}
+let callsP;
+const loadCalls = () => callsP ??= new Promise((ok, no) => { const s = el('script', { src: 'calls.js' }); s.onload = ok; s.onerror = no; document.head.append(s); });
+const callTo = (name, video) => name && loadCalls().then(() => window.Calls.start(name, video)).catch(() => toast('Calls unavailable offline', 2400, true));
 
-
-// ══════════════════════════════════════════════════════
-// PASSCODE GATE — robust boot (replaces the previous
-// (async () => { isUnlocked... })() block entirely)
-//
-// Instead of checking isUnlocked() once at an arbitrary moment
-// during load (which can race against Supabase restoring the
-// session from localStorage), this listens for Supabase's own
-// auth-state event — which fires reliably once the SDK has
-// finished checking storage, whether that's fast or slow.
-// ══════════════════════════════════════════════════════
-function setupGate(){
-  const input = document.getElementById('passcodeInput');
-  const btn = document.getElementById('passcodeSubmit');
-  const errorEl = document.getElementById('passcodeError');
-  const card = document.querySelector('.gate-card');
-  if (!input || !btn) return;
-
-  async function attemptUnlock(){
-    const password = input.value;
-    if (!password){
-      errorEl.textContent = 'Enter a passcode';
-      errorEl.classList.add('show');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.classList.add('loading');
-    errorEl.classList.remove('show');
-
-    const result = await checkPasscode(password);
-
-    btn.disabled = false;
-    btn.classList.remove('loading');
-
-    if (result.ok){
-      // onAuthStateChange (below) picks this up via setSession() and
-      // calls bootAppOnce() itself — nothing more to do here.
-    } else {
-      errorEl.textContent = result.error;
-      errorEl.classList.add('show');
-      input.value = '';
-      input.focus();
-      if (card){
-        card.classList.remove('shake');
-        void card.offsetWidth;
-        card.classList.add('shake');
-      }
-    }
+function join() {
+  const n = $('#ob-in').value.trim(); if (!n) return;
+  S.name = n; store.set('ayl_name', n); document.body.dataset.state = 'app'; start();
+}
+function begin() { document.body.dataset.state = S.name ? 'app' : 'ob'; if (S.name) start(); }
+async function start() {
+  S.profiles = store.json('ayl_profiles', {});
+  setAv($('#me-av'), S.name, 'sm'); $('#add-as').textContent = S.name;
+  const cached = store.json('ayl_cache', []); if (cached.length) { S.posts = cached; renderFeed(); }      // instant paint from last visit
+  history.replaceState({ v: 'feed' }, ''); $('#themeColorMeta').content = THEME_BG[store.get('ayl_theme', 'default')] || THEME_BG.default;
+  await Promise.all([db.posts(), db.group(), db.profiles(), db.cmtMeta()]);
+  S.ready = true; S.groupUnread = S.msgs.filter(m => !isOwn(m.name) && new Date(m.created_at) > +store.get('ayl_msgseen', 0)).length;
+  renderFeed(); S.loaded = true; updateBadges();
+  store.set('ayl_seen', Date.now());
+  showGreeting(); showReminder(); checkBirthdays();
+  subscribeAll(); subscribed = true;
+  db.seen().then(() => { db.markSeen(); for (const [id, n] of cardEls) updateCard(n, S.posts.find(p => p.id === id)); });
+  db.dmAll().then(updateBadges);
+  subscribePush(false);
+  (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => loadCalls().then(() => window.Calls.init()).catch(() => {}));
+}
+function checkBirthdays() {
+  const t = new Date();
+  for (const [n, p] of Object.entries(S.profiles)) {
+    if (!p.birthday) continue; const b = new Date(p.birthday + 'T12:00'), key = `ayl_bd_${n}_${t.getFullYear()}`;
+    if (b.getMonth() === t.getMonth() && b.getDate() === t.getDate() && !store.get(key)) { store.set(key, 1); setTimeout(() => toast(`🎂 Today is ${n}’s birthday!`, 5000), 2500); }
   }
-
-  btn.addEventListener('click', attemptUnlock);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') attemptUnlock();
-  });
-  input.addEventListener('input', () => {
-    errorEl.classList.remove('show');
-  });
 }
+window.AYL = { S, el, toast, beep, buzz, avEl, setAv, colorOf, isOwn };
 
-function showGate(){
-  const el = document.getElementById('gate');
-  if (el) el.classList.remove('hidden');
-  setTimeout(() => document.getElementById('passcodeInput')?.focus(), 100);
-}
-function hideGate(){
-  const el = document.getElementById('gate');
-  if (el) el.classList.add('hidden');
-}
-
-let appBooted = false;
-
-function bootAppOnce(){
-  if (appBooted) return;
-  appBooted = true;
-  hideGate();
-  init();
-}
-
-setupGate();
-
-/*if (USE_SB) {
-  sb.auth.onAuthStateChange((event, session) => {
-    const unlocked = session?.user?.app_metadata?.unlocked === true;
-    if (unlocked) {
-      bootAppOnce();
-    } else if (!appBooted) {
-      showGate();
-    }
-  });
-
-  // onAuthStateChange fires INITIAL_SESSION once restoration finishes,
-  // but as a safety net in case that event is ever missed or delayed
-  // indefinitely, also fall back to showing the gate after a short
-  // timeout if nothing has booted the app yet.
-  setTimeout(() => {
-    if (!appBooted) showGate();
-  }, 2500);
-} else {
-  bootAppOnce();
-}
-*/
-// ══════════════════════════════════════════════════════
-// SAFE PASSCODE GATE INITIALIZER
-// ══════════════════════════════════════════════════════
-bootAppOnce();
-
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+S.name = store.get('ayl_name', '');
+if (CFG.GATE_ON) { document.body.dataset.state = 'gate'; sb.auth.getSession().then(({ data }) => data.session?.user?.app_metadata?.unlocked ? begin() : $('#gate-in').focus()); }
+else begin();
