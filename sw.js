@@ -1,77 +1,70 @@
-const SW_VERSION = 'v3'; // bump this on every future deploy that changes sw.js itself
-const PHOTO_CACHE = 'ayl-photos-v1';
-const VIDEO_CACHE = 'ayl-videos-v1';
+/* عيلتنا service worker
+   · App shell is pre-cached → opens instantly, works offline.
+   · Shell files use stale-while-revalidate: you get the cached copy now,
+     the fresh copy is fetched in the background for next launch.
+   · Cloudinary images: cache-first (capped). Videos/API/realtime are never touched.
+   Bump VERSION whenever you deploy changed files. */
+const VERSION = 'v4';
+const SHELL = `ayl-shell-${VERSION}`, IMGS = 'ayl-photos-v2', MAX_IMGS = 160;
+const FILES = ['./', 'index.html', 'app.css', 'config.js', 'app.js', 'calls.js', 'manifest.json', 'icon.png'];
 
 self.addEventListener('install', e => {
-  self.skipWaiting(); // activate this new worker immediately, don't wait for old tabs to close
+  e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
-    await self.clients.claim(); // take control of open pages right away
-    // Drop any old named caches from previous versions so nothing stale lingers
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.filter(k => k !== PHOTO_CACHE && k !== VIDEO_CACHE).map(k => caches.delete(k))
-    );
+    for (const k of await caches.keys()) if (k !== SHELL && k !== IMGS) await caches.delete(k);
+    await self.clients.claim();
   })());
 });
 
+async function trim(cache) {
+  const keys = await cache.keys();
+  if (keys.length > MAX_IMGS) await Promise.all(keys.slice(0, keys.length - MAX_IMGS).map(k => cache.delete(k)));
+}
+
 self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  // App shell files — ALWAYS network-first with no-store, no cache fallback
-  // unless truly offline. no-store forces an actual network round-trip,
-  // bypassing the browser's own HTTP disk cache (separate from the Cache
-  // Storage API), which can otherwise serve a stale app.css/app.js even
-  // when this fetch handler itself re-fetches correctly.
-  if (url.endsWith('/aylitna/') || url.endsWith('index.html') || url.endsWith('app.js') || url.endsWith('app.css') || url.endsWith('manifest.json')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request))
-    );
+  const req = e.request, url = new URL(req.url);
+  if (req.method !== 'GET' || req.headers.has('range')) return;
+
+  if (url.origin === location.origin) {                           // shell: stale-while-revalidate
+    e.respondWith((async () => {
+      const cache = await caches.open(SHELL);
+      const hit = await cache.match(req, { ignoreSearch: true });
+      const net = fetch(req).then(r => { if (r.ok) cache.put(req, r.clone()); return r; }).catch(() => null);
+      if (hit) { e.waitUntil(net); return hit; }
+      return (await net) || (req.mode === 'navigate' ? cache.match('index.html') : Response.error());
+    })());
     return;
   }
-  // Cache photos — serve from cache first, update in background
-  if (url.includes('res.cloudinary.com/df618arjm')) {
-    e.respondWith(
-      caches.open(PHOTO_CACHE).then(async cache => {
-        const hit = await cache.match(e.request);
-        const fetchP = fetch(e.request).then(res => { if(res.ok) cache.put(e.request, res.clone()); return res; }).catch(()=>null);
-        return hit || fetchP;
-      })
-    );
-    return;
+  if (url.hostname === 'res.cloudinary.com' && !url.pathname.includes('/video/')) {   // photos: cache-first
+    e.respondWith((async () => {
+      const cache = await caches.open(IMGS), hit = await cache.match(req);
+      if (hit) return hit;
+      try {
+        const r = await fetch(req);
+        if (r.ok || r.type === 'opaque') { cache.put(req, r.clone()).then(() => trim(cache)); }
+        return r;
+      } catch { return Response.error(); }
+    })());
   }
-  // Cache videos — serve from cache first (videos are large, so cache-first is critical)
-  if (url.includes('res.cloudinary.com/hhjzkoeh') || url.includes('video/upload')) {
-    e.respondWith(
-      caches.open(VIDEO_CACHE).then(async cache => {
-        const hit = await cache.match(e.request);
-        if (hit) return hit;
-        return fetch(e.request).then(res => {
-          if(res.ok) cache.put(e.request, res.clone());
-          return res;
-        }).catch(() => null);
-      })
-    );
-    return;
-  }
-  // Everything else — network first
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
 });
 
 self.addEventListener('push', e => {
   const d = e.data?.json() || {};
   e.waitUntil((async () => {
-    const cls = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (cls.some(c => c.visibilityState === 'visible')) return;
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins.some(c => c.visibilityState === 'visible')) return;           // already looking at the app
     await self.registration.showNotification(d.title || 'عيلتنا', {
-      body: d.body || '', icon: '/aylitna/icon.png', badge: '/aylitna/icon.png',
-      vibrate: [200, 100, 200], data: { url: d.data?.url || '/aylitna/' }
+      body: d.body || '', icon: 'icon.png', badge: 'icon.png', vibrate: [200, 100, 200], tag: d.tag || 'ayl', data: { url: d.data?.url || './' },
     });
   })());
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.openWindow(e.notification.data?.url || '/aylitna/'));
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins[0]) return wins[0].focus();
+    return self.clients.openWindow(e.notification.data?.url || './');
+  })());
 });
