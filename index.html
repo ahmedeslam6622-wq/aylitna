@@ -1,83 +1,441 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-platform="web">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="عيلتنا">
-<meta name="theme-color" content="#ffffff" id="themeColorMeta">
+<meta name="theme-color" content="#FAF8F3" id="themeColorMeta">
+<meta name="color-scheme" content="light dark">
 <title>عيلتنا · Our Family</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
 <link rel="stylesheet" href="app.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-  <script>
-(function () {
-  var ua = navigator.userAgent;
-  var platform =
-    /Android/i.test(ua) ? 'android' :
-    (/iPhone|iPad|iPod/.test(ua) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? 'ios' :
-    'web';
-
-  // Testing on desktop: open the page with ?platform=ios or ?platform=android
-  var override = new URLSearchParams(location.search).get('platform');
-  if (override === 'ios' || override === 'android' || override === 'web') platform = override;
-
-  document.documentElement.dataset.platform = platform;
-})();
-  </script>
-</head>
-<body>
-<div id="app"></div>
-  <!-- Semantic Structure -->
-<header class="hdr">
-  <small>Our Family</small>
-</header>
-
-
-  
-<!-- Overlays -->
-<div class="uploading-overlay" id="uploading">
-  <div class="spinner"></div>
-  <div class="uploading-txt">Sharing with family… ❤️</div>
-  <div class="uploading-sub">Just a moment</div>
-</div>
-
-<div class="toast" id="toast"></div>
-<!-- Call overlay: inner content is rebuilt by app.js (showCallScreen) so it
-     can insert the Jitsi holder div dynamically. Left empty here on purpose. -->
-<div class="call-overlay" id="callOverlay">
-  <div class="call-bg" id="callBg"></div>
-  <div class="call-inner"></div>
-</div>
-
-  <div class="nav-toast" id="navtoast"></div>
-  
-  
-    
-<!-- File inputs -->
-<input type="file" id="galleryIn" accept="image/*" style="display:none">
-<input type="file" id="cameraIn" accept="image/*" capture="environment" style="display:none">
-<input type="file" id="videoIn" accept="video/*" style="display:none">
-<input type="file" id="commentImgIn" accept="image/*" style="display:none">
-<input type="file" id="profilePicIn" accept="image/*" style="display:none">
-
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .catch(err => console.error('SW registration failed:', err));
-  });
-}
+/* Runs before first paint: platform, theme, text size. Test on desktop with ?platform=ios|android */
+(function(){
+  var d=document.documentElement,ua=navigator.userAgent,
+  p=/Android/i.test(ua)?'android':(/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))?'ios':'web';
+  var o=new URLSearchParams(location.search).get('platform');
+  if(/^(ios|android|web)$/.test(o))p=o;
+  d.dataset.platform=p;
+  try{
+    var t=localStorage.getItem('ayl_theme');
+    if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'default';
+    if(t!=='default')d.dataset.theme=t;
+    var s=localStorage.getItem('ayl_fs');if(s)d.dataset.fs=s;
+    var c=localStorage.getItem('ayl_cp');if(c){d.style.setProperty('--cp',c);d.style.setProperty('--cp2',localStorage.getItem('ayl_cp2')||c)}
+    var m=document.getElementById('themeColorMeta');
+    var bg={midnight:'#0F0E17',rose:'#FFF5F7',forest:'#F4F7F2',ocean:'#F0F6FF',sand:'#FBF7EE'}[t];if(bg)m.content=bg;
+  }catch(e){}
+})();
 </script>
-<script src="config.js"></script>
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script defer src="config.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body data-state="boot" data-view="feed">
+<script>/* first paint: show the right screen before any app code runs */try{document.body.dataset.state=localStorage.getItem("ayl_name")?"app":"ob"}catch(e){document.body.dataset.state="ob"}</script>
+<noscript><p style="padding:24px;font:16px system-ui">عيلتنا needs JavaScript to load your family feed.</p></noscript>
+
+<!-- ═════ Icon sprite ═════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/></symbol>
+<symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+<symbol id="i-family" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.6.2 4.5 2.3 4.5 4.8"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.6 0 2-1 2-2s-.6-1.600.5-2.500H18a3 3 0 0 0 3-3 9 9 0 0 0-9-9z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="7.500" r="1"/><circle cx="16" cy="11" r="1"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.400 3.600-8 8-8s8 3.600 8 8"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.500 1.500a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="M15 10l6-3v10l-6-3z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.500 3.500 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.500"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.500"/><path d="M21 16l-5-5-9 9"/></symbol>
+<symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.500v5l4.500-2.500z"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+<symbol id="i-spk" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 8a5 5 0 0 1 0 8"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+<symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></symbol>
+<symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+</defs></svg>
+
+<!-- ═════ Passcode gate (enable with GATE_ON in app.js) ═════ -->
+<div class="gate" id="gate">
+  <form class="gate-card glass" id="gate-form" autocomplete="off">
+    <div class="gate-ico"><svg class="ico"><use href="#i-lock"/></svg></div>
+    <h1>Our Family</h1>
+    <p>Enter the family passcode</p>
+    <input id="gate-in" type="password" placeholder="Passcode" autocomplete="current-password" required>
+    <div class="err" id="gate-err" role="alert"></div>
+    <button class="btn primary pressable">Unlock</button>
+  </form>
+</div>
+
+<!-- ═════ Onboarding ═════ -->
+<main class="ob" id="ob">
+  <h1 class="ob-logo" lang="ar">عيلتنا</h1>
+  <p class="ob-sub">Your family’s private space</p>
+  <ul class="feats">
+    <li><span>📸</span><div><b>Share moments</b><small>Photos, videos, reactions and comments</small></div></li>
+    <li><span>💬</span><div><b>Family &amp; private chat</b><small>Group chat and direct messages</small></div></li>
+    <li><span>📞</span><div><b>Voice &amp; video calls</b><small>Free internet calls, no phone number</small></div></li>
+    <li><span>🎨</span><div><b>Make it yours</b><small>Themes, custom colours and text size</small></div></li>
+  </ul>
+  <form id="ob-form" autocomplete="off">
+    <label class="lbl" for="ob-in">What is your name?</label>
+    <input class="field" id="ob-in" placeholder="e.g. Omar" autocapitalize="words" autocorrect="off" required dir="auto">
+    <button class="btn primary pressable">Join the family</button>
+  </form>
+</main>
+
+<!-- ═════ App ═════ -->
+<div id="app">
+  <header class="topbar glass" id="topbar">
+    <button class="ib back pressable" data-act="back" aria-label="Back"><svg class="ico"><use href="#i-back"/></svg></button>
+    <h1 id="title">Our Family</h1><i class="live" aria-hidden="true"></i>
+    <span class="sp"></span>
+    <button class="ib feed-only pressable" data-act="search" aria-label="Search"><svg class="ico"><use href="#i-search"/></svg></button>
+    <button class="ib feed-only pressable" data-act="filter" aria-label="Filter by member"><svg class="ico"><use href="#i-filter"/></svg></button>
+    <button class="ib pressable" data-act="theme" aria-label="Appearance"><svg class="ico"><use href="#i-palette"/></svg></button>
+    <button class="ib me pressable" data-act="me" aria-label="My profile"><span id="me-av"></span></button>
+  </header>
+
+  <form class="searchbar glass" id="searchbar" role="search" hidden>
+    <svg class="ico"><use href="#i-search"/></svg>
+    <input id="q" type="search" placeholder="Search posts, names, occasions" enterkeyhint="search" autocomplete="off" dir="auto">
+  </form>
+
+  <div id="scroller">
+
+    <!-- Feed -->
+    <section class="view" id="v-feed">
+      <div class="banner greet" id="greet" hidden><b id="greet-t"></b><small id="greet-s"></small></div>
+      <div class="banner" id="reminder" hidden>
+        <span>📸</span><p id="rem-txt"></p>
+        <button class="chip primary pressable" data-go="add">Share</button>
+        <button class="ib sm pressable" data-act="dismiss-rem" aria-label="Dismiss"><svg class="ico"><use href="#i-close"/></svg></button>
+      </div>
+      <button class="newpill pressable" id="newpill" data-act="newpill" hidden></button>
+      <div id="feed" aria-busy="true">
+        <div class="card sk"><div class="sk-h"><i class="sk-c"></i><i class="sk-l"></i></div><i class="sk-img"></i><i class="sk-l w"></i></div>
+        <div class="card sk"><div class="sk-h"><i class="sk-c"></i><i class="sk-l"></i></div><i class="sk-img"></i><i class="sk-l w"></i></div>
+        <div class="card sk"><div class="sk-h"><i class="sk-c"></i><i class="sk-l"></i></div><i class="sk-img"></i><i class="sk-l w"></i></div>
+      </div>
+      <div class="empty" id="feed-empty" hidden><div class="e-ico" id="empty-i">📸</div><h2 id="empty-t"></h2><p id="empty-d"></p></div>
+    </section>
+
+    <!-- Add -->
+    <section class="view" id="v-add">
+      <h2 class="ttl">Share a moment</h2>
+      <form id="add-form" autocomplete="off">
+        <div class="posting"><div><small>Posting as</small><b id="add-as" dir="auto"></b></div></div>
+        <div class="pick">
+          <button type="button" class="pick-b pressable" data-act="pick" data-k="camera"><svg class="ico"><use href="#i-camera"/></svg>Camera</button>
+          <button type="button" class="pick-b pressable" data-act="pick" data-k="gallery"><svg class="ico"><use href="#i-image"/></svg>Photos</button>
+          <button type="button" class="pick-b pressable" data-act="pick" data-k="video"><svg class="ico"><use href="#i-film"/></svg>Video</button>
+        </div>
+        <div class="strip" id="strip" hidden></div>
+        <span class="lbl">Occasion</span>
+        <div class="chips" role="radiogroup">
+          <label class="oc"><input type="radio" name="occ" value="everyday" checked><span>💛 Everyday</span></label>
+          <label class="oc"><input type="radio" name="occ" value="birthday"><span>🎂 Birthday</span></label>
+          <label class="oc"><input type="radio" name="occ" value="eid"><span>🌙 Eid</span></label>
+          <label class="oc"><input type="radio" name="occ" value="travel"><span>✈️ Travel</span></label>
+          <label class="oc"><input type="radio" name="occ" value="together"><span>👨‍👩‍👧‍👦 Together</span></label>
+          <label class="oc"><input type="radio" name="occ" value="home"><span>🏡 Home</span></label>
+          <label class="oc"><input type="radio" name="occ" value="food"><span>🍽️ Food</span></label>
+          <label class="oc"><input type="radio" name="occ" value="milestone"><span>🏆 Milestone</span></label>
+          <label class="oc"><input type="radio" name="occ" value="prayer"><span>🤲 Prayer</span></label>
+          <label class="oc"><input type="radio" name="occ" value="health"><span>💊 Health</span></label>
+          <label class="oc"><input type="radio" name="occ" value="goingout"><span>🎉 Going out</span></label>
+        </div>
+        <label class="lbl" for="cap">Caption</label>
+        <div class="fmt">
+          <button type="button" class="chip pressable" data-act="fmt" data-w="**"><b>B</b></button>
+          <button type="button" class="chip pressable" data-act="fmt" data-w="*"><i>I</i></button>
+          <span id="mentions"></span>
+        </div>
+        <textarea class="field" id="cap" rows="3" maxlength="300" dir="auto" placeholder="Say something… **bold**, *italic*, @Name"></textarea>
+        <div class="count" id="count">0 / 300</div>
+        <button class="btn primary pressable" id="share-btn">Share with family ❤️</button>
+      </form>
+    </section>
+
+    <!-- Chat -->
+    <section class="view" id="v-chat" data-ctab="group">
+      <div class="seg" role="tablist">
+        <i class="seg-ind"></i>
+        <button role="tab" data-act="ctab" data-t="group">👨‍👩‍👧‍👦 Family</button>
+        <button role="tab" data-act="ctab" data-t="dms">💬 Direct <span class="dot" id="dm-dot" hidden></span></button>
+      </div>
+      <div class="thread-hdr glass">
+        <button class="ib pressable" data-act="dm-back" aria-label="Back to messages"><svg class="ico"><use href="#i-back"/></svg></button>
+        <span id="th-av"></span><b id="th-name" dir="auto"></b><span class="sp"></span>
+        <button class="ib pressable" data-act="call" data-video="0" aria-label="Voice call"><svg class="ico"><use href="#i-phone"/></svg></button>
+        <button class="ib pressable" data-act="call" data-video="1" aria-label="Video call"><svg class="ico"><use href="#i-video"/></svg></button>
+      </div>
+      <div class="dm-list" id="dm-list"></div>
+      <div class="msgs" id="msgs" role="log" aria-live="polite"></div>
+      <form class="composer glass" id="chat-form" autocomplete="off">
+        <textarea id="chat-in" rows="1" data-auto placeholder="Message" enterkeyhint="send" dir="auto"></textarea>
+        <button class="send pressable" aria-label="Send"><svg class="ico"><use href="#i-send"/></svg></button>
+      </form>
+    </section>
+
+    <!-- Stats -->
+    <section class="view" id="v-stats">
+      <h2 class="ttl">Family stats</h2>
+      <div class="hero"><b id="st-posts">0</b><span>moments shared together ❤️</span></div>
+      <div class="tiles">
+        <div class="tile"><b id="st-rxn">0</b><span>Reactions</span></div>
+        <div class="tile"><b id="st-cmt">0</b><span>Comments</span></div>
+        <div class="tile"><b id="st-msg">0</b><span>Messages</span></div>
+        <div class="tile"><b id="st-mem">0</b><span>Members</span></div>
+      </div>
+      <div class="tile wide" id="st-oct" hidden><span class="big" id="st-oct-e"></span><div><b id="st-oct-l"></b><span>most shared occasion</span></div></div>
+      <section class="board"><h3>🏆 Most active</h3><div id="lb-active"></div></section>
+      <section class="board"><h3>❤️ Most reactions received</h3><div id="lb-rxn"></div></section>
+      <section id="st-top-sec" hidden><h3 class="sub">⭐ Most loved moment</h3><div id="st-top"></div></section>
+      <section id="st-quiet-sec" hidden><h3 class="sub">😴 Not posted in a while</h3><div id="st-quiet"></div></section>
+    </section>
+
+    <!-- Members -->
+    <section class="view" id="v-members">
+      <h2 class="ttl">Family</h2>
+      <div id="members"></div>
+      <div class="empty" id="members-empty" hidden><div class="e-ico">👨‍👩‍👧‍👦</div><h2>No members yet</h2><p>People appear here once they share a moment.</p></div>
+    </section>
+
+    <!-- Profile (own or someone else's) -->
+    <section class="view" id="v-user" data-own="0">
+      <div class="p-hero">
+        <div class="p-av"><span id="u-av"></span><button class="edit-badge own-only pressable" data-act="edit" aria-label="Edit profile"><svg class="ico"><use href="#i-edit"/></svg></button></div>
+        <h2 id="u-name" dir="auto"></h2>
+        <p id="u-bio" dir="auto"></p>
+        <div class="badges" id="u-badges"></div>
+      </div>
+      <div class="p-stats">
+        <div><b id="u-posts">0</b><span>Posts</span></div>
+        <div><b id="u-rxn">0</b><span>Reactions</span></div>
+        <div><b id="u-cmt">0</b><span>Comments</span></div>
+      </div>
+      <div class="p-actions">
+        <button class="btn pressable own-only" data-act="edit">Edit profile</button>
+        <button class="btn pressable other-only" data-act="msg-user"><svg class="ico"><use href="#i-chat"/></svg>Message</button>
+        <button class="btn primary pressable other-only" data-act="call-user" data-video="0"><svg class="ico"><use href="#i-phone"/></svg>Call</button>
+        <button class="btn pressable other-only" data-act="call-user" data-video="1"><svg class="ico"><use href="#i-video"/></svg>Video</button>
+      </div>
+      <section id="u-gal-sec"><h3 class="sub">📸 Moments</h3><div class="gallery" id="u-gal"></div></section>
+    </section>
+
+    <!-- Edit profile -->
+    <section class="view" id="v-edit">
+      <h2 class="ttl">Edit profile</h2>
+      <form id="edit-form" autocomplete="off">
+        <div class="edit-av"><button type="button" class="p-av pressable" data-act="pic" aria-label="Change photo"><span id="e-av"></span><span class="edit-badge"><svg class="ico"><use href="#i-camera"/></svg></span></button><small>Tap to change photo</small></div>
+        <label class="lbl" for="e-name">Name</label>
+        <input class="field" id="e-name" required dir="auto" autocapitalize="words">
+        <label class="lbl" for="e-bio">Bio</label>
+        <input class="field" id="e-bio" dir="auto" placeholder="Something about yourself…">
+        <label class="lbl" for="e-bday">Birthday</label>
+        <input class="field" id="e-bday" type="date">
+        <div id="e-colors">
+          <span class="lbl">Avatar colour</span>
+          <div class="swatches">
+            <label class="sw"><input type="radio" name="pcolor" value="0"><i style="background:#FAECE7;border-color:#D85A30"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="1"><i style="background:#E6F1FB;border-color:#378ADD"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="2"><i style="background:#EAF3DE;border-color:#5A9A1A"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="3"><i style="background:#FAEEDA;border-color:#C47A10"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="4"><i style="background:#EEEDFE;border-color:#7A6AE0"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="5"><i style="background:#E1F5EE;border-color:#1A9A65"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="6"><i style="background:#FDE8F4;border-color:#C4498A"></i></label>
+            <label class="sw"><input type="radio" name="pcolor" value="7"><i style="background:#E8F4FE;border-color:#2A8AC4"></i></label>
+          </div>
+        </div>
+        <button type="button" class="btn danger pressable" id="rm-pic" data-act="rm-pic" hidden>Remove profile photo</button>
+        <button class="btn primary pressable">Save</button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Tab bar -->
+  <nav class="tabbar glass" id="tabbar" aria-label="Main">
+    <i class="ind" aria-hidden="true"></i>
+    <button class="tab pressable" data-go="feed"><span class="ic"><svg class="ico"><use href="#i-home"/></svg></span><span class="lb">Moments</span></button>
+    <button class="tab pressable" data-go="chat"><span class="ic"><svg class="ico"><use href="#i-chat"/></svg><span class="badge" id="chat-badge" hidden></span></span><span class="lb">Chat</span></button>
+    <button class="fab pressable" data-go="add" aria-label="New moment"><svg class="ico"><use href="#i-plus"/></svg></button>
+    <button class="tab pressable" data-go="stats"><span class="ic"><svg class="ico"><use href="#i-stats"/></svg></span><span class="lb">Stats</span></button>
+    <button class="tab pressable" data-go="members"><span class="ic"><svg class="ico"><use href="#i-family"/></svg></span><span class="lb">Family</span></button>
+  </nav>
+</div>
+
+<!-- ═════ Dialogs (native: focus trap, Esc, top layer) ═════ -->
+<dialog class="sheet" id="dlg-post" aria-label="Post actions">
+  <div class="grip"></div>
+  <button class="row pressable" data-act="p-profile"><svg class="ico"><use href="#i-user"/></svg>View profile</button>
+  <button class="row pressable" data-act="p-pin"><svg class="ico"><use href="#i-pin"/></svg><span id="pin-lbl">Pin to top</span></button>
+  <button class="row pressable" data-act="p-full" id="p-full"><svg class="ico"><use href="#i-full"/></svg>Fullscreen</button>
+  <button class="row pressable" data-act="p-save" id="p-save"><svg class="ico"><use href="#i-down"/></svg>Save</button>
+  <button class="row pressable" data-act="p-copy" id="p-copy"><svg class="ico"><use href="#i-copy"/></svg>Copy caption</button>
+  <button class="row danger pressable" data-act="p-del" id="p-del"><svg class="ico"><use href="#i-trash"/></svg>Delete</button>
+  <button class="row cancel pressable" data-close>Cancel</button>
+</dialog>
+
+<dialog class="sheet" id="dlg-filter" aria-label="Filter by member">
+  <div class="grip"></div>
+  <h3 class="sheet-t">Show moments from</h3>
+  <div class="pills" id="filter-list"></div>
+</dialog>
+
+<dialog class="sheet" id="dlg-theme" aria-label="Appearance">
+  <div class="grip"></div>
+  <h3 class="sheet-t">Appearance</h3>
+  <div class="themes">
+    <button class="th pressable" data-act="theme-pick" data-id="default"><i style="background:#FAF8F3"><b style="background:#C4622D"></b></i>Warm</button>
+    <button class="th pressable" data-act="theme-pick" data-id="midnight"><i style="background:#0F0E17"><b style="background:#8B5CF6"></b></i>Night</button>
+    <button class="th pressable" data-act="theme-pick" data-id="rose"><i style="background:#FFF5F7"><b style="background:#E11D6A"></b></i>Rose</button>
+    <button class="th pressable" data-act="theme-pick" data-id="forest"><i style="background:#F4F7F2"><b style="background:#2D7A3A"></b></i>Forest</button>
+    <button class="th pressable" data-act="theme-pick" data-id="ocean"><i style="background:#F0F6FF"><b style="background:#1A6FC4"></b></i>Ocean</button>
+    <button class="th pressable" data-act="theme-pick" data-id="sand"><i style="background:#FBF7EE"><b style="background:#8B6914"></b></i>Sand</button>
+    <button class="th pressable" data-act="theme-pick" data-id="custom"><i id="th-custom" style="background:#FAF8F3"><b style="background:var(--cp,#C4622D)"></b></i>Custom</button>
+  </div>
+  <div class="set-row"><label for="cpri">Primary</label><input type="color" id="cpri" value="#C4622D"><label for="cpri2">Accent</label><input type="color" id="cpri2" value="#E8A87C"><button class="chip primary pressable" data-act="custom-apply">Apply</button></div>
+  <div class="set-row"><span>Text size</span><span class="sp"></span>
+    <div class="seg2">
+      <button class="pressable" data-act="fs-pick" data-s="sm" style="font-size:.8rem">A</button>
+      <button class="pressable" data-act="fs-pick" data-s="md" style="font-size:1rem">A</button>
+      <button class="pressable" data-act="fs-pick" data-s="lg" style="font-size:1.25rem">A</button>
+    </div>
+  </div>
+  <button class="row pressable" data-act="notif" id="notif-btn"><svg class="ico"><use href="#i-bell"/></svg>Turn on notifications</button>
+</dialog>
+
+<dialog class="sheet" id="dlg-confirm" aria-label="Confirm">
+  <div class="grip"></div>
+  <h3 class="sheet-t" id="cf-t">Are you sure?</h3>
+  <button class="row danger pressable" data-act="cf-ok" id="cf-ok">Delete</button>
+  <button class="row cancel pressable" data-close>Cancel</button>
+</dialog>
+
+<dialog class="viewer" id="dlg-viewer" aria-label="Photo viewer">
+  <div class="v-top"><button class="ib pressable" data-close aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button><span id="v-count"></span><button class="ib pressable" data-act="v-save" aria-label="Save"><svg class="ico"><use href="#i-down"/></svg></button></div>
+  <div class="v-stage" id="v-stage"><img id="v-img" alt=""></div>
+  <button class="ib v-nav prev pressable" data-act="v-prev" aria-label="Previous"><svg class="ico"><use href="#i-back"/></svg></button>
+  <button class="ib v-nav next pressable" data-act="v-next" aria-label="Next"><svg class="ico"><use href="#i-chev"/></svg></button>
+  <div class="v-meta"><b id="v-who" dir="auto"></b><p id="v-cap" dir="auto"></p><small id="v-date"></small></div>
+</dialog>
+
+<dialog class="callui" id="call" data-state="idle" aria-label="Call">
+  <video class="rv" id="remoteVideo" autoplay playsinline muted></video>
+  <video class="lv" id="localVideo" autoplay playsinline muted></video>
+  <div class="call-in">
+    <span class="call-av" id="call-av"></span>
+    <h2 id="call-name" dir="auto"></h2>
+    <p id="call-st"></p>
+    <div class="call-btns">
+      <button class="cb mute pressable" data-act="mute" id="muteBtn" aria-label="Mute"><svg class="ico"><use href="#i-mic"/></svg></button>
+      <button class="cb spk pressable" data-act="spk" id="spkBtn" aria-label="Speaker"><svg class="ico"><use href="#i-spk"/></svg></button>
+      <button class="cb vid pressable" data-act="vid" id="vidBtn" aria-label="Camera"><svg class="ico"><use href="#i-video"/></svg></button>
+      <button class="cb end pressable" data-act="hang" aria-label="End call"><svg class="ico hang"><use href="#i-phone"/></svg></button>
+      <button class="cb end decl pressable" data-act="decline" aria-label="Decline"><svg class="ico hang"><use href="#i-phone"/></svg></button>
+      <button class="cb acc pressable" data-act="accept" aria-label="Accept"><svg class="ico"><use href="#i-phone"/></svg></button>
+    </div>
+  </div>
+</dialog>
+
+<div class="offline" id="offline" hidden>📡 No internet — some features won’t work</div>
+<div id="toast" popover="manual" role="status"></div>
+<div class="busy" id="busy" hidden><i class="spin"></i><b id="busy-t">Sharing with family… ❤️</b></div>
+
+<!-- File inputs -->
+<input type="file" id="galleryIn" accept="image/*" multiple hidden>
+<input type="file" id="cameraIn" accept="image/*" capture="environment" hidden>
+<input type="file" id="videoIn" accept="video/*" multiple hidden>
+<input type="file" id="commentImgIn" accept="image/*" hidden>
+<input type="file" id="profilePicIn" accept="image/*" hidden>
+
+<!-- ═════ Templates: real markup, JS only fills data ═════ -->
+<template id="t-post">
+<article class="card">
+  <div class="pin-b" data-f="pin" hidden>📌 Pinned</div>
+  <header class="card-hdr">
+    <button class="who" data-act="profile"><span data-f="av"></span><span class="who-t"><b data-f="name" dir="auto"></b><time data-f="time" data-act="date"></time></span></button>
+    <span class="tag" data-f="oct"></span>
+    <button class="ib sm pressable" data-act="more" aria-label="More options"><svg class="ico"><use href="#i-dots"/></svg></button>
+  </header>
+  <div class="media" data-f="media"></div>
+  <p class="caption" data-f="caption" dir="auto" hidden></p>
+  <div class="seen" data-f="seen" hidden></div>
+  <div class="rxns" data-f="rxns"></div>
+  <div class="rxn-add">
+    <button data-act="rxn" data-e="❤️">❤️</button><button data-act="rxn" data-e="😂">😂</button><button data-act="rxn" data-e="😍">😍</button><button data-act="rxn" data-e="👏">👏</button>
+    <button data-act="rxn" data-e="😢">😢</button><button data-act="rxn" data-e="🔥">🔥</button><button data-act="rxn" data-e="🤗">🤗</button><button data-act="rxn" data-e="😮">😮</button>
+  </div>
+  <section class="cmts">
+    <button class="cmts-toggle" data-act="cmts" aria-expanded="false"><svg class="ico sm"><use href="#i-chev"/></svg>Comments <span class="cbadge" data-f="cbadge">0</span><i class="ndot" data-f="ndot" hidden></i></button>
+    <div class="cmts-body" data-f="cbody" hidden>
+      <div data-f="clist"></div>
+      <div class="replying" data-f="replying" hidden><span>↩ Replying to <b data-f="replyname"></b></span><button type="button" class="ib sm" data-act="clear-reply" aria-label="Cancel reply"><svg class="ico sm"><use href="#i-close"/></svg></button></div>
+      <div class="cprev" data-f="cprev" hidden><img data-f="cprev-img" alt=""><button type="button" class="ib sm" data-act="clear-cimg" aria-label="Remove photo"><svg class="ico sm"><use href="#i-close"/></svg></button></div>
+      <form class="cmt-form" data-f="cform">
+        <span data-f="myav"></span>
+        <textarea rows="1" data-auto data-f="ctext" placeholder="Add a comment…" dir="auto"></textarea>
+        <button type="button" class="ib sm" data-act="attach" aria-label="Attach photo"><svg class="ico"><use href="#i-clip"/></svg></button>
+        <button class="send sm pressable" aria-label="Send comment"><svg class="ico"><use href="#i-send"/></svg></button>
+      </form>
+    </div>
+  </section>
+</article>
+</template>
+
+<template id="t-cmt">
+<div class="cmt"><span data-f="av"></span>
+  <div class="cmt-b">
+    <div class="bubble"><b data-f="name" dir="auto"></b><p data-f="text" dir="auto"></p><img class="cmt-img" data-f="img" data-act="view-img" alt="" loading="lazy" crossorigin="anonymous" hidden></div>
+    <div class="cmt-m"><time data-f="time"></time><button data-act="reply">Reply</button><button class="danger" data-act="delc" data-f="del" hidden>Delete</button>
+      <span class="crx"><button data-act="crxn" data-e="❤️">❤️</button><button data-act="crxn" data-e="😂">😂</button><button data-act="crxn" data-e="👍">👍</button><button data-act="crxn" data-e="🔥">🔥</button></span></div>
+  </div>
+</div>
+</template>
+
+<template id="t-msg">
+<div class="msg"><span data-f="av"></span>
+  <div class="mb"><small data-f="sender"></small>
+    <div class="bubble" data-act="msg"><span data-f="text" dir="auto"></span><button data-act="delmsg" data-f="del" aria-label="Delete message">Delete</button></div>
+    <time data-f="time"></time></div>
+</div>
+</template>
+
+<template id="t-dm">
+<button class="dm pressable" data-act="dm-open"><span data-f="av"></span><div class="dm-t"><b data-f="name" dir="auto"></b><small data-f="last" dir="auto"></small></div><time data-f="time"></time><span class="unread" data-f="unread" hidden></span></button>
+</template>
+
+<template id="t-member">
+<button class="member pressable" data-act="open-user"><span data-f="av"></span>
+  <div class="mi"><div><b data-f="name" dir="auto"></b><em data-f="streak" hidden></em></div><small data-f="meta"></small>
+    <div class="ms"><span><b data-f="p">0</b>Posts</span><span><b data-f="r">0</b>Reactions</span><span><b data-f="c">0</b>Comments</span></div></div>
+  <svg class="ico sm"><use href="#i-chev"/></svg></button>
+</template>
+
+<template id="t-lb">
+<button class="lb-row" data-act="open-user"><span class="rank" data-f="rank"></span><span data-f="av"></span><b data-f="name" dir="auto"></b><span class="bar"><i data-f="bar"></i></span><span class="val" data-f="val"></span></button>
+</template>
 
 </body>
 </html>
