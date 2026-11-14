@@ -23,7 +23,7 @@ const CFG = {
   MAX_CAP: 300,       // caption length
   MAX_MEDIA: 10,      // photos/videos per post
   CMT_PAGE: 5,        // top-level comments shown at a time
-  FEED_LIMIT: 60,     // posts fetched (was 120; fewer rows = less data & battery)
+  FEED_LIMIT: 500,     // posts fetched (was 120; fewer rows = less data & battery)
   IMG_MAX: 1400,      // px, longest side of an uploaded photo
   IMG_QUALITY: 0.8,
   CLD_TRANSFORM: true, // serve resized f_auto/q_auto images. Set false if Cloudinary "strict transformations" is on.
